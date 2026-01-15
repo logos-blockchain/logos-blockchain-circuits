@@ -43,6 +43,17 @@ host_arm64:
 	cmake .. -DTARGET_PLATFORM=aarch64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package_arm64 && \
 	make -j$(nproc) -vvv && make install
 
+host_linux_arm64_static:
+	rm -rf build_prover && mkdir build_prover && cd build_prover && \
+	cmake .. \
+	    -DTARGET_PLATFORM=aarch64 \
+	    -DCMAKE_BUILD_TYPE=Release \
+	    -DCMAKE_INSTALL_PREFIX=../package \
+	    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libstdc++ -static-libgcc -no-pie" \
+	    -DOpenMP_gomp_LIBRARY=$(LIBGOMP_A) \
+	    -DCMAKE_PREFIX_PATH=depends/gmp/package && \
+	make -j$(nproc) -vvv && make install
+
 android:
 	rm -rf build_prover_android && mkdir build_prover_android && cd build_prover_android && \
 	cmake .. -DTARGET_PLATFORM=ANDROID -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package_android -DBUILD_TESTS=OFF -DUSE_OPENMP=OFF && \
