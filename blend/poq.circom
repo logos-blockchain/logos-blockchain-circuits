@@ -5,7 +5,7 @@ include "../hash_bn/poseidon2_hash.circom";
 include "../misc/constants.circom";         // defines KDF, SELECTION_RANDOMNESS, PROOF_NULLIFIER
 include "../misc/comparator.circom";        
 include "../circomlib/circuits/bitify.circom";
-include "../Mantle/pol_lib.circom";      // defines proof_of_leadership
+include "../mantle/pol_lib.circom";      // defines proof_of_leadership
 include "../ledger/notes.circom";
 
 /**
