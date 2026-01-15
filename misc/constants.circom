@@ -11,31 +11,24 @@ template LEAD_V1(){
 }
 
 
-// int.from_bytes(b"NOMOS_POL_SK_V1", byteorder="little") = 256174383281726064679014503048630094
-template NOMOS_POL_SK_V1(){
+// int.from_bytes(b"NONCE_CONTRIB_V1", byteorder="little") = 65580641403957881555985426713123114830
+template NONCE_CONTRIB_V1(){
     signal output out;
-    out <== 256174383281726064679014503048630094;
+    out <== 65580641403957881555985426713123114830;
 }
 
 
-// int.from_bytes(b"NOMOS_NONCE_CONTRIB_V1", byteorder="little") = 18459309511848927313552932915476467038165525790019406
-template NOMOS_NONCE_CONTRIB_V1(){
+// int.from_bytes(b"KDF", byteorder="little") = 4605003
+template KDF(){
     signal output out;
-    out <== 18459309511848927313552932915476467038165525790019406;
+    out <== 4605003;
 }
 
 
-// int.from_bytes(b"NOMOS_KDF", byteorder="little") = 1296193216988918402894
-template NOMOS_KDF(){
+// int.from_bytes(b"NOTE_ID_V1", byteorder="little") = 232989242343357190262606
+template NOTE_ID_V1(){
     signal output out;
-    out <== 1296193216988918402894;
-}
-
-
-// int.from_bytes(b"NOMOS_NOTE_ID_V1", byteorder="little") = 65580641562429851895355409762135920462
-template NOMOS_NOTE_ID_V1(){
-    signal output out;
-    out <== 65580641562429851895355409762135920462;
+    out <== 232989242343357190262606;
 }
 
 

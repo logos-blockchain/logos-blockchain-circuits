@@ -34,7 +34,7 @@ template derive_entropy(){
     signal output out;
 
     component hash = Poseidon2_hash(4);
-    component dst = NOMOS_NONCE_CONTRIB_V1();
+    component dst = NONCE_CONTRIB_V1();
     hash.inp[0] <== dst.out;
     hash.inp[1] <== slot;
     hash.inp[2] <== note_id;
@@ -48,8 +48,6 @@ template would_win_leadership(secret_depth){
     signal input epoch_nonce;
     signal input t0;
     signal input t1;
-    signal input slot_secret;
-    signal input slot_secret_path[secret_depth];
 
     //Part of the note id proof of membership to prove aged
     signal input aged_nodes[32];
@@ -59,51 +57,23 @@ template would_win_leadership(secret_depth){
     //Used to derive the note identifier
     signal input transaction_hash;
     signal input output_number;
-
-    //Part of the secret key
-    signal input starting_slot;
+    signal input secret_key;
 
     // The winning note value
     signal input value;
 
     signal output out;
     signal output note_identifier;
-    signal output secret_key;
-
-
-    // Derivation of the secrets root from the slot secret at position slot - starting_slot
-            // Verify that the substraction wont underflow (starting_slot < slot)
-    component checker = SafeFullLessThan();
-    checker.a <== starting_slot;
-    checker.b <== slot;
-
-            // Compute the positions related to slot - starting_slot and make sure slot - starting_slot is a 25 bits number
-    component bits = Num2Bits(secret_depth);
-    bits.in <== slot - starting_slot;
-
-            // Derive the secrets root
-    component secrets_root = compute_merkle_root(secret_depth);
-    for(var i=0; i<secret_depth; i++){
-        secrets_root.nodes[i] <== slot_secret_path[i];
-        secrets_root.selector[i] <== bits.out[secret_depth-1-i];
-    }
-    secrets_root.leaf <== slot_secret;
-
-
-    // Derive the secret key
-    component sk = derive_secret_key();
-    sk.starting_slot <== starting_slot;
-    sk.secrets_root <== secrets_root.root;
 
 
     // Derive the public key from the secret key
     component pk = derive_public_key();
-    pk.secret_key <== sk.out;
+    pk.secret_key <== secret_key;
 
 
     // Derive the note id
     component note_id = Poseidon2_hash(5);
-    component dst_note_id = NOMOS_NOTE_ID_V1();
+    component dst_note_id = NOTE_ID_V1();
     note_id.inp[0] <== dst_note_id.out;
     note_id.inp[1] <== transaction_hash;
     note_id.inp[2] <== output_number;
@@ -131,7 +101,7 @@ template would_win_leadership(secret_depth){
     ticket.epoch_nonce <== epoch_nonce;
     ticket.slot <== slot;
     ticket.note_id <== note_id.out;
-    ticket.secret_key <== sk.out;
+    ticket.secret_key <== secret_key;
 
 
     // Compute the lottery threshold
@@ -147,12 +117,9 @@ template would_win_leadership(secret_depth){
     winning.b <== threshold;
 
     // Check that every constraint holds
-    signal intermediate_out;
-    intermediate_out <== aged_membership.out * winning.out;
-    out <==  intermediate_out * checker.out;
+    out <== aged_membership.out * winning.out;
 
     note_identifier <== note_id.out;
-    secret_key <== sk.out;
 } 
 
 
@@ -161,8 +128,6 @@ template proof_of_leadership(secret_depth){
     signal input epoch_nonce;  // the epoch nonce eta
     signal input t0;
     signal input t1;
-    signal input slot_secret;  // This is r_sl
-    signal input slot_secret_path[secret_depth];
 
     //Part of the note id proof of membership to prove aged
     signal input noteid_aged_path[32];
@@ -170,6 +135,7 @@ template proof_of_leadership(secret_depth){
     signal input ledger_aged;
 
     //Used to derive the note identifier
+    signal input secret_key;
     signal input note_tx_hash;
     signal input note_output_number;
     
@@ -178,10 +144,7 @@ template proof_of_leadership(secret_depth){
     signal input noteid_latest_selectors[32];         // must be bits
     signal input ledger_latest;
 
-    //Part of the secret key
-    signal input starting_slot;
-
-    // The winning note. The unit is supposed to be NMO and the ZoneID is MANTLE
+    // The winning note.
     signal input v;  // value of the note
 
 
@@ -191,10 +154,6 @@ template proof_of_leadership(secret_depth){
     lottery_checker.epoch_nonce <== epoch_nonce;
     lottery_checker.t0 <== t0;
     lottery_checker.t1 <== t1;
-    lottery_checker.slot_secret <== slot_secret;
-    for(var i = 0; i < secret_depth; i++){
-        lottery_checker.slot_secret_path[i] <== slot_secret_path[i];
-    }
     for(var i = 0; i < 32; i++){
         lottery_checker.aged_nodes[i] <== noteid_aged_path[i];
         lottery_checker.aged_selectors[i] <== noteid_aged_selectors[i];
@@ -202,7 +161,7 @@ template proof_of_leadership(secret_depth){
     lottery_checker.aged_root <== ledger_aged;
     lottery_checker.transaction_hash <== note_tx_hash;
     lottery_checker.output_number <== note_output_number;
-    lottery_checker.starting_slot <== starting_slot;
+    lottery_checker.secret_key <== secret_key;
     lottery_checker.value <== v;
 
 
@@ -241,7 +200,7 @@ template proof_of_leadership(secret_depth){
     component entropy = derive_entropy();
     entropy.slot <== sl;
     entropy.note_id <== lottery_checker.note_identifier;
-    entropy.secret_key <== lottery_checker.secret_key;
+    entropy.secret_key <== secret_key;
 
     entropy_contribution <== entropy.out;
 }
