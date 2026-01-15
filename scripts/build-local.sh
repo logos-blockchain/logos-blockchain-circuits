@@ -59,6 +59,7 @@ esac
 PTAU_URL="https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
 PTAU_FILE="powersOfTau28_hez_final_17.ptau"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Flags
 SKIP_DEPS=false
@@ -140,13 +141,13 @@ clean_artifacts() {
     log_info "Cleaning build artifacts..."
     
     # Clean circom build directories
-    rm -rf circom/ 2>/dev/null || true
+    rm -rf "$PROJECT_ROOT/circom/" 2>/dev/null || true
     
     # Clean rapidsnark build
-    if [[ -d "rapidsnark" ]]; then
-        cd rapidsnark
+    if [[ -d "$PROJECT_ROOT/rapidsnark" ]]; then
+        cd "$PROJECT_ROOT/rapidsnark"
         make clean 2>/dev/null || true
-        cd ..
+        cd "$PROJECT_ROOT"
     fi
     
     # Clean circuit build directories
@@ -268,14 +269,14 @@ install_circom() {
     fi
     
     # Clone and build Circom
-    if [[ ! -d "circom" ]]; then
-        git clone https://github.com/iden3/circom.git
+    if [[ ! -d "$PROJECT_ROOT/circom" ]]; then
+        git clone https://github.com/iden3/circom.git "$PROJECT_ROOT/circom"
     fi
     
-    cd circom
+    cd "$PROJECT_ROOT/circom"
     RUSTFLAGS="-A dead_code" cargo build --release
     RUSTFLAGS="-A dead_code" cargo install --path circom
-    cd ..
+    cd "$PROJECT_ROOT"
     
     # Verify installation
     circom --version
@@ -333,20 +334,20 @@ init_submodules() {
 download_ptau() {
     if [[ "$SKIP_PTAU" == true ]]; then
         log_info "Skipping Powers of Tau download..."
-        if [[ ! -f "$PTAU_FILE" ]]; then
-            log_error "Powers of Tau file not found: $PTAU_FILE"
+        if [[ ! -f "$PROJECT_ROOT/$PTAU_FILE" ]]; then
+            log_error "Powers of Tau file not found: $PROJECT_ROOT/$PTAU_FILE"
             exit 1
         fi
         return
     fi
     
-    if [[ -f "$PTAU_FILE" ]]; then
+    if [[ -f "$PROJECT_ROOT/$PTAU_FILE" ]]; then
         log_info "Powers of Tau file already exists, skipping download..."
         return
     fi
     
     log_info "Downloading Powers of Tau file (this may take a while, ~3GB)..."
-    curl -L -o "$PTAU_FILE" "$PTAU_URL"
+    curl -L -o "$PROJECT_ROOT/$PTAU_FILE" "$PTAU_URL"
     log_success "Powers of Tau file downloaded"
 }
 
@@ -360,7 +361,7 @@ generate_proving_key() {
     fi
     
     IFS=':' read -r circuit_path circuit_name display_name <<< "${CIRCUITS[$circuit_key]}"
-    local circuit_dir=$(dirname "$circuit_path")
+    local circuit_dir="$PROJECT_ROOT/$(dirname "$circuit_path")"
     local circuit_file=$(basename "$circuit_path")
     local circuit_filestem=$(basename "$circuit_path" .circom)
     
@@ -377,7 +378,7 @@ generate_proving_key() {
     
     # Setup
     log_info "  Running Groth16 setup..."
-    snarkjs groth16 setup "$r1cs_file" "../$PTAU_FILE" "${circuit_key}-0.zkey"
+    snarkjs groth16 setup "$r1cs_file" "$PROJECT_ROOT/$PTAU_FILE" "${circuit_key}-0.zkey"
     
     # Contribute to ceremony
     log_info "  Contributing to ceremony..."
@@ -390,7 +391,7 @@ generate_proving_key() {
     # Cleanup intermediate file
     rm -f "${circuit_key}-0.zkey"
     
-    cd "$SCRIPT_DIR"
+    cd "$PROJECT_ROOT"
     
     log_success "Proving key generated for $display_name"
 }
@@ -428,7 +429,7 @@ compile_witness_generator() {
     fi
     
     IFS=':' read -r circuit_path circuit_name display_name <<< "${CIRCUITS[$circuit_key]}"
-    local circuit_dir=$(dirname "$circuit_path")
+    local circuit_dir="$PROJECT_ROOT/$(dirname "$circuit_path")"
     local circuit_file=$(basename "$circuit_path")
     local circuit_filestem=$(basename "$circuit_path" .circom)
     local circuit_cpp_dir="${circuit_dir}/${circuit_filestem}_cpp"
@@ -443,14 +444,14 @@ compile_witness_generator() {
     
     # Replace Makefile with our custom one
     log_info "  Copying custom Makefile..."
-    cp "$SCRIPT_DIR/.github/resources/witness-generator/Makefile" "${circuit_filestem}_cpp/Makefile"
+    cp "$PROJECT_ROOT/.github/resources/witness-generator/Makefile" "${circuit_filestem}_cpp/Makefile"
     
     # Compile the witness generator
     log_info "  Compiling..."
     cd "${circuit_filestem}_cpp"
     make PROJECT="$circuit_filestem" linux
     
-    cd "$SCRIPT_DIR"
+    cd "$PROJECT_ROOT"
     
     log_success "Witness generator compiled for $display_name"
 }
@@ -480,7 +481,7 @@ compile_all_witness_generators() {
 
 # Download GMP archive if needed
 download_gmp() {
-    local gmp_dir="rapidsnark/depends"
+    local gmp_dir="$PROJECT_ROOT/rapidsnark/depends"
     local gmp_file="gmp-6.2.1.tar.xz"
     
     if [[ -f "$gmp_dir/$gmp_file" ]]; then
@@ -505,12 +506,12 @@ compile_prover_verifier() {
     
     # Replace Makefile with our custom one
     log_info "  Replacing Makefile..."
-    cp ".github/resources/prover/Makefile" "rapidsnark/Makefile"
+    cp "$PROJECT_ROOT/.github/resources/prover/Makefile" "$PROJECT_ROOT/rapidsnark/Makefile"
     
     # Download GMP if needed
     download_gmp
     
-    cd rapidsnark
+    cd "$PROJECT_ROOT/rapidsnark"
     
     # Build GMP (ignore exit code if already built)
     log_info "  Building GMP..."
@@ -539,7 +540,7 @@ compile_prover_verifier() {
         make host_linux_x86_64_static
     fi
     
-    cd "$SCRIPT_DIR"
+    cd "$PROJECT_ROOT"
     
     log_success "Prover and verifier compiled"
 }
@@ -559,8 +560,8 @@ create_bundle() {
     # Copy prover and verifier
     if [[ ! "$SKIP_PROVER" == true ]]; then
         log_info "  Copying prover and verifier..."
-        cp "rapidsnark/package/bin/prover" "${bundle_name}/prover"
-        cp "rapidsnark/package/bin/verifier" "${bundle_name}/verifier"
+        cp "$PROJECT_ROOT/rapidsnark/package/bin/prover" "${bundle_name}/prover"
+        cp "$PROJECT_ROOT/rapidsnark/package/bin/verifier" "${bundle_name}/verifier"
         chmod +x "${bundle_name}/prover"
         chmod +x "${bundle_name}/verifier"
     fi
@@ -575,7 +576,7 @@ create_bundle() {
     
     for circuit_key in "${circuits_to_bundle[@]}"; do
         IFS=':' read -r circuit_path circuit_name display_name <<< "${CIRCUITS[$circuit_key]}"
-        local circuit_dir=$(dirname "$circuit_path")
+        local circuit_dir="$PROJECT_ROOT/$(dirname "$circuit_path")"
         local circuit_filestem=$(basename "$circuit_path" .circom)
         local circuit_cpp_dir="${circuit_dir}/${circuit_filestem}_cpp"
         
@@ -653,6 +654,9 @@ print_summary() {
 # Main function
 main() {
     parse_args "$@"
+    
+    # Change to project root directory so all relative paths work correctly
+    cd "$PROJECT_ROOT"
     
     echo ""
     log_info "=========================================="
