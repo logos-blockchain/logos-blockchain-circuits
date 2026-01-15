@@ -97,7 +97,7 @@ docker run --rm $DOCKER_FLAGS \
 
 log_success "Docker build completed!"
 
-if [[ $SKIP_INSTALL == false ]]; then
+if [[ $SKIP_INSTALL == "1" ]]; then
     log_info "Remember to install the built artifacts if needed."
     exit 0
 fi

@@ -62,7 +62,7 @@ All options are passed directly to `build-local.sh` inside the container.
 |----------|-------------|
 | `DOCKER_BUILD=0` | Skip rebuilding the Docker image |
 | `DOCKER_NOCACHE=1` | Force rebuild Docker image without cache |
-| `SKIP_INSTALL=true` | Install artifacts to `~/.nomos-circuits` after build |
+| `SKIP_INSTALL=1` | Skip installing artifacts to `~/.nomos-circuits` after build |
 
 ### [`Dockerfile`](Dockerfile)
 
