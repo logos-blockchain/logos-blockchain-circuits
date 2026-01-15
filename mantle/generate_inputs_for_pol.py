@@ -228,30 +228,17 @@ t1 = F(p- (int(t1_constant) // total_stake**2))
 
 value = F(total_stake / 100)
 threshold = (t0 + t1 * value) * value
-starting_slot = randrange(max(0,slot_number-2**25+1),slot_number,1)
 
-slot_secret = F(randrange(0,p,1))
-slot_secret_indexes = format(int(slot_number - starting_slot),'025b')
-
+sk = F(randrange(0,p,1))
 tx_hash = F(randrange(0,p,1))
 output_number = F(randrange(0,50,1))
+pk = Compression([F(4605003),sk])
 
-
-slot_secret_path = [F(randrange(0,p,1)) for i in range(25)]
-secret_root = slot_secret
-for i in range(25):
-    if int(slot_secret_indexes[24-i]) == 0:
-        secret_root = Compression([secret_root,slot_secret_path[i]])
-    else:
-        secret_root = Compression([slot_secret_path[i],secret_root])
-sk = poseidon2_hash([F(256174383281726064679014503048630094),starting_slot,secret_root])
-pk = Compression([F(1296193216988918402894),sk])
-
-note_id = poseidon2_hash([F(65580641562429851895355409762135920462),tx_hash,output_number,value,pk])
+note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
 ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
 while(ticket > threshold):
     output_number += 1
-    note_id = poseidon2_hash([F(65580641562429851895355409762135920462),tx_hash,output_number,value,pk])
+    note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
     ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
  
 aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
@@ -284,10 +271,9 @@ inp = {
   "epoch_nonce":                str(epoch_nonce),
   "t0":                         str(t0),
   "t1":                         str(t1),
-  "slot_secret":                str(slot_secret),
+  "secret_key":                 str(sk),
   "P_lead_part_one":            str(F(123456)),
   "P_lead_part_two":            str(F(654321)),
-  "slot_secret_path":           [str(x) for x in slot_secret_path],
   "noteid_aged_path":           [str(x) for x in aged_nodes],
   "noteid_aged_selectors":      [str(x) for x in aged_selectors],
   "ledger_aged":                str(aged_root),
@@ -296,7 +282,6 @@ inp = {
   "noteid_latest_path":         [str(x) for x in unspent_nodes],
   "noteid_latest_selectors":    [str(x) for x in unspent_selectors],
   "ledger_latest":              str(latest_root),
-  "starting_slot":              str(starting_slot),
   "v":                          str(value)
 }
 

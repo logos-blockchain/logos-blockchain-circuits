@@ -2,7 +2,7 @@
 pragma circom 2.1.9;
 
 include "../hash_bn/poseidon2_hash.circom";
-include "../misc/constants.circom";         // defines NOMOS_KDF, SELECTION_RANDOMNESS, PROOF_NULLIFIER
+include "../misc/constants.circom";         // defines KDF, SELECTION_RANDOMNESS, PROOF_NULLIFIER
 include "../misc/comparator.circom";        
 include "../circomlib/circuits/bitify.circom";
 include "../mantle/pol_lib.circom";      // defines proof_of_leadership
@@ -48,15 +48,13 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     signal input pol_epoch_nonce;
     signal input pol_t0;
     signal input pol_t1;
-    signal input pol_slot_secret;
-    signal input pol_slot_secret_path[nLevelsPol];
 
     signal input pol_noteid_path[32];
     signal input pol_noteid_path_selectors[32];
+    signal input pol_secret_key;
     signal input pol_note_tx_hash;
     signal input pol_note_output_number;
 
-    signal input pol_sk_starting_slot;
     signal input pol_note_value;
 
 
@@ -96,10 +94,6 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     would_win.epoch_nonce         <== pol_epoch_nonce;
     would_win.t0                  <== pol_t0;
     would_win.t1                  <== pol_t1;
-    would_win.slot_secret         <== pol_slot_secret;
-    for (var i = 0; i < nLevelsPol; i++) {
-        would_win.slot_secret_path[i] <== pol_slot_secret_path[i];
-    }
     for (var i = 0; i < 32; i++) {
         would_win.aged_nodes[i]      <== pol_noteid_path[i];
         would_win.aged_selectors[i]  <== pol_noteid_path_selectors[i];
@@ -107,7 +101,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     would_win.aged_root      <== pol_ledger_aged;
     would_win.transaction_hash <== pol_note_tx_hash;
     would_win.output_number    <== pol_note_output_number;
-    would_win.starting_slot  <== pol_sk_starting_slot;
+    would_win.secret_key     <== pol_secret_key;
     would_win.value          <== pol_note_value;
 
     // Enforce the selected role is correct
