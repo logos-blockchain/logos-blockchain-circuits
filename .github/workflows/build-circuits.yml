@@ -326,7 +326,7 @@ jobs:
 
       - name: Create Unified Release Bundle
         env:
-          BUNDLE_NAME: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
@@ -374,8 +374,8 @@ jobs:
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
-          name: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-windows:
     name: Build Windows Binaries (Native)
@@ -605,7 +605,7 @@ jobs:
       - name: Create Unified Release Bundle
         shell: msys2 {0}
         env:
-          BUNDLE_NAME: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
@@ -645,8 +645,8 @@ jobs:
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
-          name: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-macos:
     name: Build MacOS Binaries (Native)
@@ -831,7 +831,7 @@ jobs:
 
       - name: Create Unified Release Bundle
         env:
-          BUNDLE_NAME: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
@@ -879,8 +879,8 @@ jobs:
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
-          name: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: nomos-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   publish-release:
     name: Create Release
@@ -943,7 +943,7 @@ jobs:
             arch: x86_64
     env:
       UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
-      ARTIFACT_NAME: nomos-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
+      ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
     steps:
       - name: Download Unified Bundle
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
