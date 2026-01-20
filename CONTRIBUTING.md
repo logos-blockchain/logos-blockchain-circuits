@@ -1,6 +1,6 @@
 # Contributor's Guide
 
-## Triggering a New Release for Nomos Circuits
+## Triggering a New Release for Logos Blockchain Circuits
 
 To trigger a release build:
 
@@ -18,14 +18,14 @@ Each release includes a single unified bundle per platform:
 
 For each supported platform (Linux x86_64, macOS aarch64, Windows x86_64):
 
-- **`nomos-circuits-{version}-{os}-{arch}.tar.gz`**
+- **`logos-blockchain-circuits-{version}-{os}-{arch}.tar.gz`**
 
   A complete bundle containing all components needed to generate and verify proofs for all circuits.
 
 **Bundle Structure:**
 
 ```
-nomos-circuits-{version}-{os}-{arch}/
+logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── VERSION
 ├── prover[.exe]
 ├── verifier[.exe]
@@ -87,5 +87,5 @@ Once everything looks good:
    - Uncheck **“This is a pre-release.”**  
    - Publish the release (removing the Draft state).
 
-> ⚡ **Important:** Nomos builds will only pick up the new circuits once the release is published as **Latest** (i.e. not marked as draft or pre-release).
+> ⚡ **Important:** Logos Blockchain builds will only pick up the new circuits once the release is published as **Latest** (i.e. not marked as draft or pre-release).
 
