@@ -378,14 +378,14 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-linux-arm64:
-    name: Build Linux ARM64 Binaries (Cross-compile for RPI5)
-    runs-on: ubuntu-latest
+    name: Build Linux ARM64 Binaries (Native for RPI5)
+    runs-on: ubuntu-22.04-arm
     needs:
       - setup
       - generate-proving-keys
     env:
       VERSION: ${{ needs.setup.outputs.version }}
-      OS: linux_aarch64
+      OS: linux
       ARCH: aarch64
     steps:
       - name: Install Rust Toolchain
@@ -415,11 +415,8 @@ jobs:
       - name: Install Dependencies [Prover]
         run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
 
-      - name: Install Dependencies [Cross-compilation]
-        run: sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
       - name: Install Dependencies [Witness Generator]
-        run: sudo apt install nlohmann-json3-dev
+        run: sudo apt install -y nlohmann-json3-dev
 
       - name: Replace Prover Makefile
         run: cp .github/resources/prover/Makefile rapidsnark/Makefile
@@ -442,8 +439,10 @@ jobs:
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
         run: |
-          ./build_gmp.sh aarch64
-          make host_linux_aarch64_static
+          ./build_gmp.sh host
+          # Create symlink for TARGET_PLATFORM=aarch64 to find GMP
+          ln -s package depends/gmp/package_aarch64
+          make host_linux_arm64_static
 
       - name: Bundle Rapidsnark Prover
         env:
@@ -1179,7 +1178,7 @@ jobs:
         platform:
           - os: linux
             arch: x86_64
-          - os: linux_aarch64
+          - os: linux
             arch: aarch64
           - os: macos
             arch: aarch64

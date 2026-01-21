@@ -13,20 +13,11 @@ OBJS            := $(SRCS:.cpp=.o)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp
 BIN             := $(PROJECT)
 
-# ---- Linux x86_64 ----
+# ---- Linux (x86_64 and aarch64) ----
 linux: CXXFLAGS=$(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
 linux: $(BIN)
-
-# ---- Linux aarch64 (cross-compile) ----
-# Uses GMP built in rapidsnark/depends/gmp/package_aarch64
-# Path is relative from circuit_cpp directory (e.g., mantle/pol_cpp/)
-linux_aarch64: CXX=aarch64-linux-gnu-g++
-linux_aarch64: CXXFLAGS=$(CXXFLAGS_COMMON) -I../../rapidsnark/depends/gmp/package_aarch64/include
-linux_aarch64: LDFLAGS=-static -L../../rapidsnark/depends/gmp/package_aarch64/lib
-linux_aarch64: LDLIBS=-lgmp
-linux_aarch64: $(BIN)
 
 # ---- macOS ----
 macos: CXXFLAGS=$(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp
