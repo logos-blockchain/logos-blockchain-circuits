@@ -26,6 +26,7 @@ host_linux_x86_64_static:
 host_linux_aarch64_static:
 	rm -rf build_prover && mkdir build_prover && cd build_prover && \
 	cmake .. \
+	    -DTARGET_PLATFORM=aarch64 \
 	    -DCMAKE_BUILD_TYPE=Release \
 	    -DCMAKE_INSTALL_PREFIX=../package \
 	    -DCMAKE_SYSTEM_NAME=Linux \
@@ -33,8 +34,7 @@ host_linux_aarch64_static:
 	    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
 	    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
 	    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libstdc++ -static-libgcc -no-pie" \
-	    -DUSE_ASM=OFF \
-	    -DGMP_PREFIX=depends/gmp/package_aarch64 && \
+	    -DUSE_ASM=OFF && \
 	make -j$(nproc) -vvv && make install
 
 host_windows_x86_64_static:
