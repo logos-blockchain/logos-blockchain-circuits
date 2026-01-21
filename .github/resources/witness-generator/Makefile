@@ -13,7 +13,7 @@ OBJS            := $(SRCS:.cpp=.o)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp
 BIN             := $(PROJECT)
 
-# ---- Linux ----
+# ---- Linux (x86_64 and aarch64) ----
 linux: CXXFLAGS=$(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
