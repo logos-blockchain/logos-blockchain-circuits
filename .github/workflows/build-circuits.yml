@@ -377,6 +377,247 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+  build-linux-arm64:
+    name: Build Linux ARM64 Binaries (Cross-compile for RPI5)
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - generate-proving-keys
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux_aarch64
+      ARCH: aarch64
+    steps:
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
+        with:
+          toolchain: stable
+          cache: false
+
+      - name: Install Circom
+        run: |
+          git clone https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo build --release
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
+
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
+      - name: Setup Dependencies
+        working-directory: rapidsnark
+        run: sudo apt update -y
+
+      - name: Install Dependencies [Prover]
+        run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+
+      - name: Install Dependencies [Cross-compilation]
+        run: sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libgmp-dev:arm64 || sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Install Dependencies [Witness Generator]
+        run: sudo apt install nlohmann-json3-dev
+
+      - name: Replace Prover Makefile
+        run: cp .github/resources/prover/Makefile rapidsnark/Makefile
+
+      - name: Cache GMP Archive
+        id: cache-gmp
+        uses: actions/cache@v4
+        with:
+          path: rapidsnark/depends/gmp-6.2.1.tar.xz
+          key: gmp-6.2.1
+
+      - name: Download GMP Archive
+        if: steps.cache-gmp.outputs.cache-hit != 'true'
+        working-directory: rapidsnark/depends
+        run: |
+          echo "Downloading GMP archive..."
+          curl -L -o gmp-6.2.1.tar.xz https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz
+          echo "Download complete."
+
+      - name: Compile Prover and Verifier
+        working-directory: rapidsnark
+        run: |
+          ./build_gmp.sh aarch64
+          make host_linux_aarch64_static
+
+      - name: Bundle Rapidsnark Prover
+        env:
+          BINARY_NAME: prover
+          BUNDLE_NAME: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_DIR: rapidsnark/package
+        run: |
+          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
+          mkdir -p "$BUNDLE_DIR"
+
+          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
+
+          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
+
+      - name: Bundle Rapidsnark Verifier
+        env:
+          BINARY_NAME: verifier
+          BUNDLE_NAME: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_DIR: rapidsnark/package
+        run: |
+          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
+          mkdir -p "$BUNDLE_DIR"
+
+          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
+
+          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
+
+      - name: Upload Rapidsnark Prover
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+      - name: Upload Rapidsnark Verifier
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+      - name: Compile PoL Witness Generator
+        uses: ./.github/actions/compile-witness-generator
+        with:
+          circuit-name-display: "PoL"
+          circuit-name-binary: "pol"
+          circuit-path: "mantle/pol.circom"
+          version: ${{ env.VERSION }}
+          os: ${{ env.OS }}
+          arch: ${{ env.ARCH }}
+
+      - name: Compile PoQ Witness Generator
+        uses: ./.github/actions/compile-witness-generator
+        with:
+          circuit-name-display: "PoQ"
+          circuit-name-binary: "poq"
+          circuit-path: "blend/poq.circom"
+          version: ${{ env.VERSION }}
+          os: ${{ env.OS }}
+          arch: ${{ env.ARCH }}
+
+      - name: Compile ZKSign Witness Generator
+        uses: ./.github/actions/compile-witness-generator
+        with:
+          circuit-name-display: "ZKSign"
+          circuit-name-binary: "zksign"
+          circuit-path: "mantle/signature.circom"
+          version: ${{ env.VERSION }}
+          os: ${{ env.OS }}
+          arch: ${{ env.ARCH }}
+
+      - name: Compile PoC Witness Generator
+        uses: ./.github/actions/compile-witness-generator
+        with:
+          circuit-name-display: "PoC"
+          circuit-name-binary: "poc"
+          circuit-path: "mantle/poc.circom"
+          version: ${{ env.VERSION }}
+          os: ${{ env.OS }}
+          arch: ${{ env.ARCH }}
+
+      - name: Download PoL Witness Generator
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/pol-artifact
+
+      - name: Download PoQ Witness Generator
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/poq-artifact
+
+      - name: Download ZKSign Witness Generator
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/zksign-artifact
+
+      - name: Download PoC Witness Generator
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/poc-artifact
+
+      - name: Download All Proving Key Artifacts
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          pattern: "*-proving-key"
+          path: proving-keys/
+
+      - name: Download Prover Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: prover-artifact/
+
+      - name: Download Verifier Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: verifier-artifact/
+
+      - name: Create Unified Release Bundle
+        env:
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: |
+          # Create the bundle directory structure
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+
+          # Create VERSION file
+          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+
+          # Extract and add prover and verifier binaries
+          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
+          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
+          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
+          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
+          chmod +x "${BUNDLE_NAME}/prover"
+          chmod +x "${BUNDLE_NAME}/verifier"
+
+          # Move witness generators into their respective circuit directories
+          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
+          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
+          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
+          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
+          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
+
+          # Restore execute permissions on witness generators
+          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
+          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
+          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
+          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+
+          # Copy proving keys and verification keys into each circuit directory
+          cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
+          cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
+          cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
+          cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
+          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
+          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
+          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+
+          # Create tarball
+          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
+
+      - name: Upload Unified Release Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
   build-windows:
     name: Build Windows Binaries (Native)
     runs-on: windows-latest
@@ -891,6 +1132,7 @@ jobs:
       - setup
       - generate-proving-keys
       - build-linux
+      - build-linux-arm64
       - build-windows
       - build-macos
     env:
@@ -937,6 +1179,8 @@ jobs:
         platform:
           - os: linux
             arch: x86_64
+          - os: linux_aarch64
+            arch: aarch64
           - os: macos
             arch: aarch64
           - os: windows

@@ -13,11 +13,18 @@ OBJS            := $(SRCS:.cpp=.o)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp
 BIN             := $(PROJECT)
 
-# ---- Linux ----
+# ---- Linux x86_64 ----
 linux: CXXFLAGS=$(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
 linux: $(BIN)
+
+# ---- Linux aarch64 (cross-compile) ----
+linux_aarch64: CXX=aarch64-linux-gnu-g++
+linux_aarch64: CXXFLAGS=$(CXXFLAGS_COMMON)
+linux_aarch64: LDFLAGS=-static
+linux_aarch64: LDLIBS=-lgmp
+linux_aarch64: $(BIN)
 
 # ---- macOS ----
 macos: CXXFLAGS=$(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp
