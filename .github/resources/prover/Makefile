@@ -23,7 +23,7 @@ host_linux_x86_64_static:
 	    -DCMAKE_PREFIX_PATH=depends/gmp/package && \
 	make -j$(nproc) -vvv && make install
 
-host_linux_arm64_static:
+host_linux_aarch64_static:
 	rm -rf build_prover && mkdir build_prover && cd build_prover && \
 	cmake .. \
 	    -DTARGET_PLATFORM=aarch64 \

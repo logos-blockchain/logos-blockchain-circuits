@@ -377,8 +377,8 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
-  build-linux-arm64:
-    name: Build Linux ARM64 Binaries (Native for RPI5)
+  build-linux-aarch64:
+    name: Build Linux aarch64 Binaries (Native for RPI5)
     runs-on: ubuntu-22.04-arm
     needs:
       - setup
@@ -442,7 +442,7 @@ jobs:
           ./build_gmp.sh host
           # Create symlink for TARGET_PLATFORM=aarch64 to find GMP
           ln -s package depends/gmp/package_aarch64
-          make host_linux_arm64_static
+          make host_linux_aarch64_static
 
       - name: Bundle Rapidsnark Prover
         env:
@@ -1131,7 +1131,7 @@ jobs:
       - setup
       - generate-proving-keys
       - build-linux
-      - build-linux-arm64
+      - build-linux-aarch64
       - build-windows
       - build-macos
     env:
