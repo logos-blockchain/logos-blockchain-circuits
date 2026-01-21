@@ -34,7 +34,7 @@ host_linux_aarch64_static:
 	    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
 	    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libstdc++ -static-libgcc -no-pie" \
 	    -DUSE_ASM=OFF \
-	    -DCMAKE_PREFIX_PATH=depends/gmp/package_aarch64 && \
+	    -DGMP_PREFIX=depends/gmp/package_aarch64 && \
 	make -j$(nproc) -vvv && make install
 
 host_windows_x86_64_static:

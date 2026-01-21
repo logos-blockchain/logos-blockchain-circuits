@@ -416,7 +416,7 @@ jobs:
         run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
 
       - name: Install Dependencies [Cross-compilation]
-        run: sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libgmp-dev:arm64 || sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+        run: sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install nlohmann-json3-dev
