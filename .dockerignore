@@ -1,0 +1,37 @@
+# Docker build context ignore file
+# Exclude files that don't need to be in the Docker build context
+
+# Build artifacts
+nomos-circuits-*/
+prover-*/
+verifier-*/
+witness-generators/
+proving-keys/
+*.tar.gz
+
+# Powers of Tau file (large, will be downloaded inside if needed)
+*.ptau
+
+# Circom build (will be done inside container)
+circom/
+
+# Generated circuit files
+*_cpp/
+*.r1cs
+*.zkey
+*_verification_key.json
+
+# Git
+.git/
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cache
+.docker-cache/
+__pycache__/
+*.pyc
