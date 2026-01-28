@@ -12,18 +12,16 @@
 
       systems = [
         "x86_64-linux"
+        "aarch64-linux"
         "aarch64-darwin"
         "x86_64-windows"
       ];
+
       forAll = lib.genAttrs systems;
 
-      circuitsVersion = "0.3.2";
-
-      circuitsHashes = {
-        x86_64-linux = "sha256-80+GrB3kBhwLHvNemme5Vig6tPDRRZC7xHps0DNonzM=";
-        aarch64-darwin = "sha256-FbLgrHaa8djFEaA69WpZMB3uozkLT/abQiCWKrkzcsk=";
-        x86_64-windows = "sha256-VOBUXlXNHTY0l91G+B1vybDfES0Y0HXhUytJIfFEiBA=";
-      };
+      circuitsVersion = "0.4.1";
+      versions = import ./versions.nix;
+      circuitsHashes = versions.${circuitsVersion};
 
       githubBase = "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download";
 
@@ -49,6 +47,12 @@
               "aarch64"
             else
               throw "Unsupported architecture.";
+
+          sha256 =
+            if circuitsHashes ? ${system} then
+              circuitsHashes.${system}
+            else
+              throw "logos-blockchain-circuits ${circuitsVersion} does not support ${system}.";
         in
         pkgs.stdenv.mkDerivation {
           pname = "logos-blockchain-circuits";
@@ -59,7 +63,7 @@
             url =
               "${githubBase}/v${circuitsVersion}"
               + "/logos-blockchain-circuits-v${circuitsVersion}-${os}-${arch}.tar.gz";
-            sha256 = circuitsHashes.${system};
+            inherit sha256;
           };
 
           installPhase = ''
@@ -69,6 +73,10 @@
 
           meta = {
             platforms = [ system ];
+          };
+
+          passthru = {
+            version = circuitsVersion;
           };
         };
     in
