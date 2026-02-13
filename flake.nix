@@ -19,7 +19,7 @@
 
       forAll = lib.genAttrs systems;
 
-      circuitsVersion = "0.3.2";  # TODO: Parametrize or make package per version available
+      circuitsVersion = "0.4.1";  # TODO: Parametrize or make package per version available
       versions = import ./versions.nix;
       circuitsHashes = versions.${circuitsVersion};
 

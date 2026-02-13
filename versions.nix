@@ -1,6 +1,6 @@
 {
   "0.3.2" = {
-    x86_64-linux = "sha256-80+GrB3kBhwLHvNemme5Vig6tPDRRZC7xHps0DNonzM=";
+    x86_64-linux   = "sha256-80+GrB3kBhwLHvNemme5Vig6tPDRRZC7xHps0DNonzM=";
     aarch64-darwin = "sha256-FbLgrHaa8djFEaA69WpZMB3uozkLT/abQiCWKrkzcsk=";
     x86_64-windows = "sha256-VOBUXlXNHTY0l91G+B1vybDfES0Y0HXhUytJIfFEiBA=";
   };

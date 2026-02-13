@@ -1159,6 +1159,7 @@ jobs:
             - [ ] Description is complete
             - [ ] Changelog is correct
             - [ ] Assets for all platforms exist
+            - [ ] `flake.nix`'s `circuitsVersion` points to the latest version 
             - [ ] Pre-release is checked if necessary
             - [ ] Remove this checklist before publishing the release.
           draft: true
