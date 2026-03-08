@@ -919,6 +919,9 @@ jobs:
       - name: Initialise Submodules
         run: git submodule update --init --recursive
 
+      - name: Replace Prover Makefile
+        run: cp .github/resources/prover/Makefile rapidsnark/Makefile
+
       - name: Setup Dependencies
         run: mkdir include
 
