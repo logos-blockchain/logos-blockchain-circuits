@@ -44,6 +44,17 @@ host_windows_x86_64_static:
     	-DCMAKE_CXX_FLAGS="-I/include -include mman_patch.hpp -include cstdint -Duint=unsigned\ int -Du_int32_t=uint32_t -Du_int64_t=uint64_t" && \
 	make -j$(nproc) -vvv && make install
 
+host_windows_x86_64_static_lib:
+	rm -rf build_lib_windows && mkdir build_lib_windows && cd build_lib_windows && \
+	cmake .. \
+		-DUSE_ASM=OFF \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=../package_lib_windows \
+		-DCMAKE_CXX_FLAGS="-I/include -include mman_patch.hpp -include cstdint -Duint=unsigned\ int -Du_int32_t=uint32_t -Du_int64_t=uint64_t" \
+		-DBUILD_TESTS=OFF && \
+	make -j$(nproc) rapidsnarkStatic rapidsnarkStaticFrFq fr fq && \
+	make install
+
 host_noasm:
 	rm -rf build_prover_noasm && mkdir build_prover_noasm && cd build_prover_noasm && \
 		cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package_noasm -DUSE_ASM=NO && \
@@ -98,11 +109,60 @@ macos_arm64:
 		cmake .. -DTARGET_PLATFORM=macos_arm64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package_macos_arm64 && \
 		make -j$(nproc) -vvv && make install
 
+macos_arm64_lib:
+	@if [ ! -d "./depends/gmp/package_macos_arm64" ]; then echo "Looks like gmp lib is not built. Run './build_gmp.sh macos_arm64' first." && exit 1; fi
+	rm -rf build_lib_macos_arm64 && mkdir build_lib_macos_arm64 && cd build_lib_macos_arm64 && \
+		cmake .. \
+		    -DTARGET_PLATFORM=macos_arm64 \
+		    -DCMAKE_BUILD_TYPE=Release \
+		    -DCMAKE_INSTALL_PREFIX=../package_lib_macos_arm64 \
+		    -DBUILD_TESTS=OFF \
+		    -DUSE_OPENMP=OFF && \
+		make -j$(nproc) rapidsnarkStatic rapidsnarkStaticFrFq fr fq && \
+		make install
+
+host_linux_x86_64_static_lib:
+	rm -rf build_lib && mkdir build_lib && cd build_lib && \
+	cmake .. \
+	    -DCMAKE_BUILD_TYPE=Release \
+	    -DCMAKE_INSTALL_PREFIX=../package_lib \
+	    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libstdc++ -static-libgcc -no-pie" \
+	    -DOpenMP_gomp_LIBRARY=$(LIBGOMP_A) \
+	    -DCMAKE_PREFIX_PATH=depends/gmp/package \
+	    -DBUILD_TESTS=OFF && \
+	make -j$(nproc) rapidsnarkStatic rapidsnarkStaticFrFq fr fq && \
+	make install
+
+host_linux_aarch64_static_lib:
+	rm -rf build_lib && mkdir build_lib && cd build_lib && \
+	cmake .. \
+	    -DTARGET_PLATFORM=aarch64 \
+	    -DCMAKE_BUILD_TYPE=Release \
+	    -DCMAKE_INSTALL_PREFIX=../package_lib \
+	    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libstdc++ -static-libgcc -no-pie" \
+	    -DOpenMP_gomp_LIBRARY=$(LIBGOMP_A) \
+	    -DCMAKE_PREFIX_PATH=depends/gmp/package \
+	    -DBUILD_TESTS=OFF && \
+	make -j$(nproc) rapidsnarkStatic rapidsnarkStaticFrFq fr fq && \
+	make install
+
 macos_x86_64:
 	@if [ ! -d "./depends/gmp/package_macos_x86_64" ]; then echo "Looks like gmp lib is not built. Run './build_gmp.sh macos_x86_64' first." && exit 1; fi
 	rm -rf build_prover_macos_x86_64 && mkdir build_prover_macos_x86_64 && cd build_prover_macos_x86_64 && \
 		cmake .. -DTARGET_PLATFORM=macos_x86_64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../package_macos_x86_64 && \
 		make -j$(nproc) -vvv && make install
+
+macos_x86_64_lib:
+	@if [ ! -d "./depends/gmp/package_macos_x86_64" ]; then echo "Looks like gmp lib is not built. Run './build_gmp.sh macos_x86_64' first." && exit 1; fi
+	rm -rf build_lib_macos_x86_64 && mkdir build_lib_macos_x86_64 && cd build_lib_macos_x86_64 && \
+		cmake .. \
+		    -DTARGET_PLATFORM=macos_x86_64 \
+		    -DCMAKE_BUILD_TYPE=Release \
+		    -DCMAKE_INSTALL_PREFIX=../package_lib_macos_x86_64 \
+		    -DBUILD_TESTS=OFF \
+		    -DUSE_OPENMP=OFF && \
+		make -j$(nproc) rapidsnarkStatic rapidsnarkStaticFrFq fr fq && \
+		make install
 
 clean:
 	rm -rf build_prover \
@@ -112,6 +172,10 @@ clean:
 		build_prover_android_x86_64 \
 		build_prover_ios \
 		build_prover_ios_simulator \
+		build_lib \
+		build_lib_macos_arm64 \
+		build_lib_macos_x86_64 \
+		build_lib_windows \
 		package \
 		package_macos_arm64 \
 		package_macos_x86_64 \
@@ -119,6 +183,10 @@ clean:
 		package_android_x86_64 \
 		package_ios \
 		package_ios_simulator \
+		package_lib \
+		package_lib_macos_arm64 \
+		package_lib_macos_x86_64 \
+		package_lib_windows \
 		depends/gmp/package \
 		depends/gmp/package_macos_arm64 \
 		depends/gmp/package_macos_x86_64 \

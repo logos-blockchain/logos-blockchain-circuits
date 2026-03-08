@@ -27,6 +27,10 @@ inputs:
   arch:
     description: "The target architecture for the bundle (x86_64, aarch64)."
     required: true
+  build-lib:
+    description: "Whether to also build a static library (.a) in addition to the executable."
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -45,7 +49,7 @@ runs:
         CIRCUIT_FILENAME="$(basename ${CIRCUIT_PATH})"
         CIRCUIT_FILESTEM="${CIRCUIT_FILENAME%.circom}"
         CIRCUIT_CPP_DIRNAME="${CIRCUIT_FILESTEM}_cpp"
-        
+
         compiled_binary_name="${CIRCUIT_FILESTEM}"
         if [ "${OS}" = "windows" ]; then
           compiled_binary_name="${compiled_binary_name}.exe"
@@ -105,6 +109,24 @@ runs:
         OS: ${{ inputs.os }}
       run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}"
 
+    - name: Build ${{ inputs.circuit-name-display }} Static Library
+      if: ${{ inputs.build-lib == 'true' && inputs.os != 'windows' }}
+      shell: bash
+      working-directory: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+      env:
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
+        OS: ${{ inputs.os }}
+      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
+
+    - name: Build ${{ inputs.circuit-name-display }} Static Library
+      if: ${{ inputs.build-lib == 'true' && inputs.os == 'windows' }}
+      shell: msys2 {0}
+      working-directory: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+      env:
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
+        OS: ${{ inputs.os }}
+      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
+
     - name: Upload ${{ inputs.circuit-name-display }}
       uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
       with:
@@ -112,3 +134,14 @@ runs:
         path: |
           ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/${{ steps.parse-circuit-path.outputs.COMPILED_BINARY_NAME }}
           ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}.dat
+
+    - name: Upload ${{ inputs.circuit-name-display }} Static Library
+      if: ${{ inputs.build-lib == 'true' }}
+      uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+      with:
+        name: ${{ inputs.circuit-name-binary }}-lib-${{ inputs.version }}-${{ inputs.os }}-${{ inputs.arch }}
+        path: |
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/lib${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}.a
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/circom.hpp
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/calcwit.hpp
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/fr.hpp

@@ -204,6 +204,10 @@ jobs:
           ./build_gmp.sh host
           make host_linux_x86_64_static
 
+      - name: Build Rapidsnark Static Libraries
+        working-directory: rapidsnark
+        run: make host_linux_x86_64_static_lib
+
       - name: Bundle Rapidsnark Prover
         env:
           BINARY_NAME: prover
@@ -251,6 +255,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoQ Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -261,6 +266,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile ZKSign Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -271,6 +277,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoC Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -281,6 +288,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Download PoL Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -305,6 +313,30 @@ jobs:
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
+
+      - name: Download PoL Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: pol-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/pol-lib
+
+      - name: Download PoQ Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poq-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poq-lib
+
+      - name: Download ZKSign Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: zksign-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/zksign-lib
+
+      - name: Download PoC Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poc-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poc-lib
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -376,6 +408,45 @@ jobs:
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+      - name: Create Dev Library Bundle
+        env:
+          LIB_BUNDLE_NAME: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_LIB_DIR: rapidsnark/package_lib/lib
+          RAPIDSNARK_INC_DIR: rapidsnark/package_lib/include
+        run: |
+          mkdir -p "${LIB_BUNDLE_NAME}/lib" "${LIB_BUNDLE_NAME}/include/rapidsnark" "${LIB_BUNDLE_NAME}/include/witness"
+
+          # RapidSnark static libraries
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark.a    "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark-fr-fq.a "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfr.a            "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfq.a            "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libgmp.a           "${LIB_BUNDLE_NAME}/lib/"
+
+          # RapidSnark headers
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.h   "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.hpp "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+
+          # Witness generator static libraries
+          cp witness-generator-libs/pol-lib/libpol.a       "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poq-lib/libpoq.a       "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/zksign-lib/libsignature.a "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poc-lib/libpoc.a       "${LIB_BUNDLE_NAME}/lib/"
+
+          # Witness generator headers (shared across circuits — take from pol-lib)
+          cp witness-generator-libs/pol-lib/circom.hpp  "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/calcwit.hpp "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/fr.hpp      "${LIB_BUNDLE_NAME}/include/witness/"
+
+          echo "${{ env.VERSION }}" > "${LIB_BUNDLE_NAME}/VERSION"
+          tar -czf "${LIB_BUNDLE_NAME}.tar.gz" "${LIB_BUNDLE_NAME}"
+
+      - name: Upload Dev Library Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-linux-aarch64:
     name: Build Linux aarch64 Binaries (Native for RPI5)
@@ -444,6 +515,10 @@ jobs:
           ln -s package depends/gmp/package_aarch64
           make host_linux_aarch64_static
 
+      - name: Build Rapidsnark Static Libraries
+        working-directory: rapidsnark
+        run: make host_linux_aarch64_static_lib
+
       - name: Bundle Rapidsnark Prover
         env:
           BINARY_NAME: prover
@@ -491,6 +566,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoQ Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -501,6 +577,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile ZKSign Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -511,6 +588,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoC Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -521,6 +599,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Download PoL Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -545,6 +624,30 @@ jobs:
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
+
+      - name: Download PoL Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: pol-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/pol-lib
+
+      - name: Download PoQ Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poq-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poq-lib
+
+      - name: Download ZKSign Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: zksign-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/zksign-lib
+
+      - name: Download PoC Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poc-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poc-lib
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -616,6 +719,41 @@ jobs:
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+      - name: Create Dev Library Bundle
+        env:
+          LIB_BUNDLE_NAME: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_LIB_DIR: rapidsnark/package_lib/lib
+          RAPIDSNARK_INC_DIR: rapidsnark/package_lib/include
+        run: |
+          mkdir -p "${LIB_BUNDLE_NAME}/lib" "${LIB_BUNDLE_NAME}/include/rapidsnark" "${LIB_BUNDLE_NAME}/include/witness"
+
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark.a       "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark-fr-fq.a "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfr.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfq.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libgmp.a              "${LIB_BUNDLE_NAME}/lib/"
+
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.h   "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.hpp "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+
+          cp witness-generator-libs/pol-lib/libpol.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poq-lib/libpoq.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/zksign-lib/libsignature.a "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poc-lib/libpoc.a          "${LIB_BUNDLE_NAME}/lib/"
+
+          cp witness-generator-libs/pol-lib/circom.hpp  "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/calcwit.hpp "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/fr.hpp      "${LIB_BUNDLE_NAME}/include/witness/"
+
+          echo "${{ env.VERSION }}" > "${LIB_BUNDLE_NAME}/VERSION"
+          tar -czf "${LIB_BUNDLE_NAME}.tar.gz" "${LIB_BUNDLE_NAME}"
+
+      - name: Upload Dev Library Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-windows:
     name: Build Windows Binaries (Native)
@@ -720,6 +858,11 @@ jobs:
           ./build_gmp.sh host
           make host_windows_x86_64_static
 
+      - name: Build Rapidsnark Static Libraries
+        shell: msys2 {0}
+        working-directory: rapidsnark
+        run: make host_windows_x86_64_static_lib
+
       - name: Bundle Rapidsnark Prover
         shell: msys2 {0}
         env:
@@ -769,6 +912,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoQ Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -779,6 +923,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile ZKSign Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -789,6 +934,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoC Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -799,6 +945,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Download PoL Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -823,6 +970,30 @@ jobs:
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
+
+      - name: Download PoL Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: pol-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/pol-lib
+
+      - name: Download PoQ Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poq-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poq-lib
+
+      - name: Download ZKSign Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: zksign-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/zksign-lib
+
+      - name: Download PoC Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poc-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poc-lib
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -888,6 +1059,42 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+      - name: Create Dev Library Bundle
+        shell: msys2 {0}
+        env:
+          LIB_BUNDLE_NAME: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_LIB_DIR: rapidsnark/package_lib_windows/lib
+          RAPIDSNARK_INC_DIR: rapidsnark/package_lib_windows/include
+        run: |
+          mkdir -p "${LIB_BUNDLE_NAME}/lib" "${LIB_BUNDLE_NAME}/include/rapidsnark" "${LIB_BUNDLE_NAME}/include/witness"
+
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark.a       "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark-fr-fq.a "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfr.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfq.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libgmp.a              "${LIB_BUNDLE_NAME}/lib/"
+
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.h   "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.hpp "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+
+          cp witness-generator-libs/pol-lib/libpol.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poq-lib/libpoq.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/zksign-lib/libsignature.a "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poc-lib/libpoc.a          "${LIB_BUNDLE_NAME}/lib/"
+
+          cp witness-generator-libs/pol-lib/circom.hpp  "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/calcwit.hpp "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/fr.hpp      "${LIB_BUNDLE_NAME}/include/witness/"
+
+          echo "${{ env.VERSION }}" > "${LIB_BUNDLE_NAME}/VERSION"
+          tar -czf "${LIB_BUNDLE_NAME}.tar.gz" "${LIB_BUNDLE_NAME}"
+
+      - name: Upload Dev Library Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
   build-macos:
     name: Build MacOS Binaries (Native)
     runs-on: macos-latest
@@ -949,6 +1156,10 @@ jobs:
           ./build_gmp.sh macos_arm64
           make macos_arm64
 
+      - name: Build Rapidsnark Static Libraries
+        working-directory: rapidsnark
+        run: make macos_arm64_lib
+
       - name: Bundle Rapidsnark Prover
         env:
           BINARY_NAME: prover
@@ -996,6 +1207,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoQ Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -1006,6 +1218,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile ZKSign Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -1016,6 +1229,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Compile PoC Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -1026,6 +1240,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          build-lib: "true"
 
       - name: Download PoL Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1050,6 +1265,30 @@ jobs:
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
+
+      - name: Download PoL Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: pol-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/pol-lib
+
+      - name: Download PoQ Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poq-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poq-lib
+
+      - name: Download ZKSign Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: zksign-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/zksign-lib
+
+      - name: Download PoC Library Artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: poc-lib-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generator-libs/poc-lib
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1122,6 +1361,41 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+      - name: Create Dev Library Bundle
+        env:
+          LIB_BUNDLE_NAME: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK_LIB_DIR: rapidsnark/package_lib_macos_arm64/lib
+          RAPIDSNARK_INC_DIR: rapidsnark/package_lib_macos_arm64/include
+        run: |
+          mkdir -p "${LIB_BUNDLE_NAME}/lib" "${LIB_BUNDLE_NAME}/include/rapidsnark" "${LIB_BUNDLE_NAME}/include/witness"
+
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark.a       "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/librapidsnark-fr-fq.a "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfr.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libfq.a               "${LIB_BUNDLE_NAME}/lib/"
+          cp "${RAPIDSNARK_LIB_DIR}"/libgmp.a              "${LIB_BUNDLE_NAME}/lib/"
+
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.h   "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+          cp "${RAPIDSNARK_INC_DIR}"/rapidsnark/*.hpp "${LIB_BUNDLE_NAME}/include/rapidsnark/"
+
+          cp witness-generator-libs/pol-lib/libpol.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poq-lib/libpoq.a          "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/zksign-lib/libsignature.a "${LIB_BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/poc-lib/libpoc.a          "${LIB_BUNDLE_NAME}/lib/"
+
+          cp witness-generator-libs/pol-lib/circom.hpp  "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/calcwit.hpp "${LIB_BUNDLE_NAME}/include/witness/"
+          cp witness-generator-libs/pol-lib/fr.hpp      "${LIB_BUNDLE_NAME}/include/witness/"
+
+          echo "${{ env.VERSION }}" > "${LIB_BUNDLE_NAME}/VERSION"
+          tar -czf "${LIB_BUNDLE_NAME}.tar.gz" "${LIB_BUNDLE_NAME}"
+
+      - name: Upload Dev Library Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-dev-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
   publish-release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -1188,6 +1462,7 @@ jobs:
     env:
       UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
       ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
+      DEV_ARTIFACT_NAME: logos-blockchain-circuits-dev-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
     steps:
       - name: Download Unified Bundle
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1202,4 +1477,18 @@ jobs:
           upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ${{ env.ARTIFACT_NAME }}
           asset_name: ${{ env.ARTIFACT_NAME }}
+
+      - name: Download Dev Library Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: ${{ env.DEV_ARTIFACT_NAME }}
+
+      - name: Upload Dev Library Bundle to Release
+        uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ${{ env.DEV_ARTIFACT_NAME }}
+          asset_name: ${{ env.DEV_ARTIFACT_NAME }}
           asset_content_type: application/octet-stream
