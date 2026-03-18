@@ -115,7 +115,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     // choose core_sk or pol.secret_key:
     selection_randomness.inp[1] <== selector * (would_win.secret_key - core_sk ) + core_sk;
     selection_randomness.inp[2] <== index;
-    selection_randomness.inp[3] <== selector * (would_win.slot - session) + would_win.slot;
+    selection_randomness.inp[3] <== selector * (would_win.slot - session) + session;
 
 
     // Derive key_nullifier
