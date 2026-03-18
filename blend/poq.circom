@@ -90,7 +90,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     // enforce potential PoL (without verification that the note is unspent)
     // (All constraints inside pol ensure LeadershipVerify)
     component would_win = would_win_leadership(nLevelsPol);
-    would_win.slot                <== pol_sl;https://github.com/logos-blockchain/logos-blockchain-circuits
+    would_win.slot                <== pol_sl;
     would_win.epoch_nonce         <== pol_epoch_nonce;
     would_win.t0                  <== pol_t0;
     would_win.t1                  <== pol_t1;
