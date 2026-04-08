@@ -8,6 +8,18 @@ endif
 # ---- Common ----
 CXX             := g++
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member
+UNAME_S         := $(shell uname -s)
+MACOS_OBJCOPY   := /opt/homebrew/opt/llvm/bin/llvm-objcopy
+ifeq ($(UNAME_S),Darwin)
+    # On macOS CI we expect llvm-objcopy from Homebrew LLVM at this exact path.
+    ifeq ($(wildcard $(MACOS_OBJCOPY)),)
+        $(error Missing $(MACOS_OBJCOPY). Install LLVM with Homebrew or update OBJCOPY for this environment.)
+    endif
+    OBJCOPY := $(MACOS_OBJCOPY)
+else
+    # On non-macOS targets we assume objcopy is available on PATH.
+    OBJCOPY := objcopy
+endif
 SRCS            := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
 OBJS            := $(SRCS:.cpp=.o)
 LIB_SRCS        := calcwit.cpp fr.cpp $(PROJECT).cpp
@@ -49,11 +61,10 @@ $(BIN): $(OBJS)
 
 $(LIB): $(LIB_OBJS)
 	ar rcs $@ $^
-	objcopy --prefix-symbols=$(PROJECT)_ $@
+	$(OBJCOPY) --prefix-symbols=$(PROJECT)_ $@
 
 %.o: %.cpp $(DEPS_HPP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(LIB_OBJS) $(BIN) $(LIB)
-
