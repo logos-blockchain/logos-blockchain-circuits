@@ -9,11 +9,11 @@ endif
 CXX             := g++
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member
 UNAME_S         := $(shell uname -s)
-MACOS_OBJCOPY   := /opt/homebrew/opt/llvm/bin/llvm-objcopy
+MACOS_OBJCOPY   := /opt/homebrew/bin/gobjcopy
 ifeq ($(UNAME_S),Darwin)
-    # On macOS CI we expect llvm-objcopy from Homebrew LLVM at this exact path.
+    # On macOS CI we expect GNU objcopy from Homebrew binutils at this exact path.
     ifeq ($(wildcard $(MACOS_OBJCOPY)),)
-        $(error Missing $(MACOS_OBJCOPY). Install LLVM with Homebrew or update OBJCOPY for this environment.)
+        $(error Missing $(MACOS_OBJCOPY). Install binutils with Homebrew or update OBJCOPY for this environment.)
     endif
     OBJCOPY := $(MACOS_OBJCOPY)
 else
