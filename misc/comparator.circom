@@ -52,7 +52,7 @@ template SafeFullLessThan() {
 
     signal intermediate_results[4];
     intermediate_results[0] <== (1 - C.out) * (1-D.out);
-    intermediate_results[1] <== (1 - C.out) * (1-E.out);
+    intermediate_results[1] <== C.out * (1-E.out);
     intermediate_results[2] <== intermediate_results[1] * (1- F.out);
     intermediate_results[3] <== B.out * (intermediate_results[0] + intermediate_results[2]);
 
