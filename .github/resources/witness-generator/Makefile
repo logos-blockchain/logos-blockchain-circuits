@@ -9,7 +9,7 @@ endif
 CXX             := g++
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member
 UNAME_S         := $(shell uname -s)
-MACOS_OBJCOPY   := /opt/homebrew/bin/gobjcopy
+MACOS_OBJCOPY   := /opt/homebrew/opt/binutils/bin/gobjcopy
 ifeq ($(UNAME_S),Darwin)
     # On macOS CI we expect GNU objcopy from Homebrew binutils at this exact path.
     ifeq ($(wildcard $(MACOS_OBJCOPY)),)
