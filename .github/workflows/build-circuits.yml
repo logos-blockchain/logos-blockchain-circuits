@@ -140,7 +140,7 @@ jobs:
             ${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}_verification_key.json
 
   build-linux:
-    name: Build Linux Binaries (Native)
+    name: Build Linux Libraries (Native)
     runs-on: ubuntu-latest
     needs:
       - setup
@@ -342,21 +342,19 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libwitness_pol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libwitness_poq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/zksign-artifact/libwitness_signature.a "${BUNDLE_NAME}/zksign/"
           mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/poc-artifact/libwitness_poc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
@@ -378,7 +376,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-linux-aarch64:
-    name: Build Linux aarch64 Binaries (Native for RPI5)
+    name: Build Linux aarch64 Libraries (Native for RPI5)
     runs-on: ubuntu-22.04-arm
     needs:
       - setup
@@ -582,21 +580,19 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libwitness_pol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libwitness_poq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/zksign-artifact/libwitness_signature.a "${BUNDLE_NAME}/zksign/"
           mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/poc-artifact/libwitness_poc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
@@ -618,7 +614,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-windows:
-    name: Build Windows Binaries (Native)
+    name: Build Windows Libraries (Native)
     runs-on: windows-latest
     needs:
       - setup
@@ -859,15 +855,19 @@ jobs:
           mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover.exe "${BUNDLE_NAME}/prover.exe"
           mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier.exe "${BUNDLE_NAME}/verifier.exe"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol.exe "${BUNDLE_NAME}/pol/witness_generator.exe"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libwitness_pol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq.exe "${BUNDLE_NAME}/poq/witness_generator.exe"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libwitness_poq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature.exe "${BUNDLE_NAME}/zksign/witness_generator.exe"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/zksign-artifact/libwitness_signature.a "${BUNDLE_NAME}/zksign/"
           mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc.exe "${BUNDLE_NAME}/poc/witness_generator.exe"
+          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/poc-artifact/libwitness_poc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
@@ -889,7 +889,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-macos:
-    name: Build MacOS Binaries (Native)
+    name: Build MacOS Libraries (Native)
     runs-on: macos-latest
     needs:
       - setup
@@ -1087,21 +1087,19 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libwitness_pol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libwitness_poq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/zksign-artifact/libwitness_signature.a "${BUNDLE_NAME}/zksign/"
           mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/poc-artifact/libwitness_poc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
