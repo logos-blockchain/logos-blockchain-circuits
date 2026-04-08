@@ -856,16 +856,16 @@ jobs:
           mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier.exe "${BUNDLE_NAME}/verifier.exe"
 
           # Move witness libraries into their respective circuit directories
-          mv witness-generators/pol-artifact/libwitness_pol.a "${BUNDLE_NAME}/pol/"
+          mv witness-generators/pol-artifact/libwitness_pol.lib "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
           cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
-          mv witness-generators/poq-artifact/libwitness_poq.a "${BUNDLE_NAME}/poq/"
+          mv witness-generators/poq-artifact/libwitness_poq.lib "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/zksign-artifact/libwitness_signature.a "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/zksign-artifact/libwitness_signature.lib "${BUNDLE_NAME}/zksign/"
           mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
           cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
-          mv witness-generators/poc-artifact/libwitness_poc.a "${BUNDLE_NAME}/poc/"
+          mv witness-generators/poc-artifact/libwitness_poc.lib "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
           cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 

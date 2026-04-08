@@ -45,6 +45,11 @@ runs:
         CIRCUIT_FILENAME="$(basename ${CIRCUIT_PATH})"
         CIRCUIT_FILESTEM="${CIRCUIT_FILENAME%.circom}"
         CIRCUIT_CPP_DIRNAME="${CIRCUIT_FILESTEM}_cpp"
+        if [ "${OS}" = "windows" ]; then
+          LIB_EXT=".lib"
+        else
+          LIB_EXT=".a"
+        fi
 
         {
           echo "CIRCUIT_DIRECTORY=${CIRCUIT_DIRECTORY}"
@@ -54,7 +59,7 @@ runs:
           echo "CIRCUIT_CPP_PATH=${CIRCUIT_DIRECTORY}/${CIRCUIT_CPP_DIRNAME}"
           echo "WITNESS_GENERATOR_RESOURCES_PATH=${RESOURCES_PATH}/witness-generator"
           echo "BUNDLE_TRIPLET=${BUNDLE_TRIPLET}"
-          echo "LIB_NAME=libwitness_${CIRCUIT_FILESTEM}.a"
+          echo "LIB_NAME=libwitness_${CIRCUIT_FILESTEM}${LIB_EXT}"
         } >> "${GITHUB_OUTPUT}"
 
     - name: Generate ${{ inputs.circuit-name-display }}

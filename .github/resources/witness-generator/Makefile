@@ -26,7 +26,12 @@ LIB_SRCS        := calcwit.cpp fr.cpp $(PROJECT).cpp
 LIB_OBJS        := $(LIB_SRCS:.cpp=.o)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp
 BIN             := $(PROJECT)
-LIB             := libwitness_$(PROJECT).a
+ifeq ($(OS),windows)
+LIB_EXT         := .lib
+else
+LIB_EXT         := .a
+endif
+LIB             := libwitness_$(PROJECT)$(LIB_EXT)
 
 # ---- Linux (x86_64 and aarch64) ----
 linux: CXXFLAGS=$(CXXFLAGS_COMMON)
