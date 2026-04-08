@@ -923,7 +923,7 @@ jobs:
         run: mkdir include
 
       - name: Install Dependencies [Witness Generator]
-        run: brew install nlohmann-json
+        run: brew install nlohmann-json llvm
 
       - name: Install Dependencies [Prover]
         run: brew install nasm m4
