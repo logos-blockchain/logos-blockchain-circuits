@@ -69,6 +69,16 @@ runs:
         CIRCUIT_FILENAME: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILENAME }}
       run: circom --c --r1cs --no_asm --O2 "${CIRCUIT_FILENAME}"
 
+    - name: Copy ${{ inputs.circuit-name-display }} FFI Sources
+      shell: bash
+      env:
+        SOURCES_ROOT: ${{ github.workspace }}/src
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+      run: |
+        cp "${SOURCES_ROOT}/ffi.cpp" "${CIRCUIT_CPP_PATH}/ffi.cpp"
+        cp "${SOURCES_ROOT}/ffi.hpp" "${CIRCUIT_CPP_PATH}/ffi.hpp"
+        cp "${SOURCES_ROOT}/types.hpp" "${CIRCUIT_CPP_PATH}/types.hpp"
+
     # TODO: Instead of replace, make a fork that generates the appropriate Makefile
     - name: Replace ${{ inputs.circuit-name-display }}'s Makefile
       shell: bash
@@ -114,6 +124,8 @@ runs:
         mv "${CIRCUIT_CPP_PATH}/calcwit.hpp" "${CIRCUIT_CPP_PATH}/include/"
         mv "${CIRCUIT_CPP_PATH}/circom.hpp" "${CIRCUIT_CPP_PATH}/include/"
         mv "${CIRCUIT_CPP_PATH}/fr.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/ffi.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/types.hpp" "${CIRCUIT_CPP_PATH}/include/"
 
     - name: Upload ${{ inputs.circuit-name-display }}
       uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8

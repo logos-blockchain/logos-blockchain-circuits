@@ -20,11 +20,13 @@ else
     # On non-macOS targets we assume objcopy is available on PATH.
     OBJCOPY := objcopy
 endif
-SRCS            := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
-OBJS            := $(SRCS:.cpp=.o)
-LIB_SRCS        := calcwit.cpp fr.cpp $(PROJECT).cpp
+COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
+COMMON_OBJS     := $(COMMON_SRCS:.cpp=.o)
+LIB_ONLY_SRCS   := ffi.cpp
+LIB_ONLY_OBJS   := $(LIB_ONLY_SRCS:.cpp=.o)
+LIB_SRCS        := $(COMMON_SRCS) $(LIB_ONLY_SRCS)
 LIB_OBJS        := $(LIB_SRCS:.cpp=.o)
-DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp
+DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp ffi.hpp
 BIN             := $(PROJECT)
 ifeq ($(OS),windows)
 LIB_EXT         := .lib
@@ -61,7 +63,7 @@ windows-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
 # ---- Rules ----
-$(BIN): $(OBJS)
+$(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
@@ -72,4 +74,4 @@ $(LIB): $(LIB_OBJS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(LIB_OBJS) $(BIN) $(LIB)
+	rm -f $(COMMON_OBJS) $(LIB_ONLY_OBJS) $(BIN) $(LIB)
