@@ -21,20 +21,30 @@ extern "C" {
 ///
 /// - `dat`: Path to the .dat file. Must be extensionless.
 /// - `inputs`: Path to the inputs file for the circuit. Must be a JSON file.
-/// - `output`: Path where the output witness file will be written.
-int generate_witness_from_files(const char* dat, const char* inputs, const char* output);
+/// - `output`: Path to the output file where the witness will be written.
+///
+/// # Returns
+///
+/// On success, returns a `Status` with `StatusCode::Ok` and writes the witness to the specified output file.
+/// On failure, returns a `Status` with an appropriate error code.
+status::Status generate_witness_from_files(const char* dat, const char* inputs, const char* output);
 
 /// Generates a witness from in-memory buffers.
 ///
 /// # Parameters
 ///
 /// - `input`: The `WitnessInput` struct containing the circuit information.
-/// - `output`: On success, this will be populated with the generated witness bytes.
-///  The caller is responsible for freeing this buffer.
-int generate_witness(const WitnessInput input, Bytes* output);
+/// - `output`: Pointer to a `Bytes` struct that will be populated with the generated witness bytes.
+///
+/// # Returns
+///
+/// On success, returns a `Status` with `StatusCode::Ok` and populates `output` with the generated witness bytes. The
+/// caller is responsible for freeing the memory allocated for `output.data`.
+/// On failure, returns a `Status` with an appropriate error code, and `output` will not be modified.
+status::Status generate_witness(const WitnessInput* input, Bytes* output);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // FFI_HPP
+#endif
