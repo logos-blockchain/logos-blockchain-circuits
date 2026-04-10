@@ -4,12 +4,12 @@
 #include "types.hpp"
 
 /// Inputs for witness generation.
-struct WitnessInput {
+typedef struct WitnessInput {
     /// Contents of the circuit's .dat file.
     const ConstBytes dat;
     /// Null-terminated JSON string of circuit inputs.
     const char* inputs_json;
-};
+} WitnessInput;
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,9 +25,9 @@ extern "C" {
 ///
 /// # Returns
 ///
-/// On success, returns a `Status` with `StatusCode::Ok` and writes the witness to the specified output file.
+/// On success, returns a `Status` with `StatusCode_Ok` and writes the witness to the specified output file.
 /// On failure, returns a `Status` with an appropriate error code.
-status::Status generate_witness_from_files(const char* dat, const char* inputs, const char* output);
+Status generate_witness_from_files(const char* dat, const char* inputs, const char* output);
 
 /// Generates a witness from in-memory buffers.
 ///
@@ -38,10 +38,12 @@ status::Status generate_witness_from_files(const char* dat, const char* inputs, 
 ///
 /// # Returns
 ///
-/// On success, returns a `Status` with `StatusCode::Ok` and populates `output` with the generated witness bytes. The
-/// caller is responsible for freeing the memory allocated for `output.data`.
+/// On success, returns a `Status` with `StatusCode_Ok` and populates `output` with the generated witness bytes. The
+/// caller is responsible for freeing the resources allocated into `output` by this function using `free_bytes`.
 /// On failure, returns a `Status` with an appropriate error code, and `output` will not be modified.
-status::Status generate_witness(const WitnessInput* input, Bytes* output);
+Status generate_witness(const WitnessInput* input, Bytes* output);
+
+void free_bytes(Bytes* bytes);
 
 #ifdef __cplusplus
 }

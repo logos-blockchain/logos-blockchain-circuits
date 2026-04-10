@@ -1,57 +1,54 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include <cstddef>
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
-/// A pointer to a contiguous sequence of elements with a known length.
-///
-/// # Parameters
-///
-/// - `T`: The element type. Use `const T` for immutable data.
-template<typename T>
-struct Slice {
-    /// Pointer to the first element.
-    T* data;
-    /// Number of elements.
-    size_t size;
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Mutable byte buffer.
-using Bytes = Slice<uint8_t>;
+typedef struct Bytes {
+    uint8_t* data;
+    size_t size;
+} Bytes;
 
 /// Immutable byte buffer.
-using ConstBytes = Slice<const uint8_t>;
+typedef struct ConstBytes {
+    const uint8_t* data;
+    size_t size;
+} ConstBytes;
 
-namespace status {
-    /// Represents the outcome of an operation.
-    enum StatusCode {
-        Ok = 0,
-        DynError = 1,
-        InvalidInput = 2,
-        OutOfMemory = 3,
-    };
+typedef enum StatusCode {
+    StatusCode_Ok = 0,
+    StatusCode_DynError = 1,
+    StatusCode_InvalidInput = 2,
+    StatusCode_OutOfMemory = 3,
+} StatusCode;
 
-    inline bool is_ok(const StatusCode code) {
-        return code == Ok;
-    }
-
-    inline bool is_error(const StatusCode code) {
-        return !is_ok(code);
-    }
-
-    /// A status code with an optional human-readable description.
-    struct Status {
-        StatusCode code;
-        const char* message;
-    };
-
-    inline Status from_code(const StatusCode code) { return Status { code, nullptr }; }
-    inline Status ok() { return from_code(Ok); }
-
-    inline bool is_ok(const Status status) { return is_ok(status.code); }
-    inline bool is_error(const Status status) { return is_error(status.code); }
-
+static bool status_code_is_ok(const StatusCode code) {
+    return code == StatusCode_Ok;
 }
+
+static bool status_code_is_error(const StatusCode code) {
+    return !status_code_is_ok(code);
+}
+
+/// A status code with an optional human-readable description.
+typedef struct Status {
+    StatusCode code;
+    const char* message;
+} Status;
+
+static Status status_from_code(const StatusCode code) { return Status { code, NULL }; }
+static Status status_ok() { return status_from_code(StatusCode_Ok); }
+
+static bool status_is_ok(const Status status) { return status_code_is_ok(status.code); }
+static bool status_is_error(const Status status) { return status_code_is_error(status.code); }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TYPES_HPP

@@ -24,83 +24,118 @@ void qualify_input_list(std::string prefix, json& in, json& in1);
 // -------------------------------------------------------------
 
 // ---- File-based entry point (wraps circom-generated main) ----
-
-static status::Status validate_generate_witness_from_files_input(const char* dat, const char* inputs, const char* output) {
-    if (dat == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "dat is null"};
+template<typename T>
+static Status exceptions_into_status(T&& func) {
+    try {
+        return func();
+    } catch (const std::bad_alloc&) {
+        return status_from_code(StatusCode_OutOfMemory);
+    } catch (const std::exception& e) {
+        return Status{StatusCode_DynError, e.what()};
+    } catch (...) {
+        return Status{StatusCode_DynError, "An unknown error occurred."};
     }
-    if (inputs == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "inputs is null"};
-    }
-    if (output == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "output is null"};
-    }
-    return status::ok();
 }
 
-extern "C" status::Status generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
-    const status::Status status = validate_generate_witness_from_files_input(dat, inputs, output);
-    if (is_error(status)) {
-        return status;
+static Status validate_generate_witness_from_files_input(const char* dat, const char* inputs, const char* output) {
+    if (dat == nullptr) {
+        return Status{StatusCode_InvalidInput, "dat is null"};
     }
+    if (inputs == nullptr) {
+        return Status{StatusCode_InvalidInput, "inputs is null"};
+    }
+    if (output == nullptr) {
+        return Status{StatusCode_InvalidInput, "output is null"};
+    }
+    return status_ok();
+}
 
+static Status generate_witness_from_files_impl(const char* dat, const char* inputs, const char* output) {
     char* argv[] = {
+        const_cast<char*>("generate_witness_from_files"),
         const_cast<char*>(dat),
         const_cast<char*>(inputs),
         const_cast<char*>(output),
         nullptr
     };
-    const int code = main(3, argv);
 
+    const int code = main(4, argv);
     if (code == 0) {
-        return status::ok();
+        return status_ok();
     }
-    return status::from_code(status::StatusCode::DynError);
+    return status_from_code(StatusCode_DynError);
+}
+
+extern "C" Status generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
+    const Status status = validate_generate_witness_from_files_input(dat, inputs, output);
+    if (status_is_error(status)) {
+        return status;
+    }
+
+    return exceptions_into_status([&] {
+        return generate_witness_from_files_impl(dat, inputs, output);
+    });
 }
 
 // ---- Memory-based entry point ----
 
-static status::Status validate_witness_input(const WitnessInput* input, const Bytes* output) {
+static Status validate_witness_input(const WitnessInput* input, const Bytes* output) {
     if (output == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "output is null"};
+        return Status{StatusCode_InvalidInput, "output is null"};
     }
     if (output->data != nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "output.data is not null"};
+        return Status{StatusCode_InvalidInput, "output.data is not null"};
     }
 
     if (input == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "input is null"};
+        return Status{StatusCode_InvalidInput, "input is null"};
     }
     if (input->dat.data == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "input.dat.data is null"};
+        return Status{StatusCode_InvalidInput, "input.dat.data is null"};
     }
     if (input->dat.size == 0) {
-        return status::Status{status::StatusCode::InvalidInput, "input.dat.size is zero"};
+        return Status{StatusCode_InvalidInput, "input.dat.size is zero"};
     }
     if (input->inputs_json == nullptr) {
-        return status::Status{status::StatusCode::InvalidInput, "input.inputs_json is null"};
+        return Status{StatusCode_InvalidInput, "input.inputs_json is null"};
     }
-    return status::ok();
+    return status_ok();
 }
 
-extern "C" status::Status generate_witness(const WitnessInput* input, Bytes* output) {
-    const status::Status status = validate_witness_input(input, output);
-    if (is_error(status)) {
-        return status;
-    }
-
+static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     // TODO: Implement the actual witness generation logic using the provided input data.
     const uint8_t dummy_witness[] = {0, 1, 2, 3}; // Placeholder for actual witness data
 
     const size_t witness_size = sizeof(dummy_witness);
     uint8_t* witness_data = static_cast<uint8_t*>(malloc(witness_size));
     if (witness_data == nullptr) {
-        return status::Status{status::StatusCode::OutOfMemory, "Failed to allocate witness memory"};
+        return Status{StatusCode_OutOfMemory, "Failed to allocate witness memory"};
     }
     std::copy(dummy_witness, dummy_witness + witness_size, witness_data);
 
     output->data = witness_data;
     output->size = witness_size;
 
-    return status::ok();
+    return status_ok();
+}
+
+extern "C" Status generate_witness(const WitnessInput* input, Bytes* output) {
+    const Status status = validate_witness_input(input, output);
+    if (status_is_error(status)) {
+        return status;
+    }
+
+    return exceptions_into_status([&] {
+        return generate_witness_impl(input, output);
+    });
+}
+
+extern "C" void free_bytes(Bytes* bytes) {
+    if (bytes == nullptr) {
+        return;
+    }
+
+    free(bytes->data);
+    bytes->data = nullptr;
+    bytes->size = 0;
 }
