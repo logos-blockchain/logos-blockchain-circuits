@@ -1,2 +1,7 @@
 .idea/
 result
+
+# Generated files
+*_cpp/
+*.r1cs
+**/input.json
