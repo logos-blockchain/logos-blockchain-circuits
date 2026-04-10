@@ -1,15 +1,14 @@
-#include "ffi.hpp."
+#include "ffi.hpp"
 
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cstdlib>
 
 #include <nlohmann/json.hpp>
 
-#include "calcwit.hpp."
-#include "circom.hpp."
-#include "fr.hpp."
+#include "calcwit.hpp"
+#include "circom.hpp"
+#include "fr.hpp"
 
 using json = nlohmann::json;
 
@@ -131,14 +130,4 @@ extern "C" Status generate_witness(const WitnessInput* input, Bytes* output) {
     return exceptions_into_status([&] {
         return generate_witness_impl(input, output);
     });
-}
-
-extern "C" void free_bytes(Bytes* bytes) {
-    if (bytes == nullptr) {
-        return;
-    }
-
-    free(bytes->data);
-    bytes->data = nullptr;
-    bytes->size = 0;
 }
