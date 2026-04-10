@@ -7,7 +7,7 @@ endif
 
 # ---- Common ----
 CXX             := g++
-CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member
+CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
 UNAME_S         := $(shell uname -s)
 MACOS_OBJCOPY   := /opt/homebrew/opt/binutils/bin/gobjcopy
 ifeq ($(UNAME_S),Darwin)

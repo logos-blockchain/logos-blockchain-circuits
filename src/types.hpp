@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+
+#define STATUS_MESSAGE_LENGTH 256
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,25 +30,32 @@ typedef enum StatusCode {
     StatusCode_OutOfMemory = 3,
 } StatusCode;
 
-static bool status_code_is_ok(const StatusCode code) {
+static inline bool status_code_is_ok(const StatusCode code) {
     return code == StatusCode_Ok;
 }
 
-static bool status_code_is_error(const StatusCode code) {
+static inline bool status_code_is_error(const StatusCode code) {
     return !status_code_is_ok(code);
 }
 
 /// A status code with an optional human-readable description.
 typedef struct Status {
     StatusCode code;
-    const char* message;
+    char message[STATUS_MESSAGE_LENGTH];
 } Status;
 
-static Status status_from_code(const StatusCode code) { return Status { code, NULL }; }
-static Status status_ok() { return status_from_code(StatusCode_Ok); }
+static inline Status status_new(const StatusCode code, const char* message) {
+    Status status = {code, {}};
+    if (message != NULL) {
+        strncpy(status.message, message, STATUS_MESSAGE_LENGTH - 1);
+    }
+    return status;
+}
+static inline Status status_from_code(const StatusCode code) { return status_new(code, NULL); }
+static inline Status status_ok() { return status_from_code(StatusCode_Ok); }
 
-static bool status_is_ok(const Status status) { return status_code_is_ok(status.code); }
-static bool status_is_error(const Status status) { return status_code_is_error(status.code); }
+static inline bool status_is_ok(const Status status) { return status_code_is_ok(status.code); }
+static inline bool status_is_error(const Status status) { return status_code_is_error(status.code); }
 
 #ifdef __cplusplus
 }
