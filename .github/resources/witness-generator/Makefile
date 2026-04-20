@@ -7,19 +7,7 @@ endif
 
 # ---- Common ----
 CXX             := g++
-CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
-UNAME_S         := $(shell uname -s)
-MACOS_OBJCOPY   := /opt/homebrew/opt/binutils/bin/gobjcopy
-ifeq ($(UNAME_S),Darwin)
-    # On macOS CI we expect GNU objcopy from Homebrew binutils at this exact path.
-    ifeq ($(wildcard $(MACOS_OBJCOPY)),)
-        $(error Missing $(MACOS_OBJCOPY). Install binutils with Homebrew or update OBJCOPY for this environment.)
-    endif
-    OBJCOPY := $(MACOS_OBJCOPY)
-else
-    # On non-macOS targets we assume objcopy is available on PATH.
-    OBJCOPY := objcopy
-endif
+CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main -DCIRCUIT_NAME=$(PROJECT)
 COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
 COMMON_OBJS     := $(COMMON_SRCS:.cpp=.o)
 LIB_ONLY_SRCS   := ffi.cpp
@@ -68,7 +56,6 @@ $(BIN): $(COMMON_OBJS)
 
 $(LIB): $(LIB_OBJS)
 	ar rcs $@ $^
-	$(OBJCOPY) --prefix-symbols=$(PROJECT)_ $@
 
 %.o: %.cpp $(DEPS_HPP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@

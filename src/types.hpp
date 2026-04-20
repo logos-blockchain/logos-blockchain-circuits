@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define STATUS_MESSAGE_LENGTH 256
@@ -56,6 +57,21 @@ static inline Status status_ok() { return status_from_code(StatusCode_Ok); }
 
 static inline bool status_is_ok(const Status status) { return status_code_is_ok(status.code); }
 static inline bool status_is_error(const Status status) { return status_code_is_error(status.code); }
+
+/// Inputs for witness generation.
+typedef struct WitnessInput {
+    /// Contents of the circuit's .dat file.
+    const ConstBytes dat;
+    /// Null-terminated JSON string of circuit inputs.
+    const char* inputs_json;
+} WitnessInput;
+
+static inline void free_bytes(Bytes* bytes) {
+    if (bytes == NULL) return;
+    free(bytes->data);
+    bytes->data = NULL;
+    bytes->size = 0;
+}
 
 #ifdef __cplusplus
 }

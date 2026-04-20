@@ -1,4 +1,4 @@
-#include "ffi.hpp"
+#include "poq/ffi.hpp"
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@ using json = nlohmann::json;
 // ---- Forward declarations from circom-generated main.cpp ----
 
 /// This is a forward declaration of circom main(). It's renamed due to UB when calling a main() function.
-/// TODO: Successful path of the function returns nothing despite the int return type.
+/// TODO: Successful path of the function has no explicit return.
 int circom_main(int argc, char* argv[]);
 bool check_valid_number(std::string& s, uint base);
 void json2FrElements(json val, std::vector<FrElement>& vval);
@@ -25,7 +25,6 @@ void qualify_input_list(std::string prefix, json& in, json& in1);
 
 // -------------------------------------------------------------
 
-// ---- File-based entry point (wraps circom-generated main) ----
 template<typename T>
 static Status exceptions_into_status(T&& func) {
     try {
@@ -68,8 +67,8 @@ static Status generate_witness_from_files_impl(const char* dat, const char* inpu
     return status_new(StatusCode_DynError, message.c_str());
 }
 
-extern "C" Status generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
-    const Status status = validate_generate_witness_from_files_input(dat, inputs, output);
+extern "C" Status poq_generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
+    const Status status = validate_generate_witness_from_files_input(dat, inputs, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;
     }
@@ -82,13 +81,6 @@ extern "C" Status generate_witness_from_files(const char* dat, const char* input
 // ---- Memory-based entry point ----
 
 static Status validate_witness_input(const WitnessInput* input, const Bytes* output) {
-    if (output == nullptr) {
-        return status_new(StatusCode_InvalidInput, "output is null.");
-    }
-    if (output->data != nullptr) {
-        return status_new(StatusCode_InvalidInput, "output.data is not null.");
-    }
-
     if (input == nullptr) {
         return status_new(StatusCode_InvalidInput, "input is null.");
     }
@@ -101,12 +93,20 @@ static Status validate_witness_input(const WitnessInput* input, const Bytes* out
     if (input->inputs_json == nullptr) {
         return status_new(StatusCode_InvalidInput, "input.inputs_json is null.");
     }
+
+    if (output == nullptr) {
+        return status_new(StatusCode_InvalidInput, "output is null.");
+    }
+    if (output->data != nullptr) {
+        return status_new(StatusCode_InvalidInput, "output.data is not null.");
+    }
+
     return status_ok();
 }
 
 static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     // TODO: Implement the actual witness generation logic using the provided input data.
-    const uint8_t dummy_witness[] = {0, 1, 2, 3}; // Placeholder for actual witness data
+    const uint8_t dummy_witness[] = {0, 1, 2, 3};
 
     const size_t witness_size = sizeof(dummy_witness);
     uint8_t* witness_data = static_cast<uint8_t*>(malloc(witness_size));
@@ -121,8 +121,8 @@ static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     return status_ok();
 }
 
-extern "C" Status generate_witness(const WitnessInput* input, Bytes* output) {
-    const Status status = validate_witness_input(input, output);
+extern "C" Status poq_generate_witness(const WitnessInput* input, Bytes* output) {
+    const Status status = validate_witness_input(input, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;
     }
