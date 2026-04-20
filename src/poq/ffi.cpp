@@ -1,29 +1,8 @@
 #include "poq/ffi.hpp"
+#include "circom_fwd.hpp"
 
 #include <string>
-#include <vector>
 #include <algorithm>
-
-#include <nlohmann/json.hpp>
-
-#include "calcwit.hpp"
-#include "circom.hpp"
-#include "fr.hpp"
-
-using json = nlohmann::json;
-
-// ---- Forward declarations from circom-generated main.cpp ----
-
-/// This is a forward declaration of circom main(). It's renamed due to UB when calling a main() function.
-/// TODO: Successful path of the function has no explicit return.
-int circom_main(int argc, char* argv[]);
-bool check_valid_number(std::string& s, uint base);
-void json2FrElements(json val, std::vector<FrElement>& vval);
-json::value_t check_type(std::string prefix, json in);
-void qualify_input(std::string prefix, json& in, json& in1);
-void qualify_input_list(std::string prefix, json& in, json& in1);
-
-// -------------------------------------------------------------
 
 template<typename T>
 static Status exceptions_into_status(T&& func) {
@@ -38,7 +17,7 @@ static Status exceptions_into_status(T&& func) {
     }
 }
 
-static Status validate_generate_witness_from_files_input(const char* dat, const char* inputs, const char* output) {
+static Status validate_generate_witness_from_files_arguments(const char* dat, const char* inputs, const char* output) {
     if (dat == nullptr) {
         return status_new(StatusCode_InvalidInput, "dat is null.");
     }
@@ -68,7 +47,7 @@ static Status generate_witness_from_files_impl(const char* dat, const char* inpu
 }
 
 extern "C" Status poq_generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
-    const Status status = validate_generate_witness_from_files_input(dat, inputs, output); // NOLINT: if-init
+    const Status status = validate_generate_witness_from_files_arguments(dat, inputs, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;
     }
@@ -80,7 +59,7 @@ extern "C" Status poq_generate_witness_from_files(const char* dat, const char* i
 
 // ---- Memory-based entry point ----
 
-static Status validate_witness_input(const WitnessInput* input, const Bytes* output) {
+static Status validate_witness_arguments(const WitnessInput* input, const Bytes* output) {
     if (input == nullptr) {
         return status_new(StatusCode_InvalidInput, "input is null.");
     }
@@ -122,7 +101,7 @@ static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
 }
 
 extern "C" Status poq_generate_witness(const WitnessInput* input, Bytes* output) {
-    const Status status = validate_witness_input(input, output); // NOLINT: if-init
+    const Status status = validate_witness_arguments(input, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;
     }
