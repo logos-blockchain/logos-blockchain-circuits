@@ -1,8 +1,11 @@
 #include "poq/ffi.hpp"
 #include "circom_fwd.hpp"
+#include "circom_adapter.hpp"
 
 #include <string>
 #include <algorithm>
+
+#include "../types.hpp"
 
 template<typename T>
 static Status exceptions_into_status(T&& func) {
@@ -84,18 +87,22 @@ static Status validate_witness_arguments(const WitnessInput* input, const Bytes*
 }
 
 static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
-    // TODO: Implement the actual witness generation logic using the provided input data.
-    const uint8_t dummy_witness[] = {0, 1, 2, 3};
+    const ConstBytes& circuit_bytes = input->dat;
 
-    const size_t witness_size = sizeof(dummy_witness);
-    uint8_t* witness_data = static_cast<uint8_t*>(malloc(witness_size));
-    if (witness_data == nullptr) {
-        return status_new(StatusCode_OutOfMemory, "Failed to allocate witness memory.");
+    Circom_Circuit* circuit = loadCircuit(circuit_bytes);
+    Circom_CalcWit* ctx = new Circom_CalcWit(circuit);
+
+    loadJson(ctx, input->inputs_json);
+    if (ctx->getRemaingInputsToBeSet()!=0) {
+        const std::string message = "Not all inputs have been set. Only " + std::to_string(get_main_input_signal_no()-ctx->getRemaingInputsToBeSet()) + " out of " + std::to_string(get_main_input_signal_no()) + ".";
+        delete ctx;
+        delete circuit;
+        return status_new(StatusCode_InvalidInput, message.c_str());
     }
-    std::copy(dummy_witness, dummy_witness + witness_size, witness_data);
 
-    output->data = witness_data;
-    output->size = witness_size;
+    writeBinWitness(ctx, output);
+    delete ctx;
+    delete circuit;
 
     return status_ok();
 }

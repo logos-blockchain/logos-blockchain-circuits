@@ -52,11 +52,19 @@ static inline Status status_new(const StatusCode code, const char* message) {
     }
     return status;
 }
-static inline Status status_from_code(const StatusCode code) { return status_new(code, NULL); }
-static inline Status status_ok() { return status_from_code(StatusCode_Ok); }
+static inline Status status_from_code(const StatusCode code) {
+    return status_new(code, NULL);
+}
+static inline Status status_ok() {
+    return status_from_code(StatusCode_Ok);
+}
 
-static inline bool status_is_ok(const Status status) { return status_code_is_ok(status.code); }
-static inline bool status_is_error(const Status status) { return status_code_is_error(status.code); }
+static inline bool status_is_ok(const Status status) {
+    return status_code_is_ok(status.code);
+}
+static inline bool status_is_error(const Status status) {
+    return status_code_is_error(status.code);
+}
 
 /// Inputs for witness generation.
 typedef struct WitnessInput {
@@ -67,7 +75,8 @@ typedef struct WitnessInput {
 } WitnessInput;
 
 static inline void free_bytes(Bytes* bytes) {
-    if (bytes == NULL) return;
+    if (bytes == NULL)
+        return;
     free(bytes->data);
     bytes->data = NULL;
     bytes->size = 0;
