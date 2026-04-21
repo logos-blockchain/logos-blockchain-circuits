@@ -7,14 +7,14 @@ endif
 
 # ---- Common ----
 CXX             := g++
-CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main -DCIRCUIT_NAME=$(PROJECT)
+CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
 COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
 COMMON_OBJS     := $(COMMON_SRCS:.cpp=.o)
-LIB_ONLY_SRCS   := ffi.cpp
+LIB_ONLY_SRCS   := $(PROJECT)/ffi.cpp circom_adapter.cpp
 LIB_ONLY_OBJS   := $(LIB_ONLY_SRCS:.cpp=.o)
 LIB_SRCS        := $(COMMON_SRCS) $(LIB_ONLY_SRCS)
-LIB_OBJS        := $(LIB_SRCS:.cpp=.o)
-DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp ffi.hpp
+LIB_OBJS        := $(COMMON_OBJS) $(LIB_ONLY_OBJS)
+DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp $(PROJECT)/ffi.hpp
 BIN             := $(PROJECT)
 ifeq ($(OS),windows)
 LIB_EXT         := .lib

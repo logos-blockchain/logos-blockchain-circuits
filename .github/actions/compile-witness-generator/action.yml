@@ -74,9 +74,12 @@ runs:
       env:
         SOURCES_ROOT: ${{ github.workspace }}/src
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
       run: |
-        cp "${SOURCES_ROOT}/ffi.cpp" "${CIRCUIT_CPP_PATH}/ffi.cpp"
-        cp "${SOURCES_ROOT}/ffi.hpp" "${CIRCUIT_CPP_PATH}/ffi.hpp"
+        cp -r "${SOURCES_ROOT}/${CIRCUIT_FILESTEM}" "${CIRCUIT_CPP_PATH}/${CIRCUIT_FILESTEM}"
+        cp "${SOURCES_ROOT}/circom_adapter.cpp" "${CIRCUIT_CPP_PATH}/circom_adapter.cpp"
+        cp "${SOURCES_ROOT}/circom_adapter.hpp" "${CIRCUIT_CPP_PATH}/circom_adapter.hpp"
+        cp "${SOURCES_ROOT}/circom_fwd.hpp" "${CIRCUIT_CPP_PATH}/circom_fwd.hpp"
         cp "${SOURCES_ROOT}/types.hpp" "${CIRCUIT_CPP_PATH}/types.hpp"
 
     # TODO: Instead of replace, make a fork that generates the appropriate Makefile
@@ -119,12 +122,13 @@ runs:
       shell: bash
       env:
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
       run: |
         mkdir -p "${CIRCUIT_CPP_PATH}/include"
         mv "${CIRCUIT_CPP_PATH}/calcwit.hpp" "${CIRCUIT_CPP_PATH}/include/"
         mv "${CIRCUIT_CPP_PATH}/circom.hpp" "${CIRCUIT_CPP_PATH}/include/"
         mv "${CIRCUIT_CPP_PATH}/fr.hpp" "${CIRCUIT_CPP_PATH}/include/"
-        mv "${CIRCUIT_CPP_PATH}/ffi.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/${CIRCUIT_FILESTEM}/ffi.hpp" "${CIRCUIT_CPP_PATH}/include/"
         mv "${CIRCUIT_CPP_PATH}/types.hpp" "${CIRCUIT_CPP_PATH}/include/"
 
     - name: Upload ${{ inputs.circuit-name-display }}
