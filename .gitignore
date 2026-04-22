@@ -1,5 +1,6 @@
 .idea/
 result
+*ignore*
 
 # Generated files
 *_cpp/
