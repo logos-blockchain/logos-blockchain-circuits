@@ -74,6 +74,9 @@ typedef struct WitnessInput {
     const char* inputs_json;
 } WitnessInput;
 
+/// Static inline is inlined at every call site and cannot be linked, so each language binding must reimplement it.
+/// This is the best-effort approach for now.
+/// TODO: Make this an exported symbol so Rust (and other callers) can link against a single canonical definition.
 static inline void free_bytes(Bytes* bytes) {
     if (bytes == NULL)
         return;
