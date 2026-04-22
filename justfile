@@ -1,8 +1,14 @@
-src          := justfile_directory() + "/src"
-ci_makefile  := justfile_directory() + "/.github/resources/witness-generator/Makefile"
+src             := justfile_directory() + "/src"
+ci_makefile     := justfile_directory() + "/.github/resources/witness-generator/Makefile"
+circom_version  := "2.2.2" # This version must match the version used in the CI
 
 os := `uname -s`
 sed_i := if os == "Darwin" { "sed -i ''" } else { "sed -i" }
+
+# Verify the installed circom matches the pinned version.
+check-circom:
+    @circom --version | grep -qF "{{circom_version}}" || \
+        (echo "circom {{circom_version}} required; got: $(circom --version 2>&1)" >&2; exit 1)
 
 prettify:
     nix shell nixpkgs#clang-tools -c clang-format -i src/**.cpp src/**.hpp
@@ -18,7 +24,7 @@ sage-run script +args='':
         sagemath/sagemath sage "$(basename '{{script}}')" {{args}}
 
 # Build the PoQ circuit and its C++ witness generator, equivalent to the CI build.
-poq:
+poq: check-circom
     circom blend/poq.circom --c --r1cs --no_asm --O2 --output blend
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
@@ -34,7 +40,7 @@ test-poq: poq
     cd blend/poq_cpp && ./test_ffi
 
 # Build the PoL circuit and its C++ witness generator, equivalent to the CI build.
-pol:
+pol: check-circom
     circom mantle/pol.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/pol_cpp/main.cpp
@@ -50,7 +56,7 @@ test-pol: pol
     cd mantle/pol_cpp && ./test_pol
 
 # Build the PoC circuit and its C++ witness generator, equivalent to the CI build.
-poc:
+poc: check-circom
     circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
@@ -66,7 +72,7 @@ test-poc: poc
     cd mantle/poc_cpp && ./test_poc
 
 # Build the signature circuit and its C++ witness generator, equivalent to the CI build.
-signature:
+signature: check-circom
     circom mantle/signature.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
