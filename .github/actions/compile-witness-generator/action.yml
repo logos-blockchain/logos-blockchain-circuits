@@ -90,6 +90,13 @@ runs:
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
       run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/Makefile" "${CIRCUIT_CPP_PATH}/Makefile"
 
+    # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
+    - name: Patch ${{ inputs.circuit-name-display }} Missing Return
+      shell: bash
+      env:
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+      run: sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' "${CIRCUIT_CPP_PATH}/main.cpp"
+
     # TODO: Instead of insertion, make a fork that includes the appropriate patch (or the actual fix)
     - name: Patch MacOS GMP
       shell: bash
