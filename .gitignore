@@ -7,3 +7,6 @@ result
 *.r1cs
 **/input.json
 **/*-input.json
+
+# Rust Codebase
+rust/**/target/
