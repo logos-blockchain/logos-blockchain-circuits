@@ -1,6 +1,9 @@
 src          := justfile_directory() + "/src"
 ci_makefile  := justfile_directory() + "/.github/resources/witness-generator/Makefile"
 
+os := `uname -s`
+sed_i := if os == "Darwin" { "sed -i ''" } else { "sed -i" }
+
 prettify:
     nix shell nixpkgs#clang-tools -c clang-format -i src/**.cpp src/**.hpp
 
@@ -18,7 +21,7 @@ sage-run script +args='':
 poq:
     circom blend/poq.circom --c --r1cs --no_asm --O2 --output blend
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
     cp -r {{src}}/poq blend/poq_cpp/poq
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp blend/poq_cpp/
     cp {{ci_makefile}} blend/poq_cpp/Makefile
@@ -34,7 +37,7 @@ test-poq: poq
 pol:
     circom mantle/pol.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/pol_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/pol_cpp/main.cpp
     cp -r {{src}}/pol mantle/pol_cpp/pol
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/pol_cpp/
     cp {{ci_makefile}} mantle/pol_cpp/Makefile
@@ -50,7 +53,7 @@ test-pol: pol
 poc:
     circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
     cp -r {{src}}/poc mantle/poc_cpp/poc
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/poc_cpp/
     cp {{ci_makefile}} mantle/poc_cpp/Makefile
@@ -66,7 +69,7 @@ test-poc: poc
 signature:
     circom mantle/signature.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
     cp -r {{src}}/signature mantle/signature_cpp/signature
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/signature_cpp/
     cp {{ci_makefile}} mantle/signature_cpp/Makefile
