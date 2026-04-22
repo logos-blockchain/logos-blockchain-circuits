@@ -5,3 +5,4 @@ result
 *_cpp/
 *.r1cs
 **/input.json
+**/*-input.json

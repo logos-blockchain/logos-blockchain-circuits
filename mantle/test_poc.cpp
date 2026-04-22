@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "poq/ffi.hpp"
+#include "poc/ffi.hpp"
 
 static uint8_t* read_file(const char* path, size_t* out_size) {
     FILE* f = fopen(path, "rb");
@@ -18,9 +18,9 @@ static uint8_t* read_file(const char* path, size_t* out_size) {
 }
 
 int main() {
-    Status status = poq_generate_witness_from_files(
-        "poq",
-        "../poq-input.json",
+    Status status = poc_generate_witness_from_files(
+        "poc",
+        "../poc-input.json",
         "witness.wtns"
     );
 
@@ -32,8 +32,8 @@ int main() {
     printf("generate_witness_from_files: OK\n");
 
     size_t dat_size, json_size;
-    uint8_t* dat_data = read_file("poq.dat", &dat_size);
-    uint8_t* json_data = read_file("../poq-input.json", &json_size);
+    uint8_t* dat_data = read_file("poc.dat", &dat_size);
+    uint8_t* json_data = read_file("../poc-input.json", &json_size);
 
     WitnessInput input = {
         {dat_data, dat_size},
@@ -41,7 +41,7 @@ int main() {
     };
     Bytes output = {nullptr, 0};
 
-    status = poq_generate_witness(&input, &output);
+    status = poc_generate_witness(&input, &output);
 
     free(dat_data);
     free(json_data);
