@@ -1,7 +1,7 @@
 use std::ffi::c_char;
 
+/// Status codes for C API functions.
 #[repr(C)]
-#[derive(Debug, PartialEq)]
 pub enum Code {
     Ok = 0,
     DynError = 1,
@@ -11,7 +11,7 @@ pub enum Code {
 
 impl Code {
     pub fn is_ok(&self) -> bool {
-        self == &Code::Ok
+        matches!(self, Code::Ok)
     }
 
     pub fn is_error(&self) -> bool {
@@ -19,8 +19,8 @@ impl Code {
     }
 }
 
+/// Status reporting structure for C API functions.
 #[repr(C)]
-#[derive(Debug)]
 pub struct Status {
     pub code: Code,
     pub message: [c_char; 256],

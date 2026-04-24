@@ -8,7 +8,13 @@ mod inner {
     }
 }
 
+/// Owned byte buffer returned by the C witness generator functions.
+///
+/// The inner `data` pointer must be null-initialized. It's heap-allocated by the C side and must be
+/// freed with [`free_bytes`] after use.
 pub type Bytes = inner::Buffer<*mut u8>;
+
+/// Read-only byte slice passed into the C witness generator functions.
 pub type ConstBytes = inner::Buffer<*const u8>;
 
 /// Frees the data buffer inside a [`Bytes`] struct allocated by the C API.

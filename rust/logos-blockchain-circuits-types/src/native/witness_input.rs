@@ -1,8 +1,11 @@
 use std::ffi::{c_char, CString, NulError};
 use crate::ffi;
 
+/// Input for witness generators
 pub struct WitnessInput {
+    /// The circuit's dat file contents.
     dat: Vec<u8>,
+    /// The JSON string containing the circuit inputs.
     inputs_json: String,
 }
 
@@ -12,6 +15,9 @@ impl WitnessInput {
         Self { dat, inputs_json }
     }
 
+    /// Borrows this value as a temporary FFI-compatible view.
+    ///
+    /// Returns an error if `inputs_json` contains an interior null byte.
     pub fn as_ffi(&'_ self) -> Result<WitnessInputFfiGuard<'_>, NulError> {
         WitnessInputFfiGuard::new(self)
     }
@@ -29,7 +35,7 @@ pub struct WitnessInputFfiGuard<'a> {
 impl<'a> WitnessInputFfiGuard<'a> {
     fn new(inner: &'a WitnessInput) -> Result<Self, NulError> {
         let dat = ffi::ConstBytes { data: inner.dat.as_ptr(), size: inner.dat.len() };
-        let inputs_json = CString::new(inner.inputs_json.clone())?.into_raw();
+        let inputs_json = CString::new(inner.inputs_json.clone())?.into_raw(); // TODO CLEANER?
         let ffi = ffi::WitnessInput { dat, inputs_json };
         Ok(Self {
             ffi,

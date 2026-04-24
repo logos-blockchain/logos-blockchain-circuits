@@ -1,5 +1,9 @@
 use crate::ffi;
 
+/// Byte buffer
+///
+/// When constructing from [`From<ffi::Bytes>`], it takes ownership of the underlying value and
+/// frees it.
 pub struct Bytes(Vec<u8>);
 
 impl Bytes {
@@ -7,7 +11,7 @@ impl Bytes {
     pub fn into_inner(self) -> Vec<u8> {
         self.0
     }
-    
+
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
         &self.0

@@ -5,6 +5,7 @@ use crate::ffi::status::Code as FfiStatusCode;
 pub type DynError = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Error returned when a witness generator call does not succeed.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Invalid input")]
