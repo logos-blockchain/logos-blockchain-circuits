@@ -19,7 +19,7 @@ pub type ConstBytes = inner::Buffer<*const u8>;
 /// # Arguments
 ///
 /// - `bytes`: A pointer to a [`Bytes`] struct whose data buffer was allocated by the C API and
-/// needs to be freed.
+///   needs to be freed.
 ///
 /// # Safety
 ///

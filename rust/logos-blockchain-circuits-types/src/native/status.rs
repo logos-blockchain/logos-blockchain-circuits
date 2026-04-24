@@ -32,7 +32,7 @@ impl TryFrom<crate::ffi::Status> for () {
                         None
                     };
                 let error_message = message
-                    .map(|inner| DynError::from(inner.to_string_lossy().to_owned()))
+                    .map(|inner| DynError::from(inner.to_string_lossy().into_owned()))
                     .unwrap_or_else(|| DynError::from("Unknown error"));
                 Err(error_message.into())
             },
