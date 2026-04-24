@@ -1,4 +1,5 @@
 use std::cmp::PartialEq;
+use std::ffi::c_char;
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
@@ -23,14 +24,14 @@ impl Code {
 #[derive(Debug)]
 pub struct Status {
     pub code: Code,
-    pub message: String,
+    pub message: [c_char; 256],
 }
 
 impl Status {
     pub fn ok() -> Self {
         Status {
             code: Code::Ok,
-            message: String::new(),
+            message: [0; 256],
         }
     }
 
@@ -40,5 +41,9 @@ impl Status {
 
     pub fn is_error(&self) -> bool {
         self.code.is_error()
+    }
+
+    pub fn has_message(&self) -> bool {
+        self.message[0] != 0
     }
 }
