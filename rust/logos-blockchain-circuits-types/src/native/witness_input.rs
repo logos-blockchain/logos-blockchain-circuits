@@ -1,4 +1,4 @@
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char, CString, NulError};
 use crate::ffi;
 
 pub struct WitnessInput {
@@ -12,8 +12,7 @@ impl WitnessInput {
         Self { dat, inputs_json }
     }
 
-    #[must_use]
-    pub fn as_ffi(&'_ self) -> WitnessInputFfiGuard<'_> {
+    pub fn as_ffi(&'_ self) -> Result<WitnessInputFfiGuard<'_>, NulError> {
         WitnessInputFfiGuard::new(self)
     }
 }
@@ -28,15 +27,14 @@ pub struct WitnessInputFfiGuard<'a> {
 }
 
 impl<'a> WitnessInputFfiGuard<'a> {
-    #[must_use]
-    fn new(inner: &'a WitnessInput) -> Self {
+    fn new(inner: &'a WitnessInput) -> Result<Self, NulError> {
         let dat = ffi::ConstBytes { data: inner.dat.as_ptr(), size: inner.dat.len() };
-        let inputs_json = CString::new(inner.inputs_json.clone()).expect("CString::new failed").into_raw();
+        let inputs_json = CString::new(inner.inputs_json.clone())?.into_raw();
         let ffi = ffi::WitnessInput { dat, inputs_json };
-        Self {
+        Ok(Self {
             ffi,
             _lifetime: std::marker::PhantomData,
-        }
+        })
     }
 }
 
@@ -55,4 +53,3 @@ impl<'a> Drop for WitnessInputFfiGuard<'a> {
         }
     }
 }
-

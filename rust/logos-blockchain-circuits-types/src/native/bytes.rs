@@ -4,8 +4,19 @@ pub struct Bytes(Vec<u8>);
 
 impl Bytes {
     #[must_use]
-    pub fn inner(&self) -> &Vec<u8> {
+    pub fn into_inner(self) -> Vec<u8> {
+        self.0
+    }
+    
+    #[must_use]
+    pub fn as_slice(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<Vec<u8>> for Bytes {
+    fn from(value: Vec<u8>) -> Self {
+        Self(value)
     }
 }
 
