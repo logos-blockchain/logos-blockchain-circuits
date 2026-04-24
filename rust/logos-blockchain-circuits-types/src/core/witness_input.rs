@@ -18,9 +18,10 @@ impl WitnessInput {
     }
 }
 
-/// Represents a guard for managing the lifetime of a WitnessInput in FFI.
-/// This struct ensures that the memory allocated for the FFI representation of WitnessInput is
-/// properly released when it goes out of scope.
+/// Temporary FFI view of a [`WitnessInput`], valid for the lifetime of the source.
+///
+/// Owns the C string allocation of `WitnessInput::inputs_json` and ensures it is freed when
+/// dropped.
 pub struct WitnessInputFfiGuard<'a> {
     ffi: ffi::WitnessInput,
     _lifetime: std::marker::PhantomData<&'a WitnessInput>,
@@ -28,7 +29,7 @@ pub struct WitnessInputFfiGuard<'a> {
 
 impl<'a> WitnessInputFfiGuard<'a> {
     #[must_use]
-    pub fn new(inner: &'a WitnessInput) -> Self {
+    fn new(inner: &'a WitnessInput) -> Self {
         let dat = ffi::ConstBytes { data: inner.dat.as_ptr(), size: inner.dat.len() };
         let inputs_json = CString::new(inner.inputs_json.clone()).expect("CString::new failed").into_raw();
         let ffi = ffi::WitnessInput { dat, inputs_json };

@@ -1,4 +1,3 @@
-use std::cmp::PartialEq;
 use std::ffi::c_char;
 
 #[repr(C)]

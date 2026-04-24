@@ -34,7 +34,7 @@ impl TryFrom<crate::ffi::Status> for () {
                 let error_message = message
                     .map(|inner| DynError::from(inner.to_string_lossy().to_owned()))
                     .unwrap_or_else(|| DynError::from("Unknown error"));
-                Err(Error::Other(error_message))
+                Err(error_message.into())
             },
             FfiStatusCode::InvalidInput => Err(Error::InvalidInput),
             FfiStatusCode::OutOfMemory => Err(Error::OutOfMemory),
