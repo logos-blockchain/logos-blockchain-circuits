@@ -26,10 +26,14 @@ impl From<Vec<u8>> for Bytes {
 
 impl From<ffi::Bytes> for Bytes {
     fn from(mut ffi_value: ffi::Bytes) -> Self {
-        let raw = unsafe {
-            std::slice::from_raw_parts(ffi_value.data, ffi_value.size).to_vec()
+        let vec = if ffi_value.size == 0 || ffi_value.data.is_null() {
+            Vec::new()
+        } else {
+            unsafe {
+                std::slice::from_raw_parts(ffi_value.data, ffi_value.size).to_vec()
+            }
         };
-        unsafe { ffi::free_bytes(&mut ffi_value); }
-        Self(raw)
+        unsafe { ffi::free_bytes(&mut ffi_value) };
+        Self(vec)
     }
 }

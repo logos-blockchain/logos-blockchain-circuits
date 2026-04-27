@@ -11,4 +11,3 @@ version.workspace = true
 
 [dependencies]
 libc = { workspace = true }
-thiserror = { workspace = true }

@@ -24,5 +24,4 @@ lbc-types = { default-features = false, package = "logos-blockchain-circuits-typ
 flate2 = "1"
 libc = "0.2.185"
 tar = "0.4"
-thiserror = "2.0.18"
 ureq = "3.3.0"

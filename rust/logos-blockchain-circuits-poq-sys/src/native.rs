@@ -1,7 +1,20 @@
-use std::ffi::c_char;
 use std::path::Path;
 use lbc_types::{ffi, native::{Bytes, Error, WitnessInput}};
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
+
+fn into_null_terminated_string(
+    string: &str,
+) -> Result<std::ffi::CString, Error> {
+    std::ffi::CString::new(string)
+        .map_err(|error| Error::InvalidInput(Some(format!("Could not convert string to CString: {error}"))))
+}
+
+fn path_as_null_terminated_string(
+    path: &Path,
+) -> Result<std::ffi::CString, Error> {
+    let path = path.to_str().ok_or(Error::InvalidInput(Some(format!("Could not convert the path to a string: {}", path.display()))))?;
+    into_null_terminated_string(path)
+}
 
 pub fn generate_witness(
     input: WitnessInput,
@@ -9,10 +22,7 @@ pub fn generate_witness(
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
-    let mut ffi_output_bytes = ffi::Bytes {
-        data: std::ptr::null_mut(),
-        size: 0
-    };
+    let mut ffi_output_bytes = ffi::Bytes::null();
 
     let status = unsafe {
         poq_generate_witness(
@@ -29,15 +39,15 @@ pub fn generate_witness_from_files(
     inputs: &Path,
     output: &Path,
 ) -> Result<(), Error> {
-    let dat = dat.to_str().ok_or_else(|| Error::InvalidInput)?; // TODO: Message
-    let inputs = inputs.to_str().ok_or_else(|| Error::InvalidInput)?;
-    let output = output.to_str().ok_or_else(|| Error::InvalidInput)?;
+    let c_dat = path_as_null_terminated_string(dat)?;
+    let c_inputs = path_as_null_terminated_string(inputs)?;
+    let c_output = path_as_null_terminated_string(output)?;
 
     unsafe {
         poq_generate_witness_from_files (
-            dat.as_ptr() as *const c_char,
-            inputs.as_ptr() as *const c_char,
-            output.as_ptr() as *const c_char
+            c_dat.as_ptr(),
+            c_inputs.as_ptr(),
+            c_output.as_ptr(),
         )
     }.try_into()
 }

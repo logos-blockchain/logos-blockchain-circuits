@@ -1,17 +1,20 @@
 use std::ffi::c_char;
 
 /// Status codes for C API functions.
-#[repr(C)]
-pub enum Code {
-    Ok = 0,
-    DynError = 1,
-    InvalidInput = 2,
-    OutOfMemory = 3,
+#[derive(PartialEq, Eq)] // Enables comparisons with named constants.
+#[repr(transparent)]
+pub struct Code(pub i32);
+
+impl Code {
+    pub const OK: Self = Self(0);
+    pub const DYN_ERROR: Self = Self(1);
+    pub const INVALID_INPUT: Self = Self(2);
+    pub const OUT_OF_MEMORY: Self = Self(3);
 }
 
 impl Code {
     pub fn is_ok(&self) -> bool {
-        matches!(self, Code::Ok)
+        self == &Self::OK
     }
 
     pub fn is_error(&self) -> bool {
@@ -29,7 +32,7 @@ pub struct Status {
 impl Status {
     pub fn ok() -> Self {
         Status {
-            code: Code::Ok,
+            code: Code::OK,
             message: [0; 256],
         }
     }

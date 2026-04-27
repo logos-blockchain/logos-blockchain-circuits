@@ -1,44 +1,52 @@
 use std::ffi::CStr;
-use thiserror::Error;
+use std::fmt::Display;
 use crate::ffi::status::Code as FfiStatusCode;
 
-pub type DynError = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Error returned when a witness generator call does not succeed.
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("Invalid input")]
-    InvalidInput,
-    #[error("Out of memory")]
-    OutOfMemory,
-    #[error(transparent)]
-    Other(#[from] DynError),
+    InvalidInput(Option<String>),
+    OutOfMemory(Option<String>),
+    Other(Option<String>),
+}
+
+impl std::error::Error for Error {}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (kind, message) = match self {
+            Error::InvalidInput(msg) => ("Invalid input", msg),
+            Error::OutOfMemory(msg) => ("Out of memory", msg),
+            Error::Other(msg) => ("Other error", msg),
+        };
+        match message {
+            Some(message) => write!(f, "{kind}: {message}"),
+            None => write!(f, "{kind}"),
+        }
+    }
 }
 
 impl TryFrom<crate::ffi::Status> for () {
     type Error = Error;
 
     fn try_from(status: crate::ffi::Status) -> Result<()> {
+        let message: Option<String> = if status.has_message() {
+            let status_message = unsafe {
+                CStr::from_ptr(status.message.as_ptr())
+            };
+            Some(status_message.to_string_lossy().into_owned())
+        } else {
+            None
+        };
+
         match status.code {
-            FfiStatusCode::Ok => Ok(()),
-            FfiStatusCode::DynError => {
-                let message: Option<&CStr> =
-                    if status.has_message() {
-                        let status_message = unsafe {
-                            CStr::from_ptr(status.message.as_ptr())
-                        };
-                        Some(status_message)
-                    } else {
-                        None
-                    };
-                let error_message = message
-                    .map(|inner| DynError::from(inner.to_string_lossy().into_owned()))
-                    .unwrap_or_else(|| DynError::from("Unknown error"));
-                Err(error_message.into())
-            },
-            FfiStatusCode::InvalidInput => Err(Error::InvalidInput),
-            FfiStatusCode::OutOfMemory => Err(Error::OutOfMemory),
+            FfiStatusCode::OK => Ok(()),
+            FfiStatusCode::DYN_ERROR => Err(Error::Other(message)),
+            FfiStatusCode::INVALID_INPUT => Err(Error::InvalidInput(message)),
+            FfiStatusCode::OUT_OF_MEMORY => Err(Error::OutOfMemory(message)),
+            other => Err(Error::Other(Some(format!("Unknown status code: {}", other.0))))
         }
     }
 }

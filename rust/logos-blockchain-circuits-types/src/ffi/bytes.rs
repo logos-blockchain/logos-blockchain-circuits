@@ -8,6 +8,24 @@ mod inner {
     }
 }
 
+impl<T> inner::Buffer<*const T> {
+    pub fn null() -> Self {
+        Self {
+            data: std::ptr::null(),
+            size: 0,
+        }
+    }
+}
+
+impl<T> inner::Buffer<*mut T> {
+    pub fn null() -> Self {
+        Self {
+            data: std::ptr::null_mut(),
+            size: 0,
+        }
+    }
+}
+
 /// Owned byte buffer returned by the C witness generator functions.
 ///
 /// The inner `data` pointer must be null-initialized. It's heap-allocated by the C side and must be
@@ -29,7 +47,7 @@ pub type ConstBytes = inner::Buffer<*const u8>;
 ///
 /// # Safety
 ///
-/// Dereferences raw pointers. The caller must ensure that the pointer is valid.
+/// Dereferences raw pointers.
 pub unsafe fn free_bytes(bytes: *mut Bytes) {
     if bytes.is_null() {
         return;

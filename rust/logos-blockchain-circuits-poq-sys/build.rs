@@ -20,6 +20,7 @@ fn get_artifact_url(version: &str, os: &str, arch: &str) -> String {
 
 fn fetch_library(version: &str, os: &str, arch: &str) -> Response<Body> {
     let url = get_artifact_url(version, os, arch);
+    // TODO: Verify checksum.
     ureq::get(&url).call().unwrap_or_else(|error| {
         panic!(
             "Failed to download a prebuilt library for {os}-{arch} v{version}: {error}. \
@@ -35,7 +36,11 @@ fn unpack_library(response: Response<Body>, version: &str, os: &str, arch: &str,
 
     let unpacked_artifact_path = output_dir.join(get_artifact_name(version, os, arch));
     let unpacked_library_directory = unpacked_artifact_path.join(CIRCUIT_NAME);
-    assert!(unpacked_library_directory.exists(), "Expected the unpacked library at {}.", unpacked_library_directory.display());
+
+    if !unpacked_library_directory.exists() {
+        panic!("Failed to find the unpacked library at {}.", unpacked_library_directory.display());
+    }
+
     unpacked_library_directory
 }
 
@@ -57,12 +62,18 @@ fn provision_library() -> PathBuf {
 
 fn main() {
     println!("cargo:rerun-if-env-changed={LIB_VAR_NAME}");
+    println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-changed=build.rs");
 
     let lib_dir = std::env::var(LIB_VAR_NAME).map(
         |lib_dir| {
             println!("Using a library directory from {LIB_VAR_NAME}: {lib_dir}");
             let lib_dir_path = PathBuf::from(lib_dir);
-            assert!(lib_dir_path.exists(), "The library directory at {} does not exist.", lib_dir_path.display());
+            if !lib_dir_path.exists() {
+                panic!("The library directory specified in {LIB_VAR_NAME} at {} does not exist.", lib_dir_path.display());
+
+            }
             lib_dir_path
         }
     ).unwrap_or_else(|_| {

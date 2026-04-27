@@ -1,5 +1,6 @@
-use std::ffi::{CString, NulError};
+use std::ffi::CString;
 use crate::ffi;
+use crate::native::Error;
 
 /// Input for witness generators
 pub struct WitnessInput {
@@ -10,8 +11,12 @@ pub struct WitnessInput {
 }
 
 impl WitnessInput {
-    pub fn new(dat: Vec<u8>, inputs_json: String) -> Result<Self, NulError> {
-        let inputs_json = CString::new(inputs_json)?;
+    pub fn new(dat: Vec<u8>, inputs_json: String) -> Result<Self, Error> {
+        let inputs_json = CString::new(inputs_json).map_err(
+            |error| Error::InvalidInput(Some(
+                format!("The parameter inputs_json could not be converted to CString: {}", error)
+            ))
+        )?;
         Ok(Self { dat, inputs_json })
     }
 

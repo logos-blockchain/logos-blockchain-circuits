@@ -10,7 +10,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-lbc-types = { workspace = true}
+lbc-types = { workspace = true }
 
 [build-dependencies]
 flate2 = { workspace = true }
