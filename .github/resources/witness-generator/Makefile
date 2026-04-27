@@ -18,10 +18,12 @@ DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp $(PROJECT)/ffi.hpp
 BIN             := $(PROJECT)
 ifeq ($(OS),windows)
 LIB_EXT         := .lib
+LIB_PREFIX      :=
 else
 LIB_EXT         := .a
+LIB_PREFIX      := lib
 endif
-LIB             := libwitness_$(PROJECT)$(LIB_EXT)
+LIB             := $(LIB_PREFIX)$(PROJECT)$(LIB_EXT)
 
 # ---- Linux (x86_64 and aarch64) ----
 linux: CXXFLAGS=$(CXXFLAGS_COMMON)
