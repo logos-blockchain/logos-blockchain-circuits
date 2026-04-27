@@ -6,18 +6,23 @@ keywords    = ["blockchain", "privacy"]
 license     = "MIT or Apache-2.0"
 readme      = "README.md"
 repository  = "https://github.com/logos-blockchain/logos-blockchain-circuits"
-version     = "0.1.0"
+version     = "0.4.2"
 
 [workspace]
 members = [
+    "logos-blockchain-circuits-poq-sys",
     "logos-blockchain-circuits-types"
 ]
 resolver = "3"
 
 [workspace.dependencies]
 # Internal
-lbc-types = { path = "logos-blockchain-circuits-types" }
+lbc-poq-sys = { default-features = false, package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
+lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
 # External
+flate2 = "1"
 libc = "0.2.185"
+tar = "0.4"
 thiserror = "2.0.18"
+ureq = "3.3.0"
