@@ -3,15 +3,15 @@ use crate::ffi;
 use crate::native::Error;
 
 /// Input for witness generators
-pub struct WitnessInput {
+pub struct WitnessInput<'a> {
     /// The circuit's dat file contents.
-    dat: Vec<u8>,
+    dat: &'a [u8],
     /// The JSON string containing the circuit inputs.
     inputs_json: CString,
 }
 
-impl WitnessInput {
-    pub fn new(dat: Vec<u8>, inputs_json: String) -> Result<Self, Error> {
+impl<'a> WitnessInput<'a> {
+    pub fn new(dat: &'a [u8], inputs_json: String) -> Result<Self, Error> {
         let inputs_json = CString::new(inputs_json).map_err(
             |error| Error::InvalidInput(Some(
                 format!("The parameter inputs_json could not be converted to CString: {}", error)
@@ -29,7 +29,7 @@ impl WitnessInput {
 /// Temporary FFI view of a [`WitnessInput`], which makes [`ffi::WitnessInput`] lifetime-aware.
 pub struct WitnessInputFfiGuard<'a> {
     ffi: ffi::WitnessInput,
-    _lifetime: std::marker::PhantomData<&'a WitnessInput>,
+    _lifetime: std::marker::PhantomData<&'a WitnessInput<'a>>,
 }
 
 impl<'a> WitnessInputFfiGuard<'a> {
