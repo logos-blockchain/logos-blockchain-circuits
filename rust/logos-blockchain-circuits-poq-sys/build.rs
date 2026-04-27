@@ -83,4 +83,6 @@ fn main() {
     let lib_dir = lib_dir.to_str().expect("Failed to convert the library directory path to a string");
     println!("cargo:rustc-link-search=native={lib_dir}");
     println!("cargo:rustc-link-lib=static={CIRCUIT_NAME}");
+    println!("cargo:rustc-link-lib=stdc++");
+    println!("cargo:rustc-link-lib=gmp");
 }
