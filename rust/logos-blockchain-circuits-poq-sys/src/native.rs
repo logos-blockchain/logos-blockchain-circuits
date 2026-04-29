@@ -60,9 +60,10 @@ mod tests {
     use super::{generate_witness, generate_witness_from_files};
 
     static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
+        const ENV_VAR: &str = "LBC_POQ_LIB_DIR";
         PathBuf::from(
-            std::env::var("POQ_LIB_DIR")
-                .expect("POQ_LIB_DIR must be available, as provided by the build script."),
+            std::env::var(ENV_VAR)
+                .expect(format!("Environment variable '{ENV_VAR}' must be available, as provided by the build script.").as_str()),
         )
     });
     static INPUTS: LazyLock<PathBuf> = LazyLock::new(|| {

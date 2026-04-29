@@ -3,7 +3,7 @@ use ureq::Body;
 use ureq::http::Response;
 
 static CIRCUIT_NAME: &str = "poq";
-static LIB_VAR_NAME: &str = "POQ_LIB_DIR";
+static LIB_VAR_NAME: &str = "LBC_POQ_LIB_DIR";
 
 
 fn get_artifact_name(version: &str, os: &str, arch: &str) -> String {
