@@ -51,3 +51,44 @@ pub fn generate_witness_from_files(
         )
     }.try_into()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use lbc_types::native::WitnessInput;
+    use std::sync::LazyLock;
+    use super::{generate_witness, generate_witness_from_files};
+
+    static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
+        PathBuf::from(
+            std::env::var("POQ_LIB_DIR")
+                .expect("POQ_LIB_DIR must be available, as provided by the build script."),
+        )
+    });
+    static INPUTS: LazyLock<PathBuf> = LazyLock::new(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json")
+    });
+
+    #[test]
+    fn test_generate_witness() {
+        let dat = LIB_DIR.join("witness_generator");
+        let witness_output_path = std::env::temp_dir().join("poq_test_witness.wtns");
+
+        generate_witness_from_files(&dat, &*INPUTS, &witness_output_path)
+            .expect("generate_witness_from_files failed.");
+
+        let dat_bytes = {
+            let dat_file = dat.with_extension("dat");
+            std::fs::read(&dat_file)
+                .expect(format!("Failed to read {}.", dat_file.display()).as_str())
+        };
+        let inputs_json = std::fs::read_to_string(&*INPUTS)
+            .expect(format!("Failed to read {}.", INPUTS.display()).as_str());
+
+        let input = WitnessInput::new(dat_bytes.as_slice(), inputs_json).expect("Failed to construct the input for the witness generator.");
+        let output = generate_witness(input).expect("generate_witness failed.");
+
+        let expected = std::fs::read(&witness_output_path).expect(format!("Failed to read the generated witness from {}.", witness_output_path.display()).as_str());
+        assert_eq!(output.as_slice(), expected.as_slice());
+    }
+}

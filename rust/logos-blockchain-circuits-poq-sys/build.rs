@@ -60,6 +60,17 @@ fn provision_library() -> PathBuf {
     unpack_library(response, version, &os, &arch, &out_dir)
 }
 
+/// Configures the corresponding witness generator library.
+///
+/// # Arguments
+///
+/// - `LIB_VAR_NAME` is the name of the environment variable that points to the directory
+///  containing the library. If it is not set, the library will be downloaded from GitHub.
+///
+/// # Output
+///
+/// - `LIB_VAR_NAME` is always emitted so internals can refer to it regardless of whether the
+///  library was downloaded or provided by the user.
 fn main() {
     println!("cargo:rerun-if-env-changed={LIB_VAR_NAME}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
@@ -81,6 +92,7 @@ fn main() {
     });
 
     let lib_dir = lib_dir.to_str().expect("Failed to convert the library directory path to a string");
+    println!("cargo:rustc-env={LIB_VAR_NAME}={lib_dir}");
     println!("cargo:rustc-link-search=native={lib_dir}");
     println!("cargo:rustc-link-lib=static={CIRCUIT_NAME}");
     println!("cargo:rustc-link-lib=stdc++");
