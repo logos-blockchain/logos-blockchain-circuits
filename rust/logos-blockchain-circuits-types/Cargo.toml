@@ -1,0 +1,13 @@
+[package]
+name = "logos-blockchain-circuits-types"
+categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+libc = { workspace = true }

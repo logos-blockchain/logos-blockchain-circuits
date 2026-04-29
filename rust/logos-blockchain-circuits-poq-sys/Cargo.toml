@@ -1,0 +1,18 @@
+[package]
+name = "logos-blockchain-circuits-poq-sys"
+categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+lbc-types = { workspace = true }
+
+[build-dependencies]
+flate2 = { workspace = true }
+tar = { workspace = true }
+ureq = { workspace = true }
