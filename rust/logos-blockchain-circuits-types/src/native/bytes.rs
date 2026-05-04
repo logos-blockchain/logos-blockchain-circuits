@@ -18,6 +18,12 @@ impl Bytes {
     }
 }
 
+impl AsRef<[u8]> for Bytes {
+    fn as_ref(&self) -> &[u8] {
+        self.as_slice()
+    }
+}
+
 impl From<Vec<u8>> for Bytes {
     fn from(value: Vec<u8>) -> Self {
         Self(value)
