@@ -1,24 +1,60 @@
 use std::path::Path;
-use lbc_types::{ffi, native::{Bytes, Error, WitnessInput}};
+use lbc_types::{ffi, native::{Bytes, Error}};
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
-fn into_null_terminated_string(
-    string: &str,
-) -> Result<std::ffi::CString, Error> {
-    std::ffi::CString::new(string)
-        .map_err(|error| Error::InvalidInput(Some(format!("Could not convert string to CString: {error}"))))
+mod helpers {
+    use std::path::Path;
+    use lbc_types::native::Error;
+
+    pub fn into_null_terminated_string(
+        string: &str,
+    ) -> Result<std::ffi::CString, Error> {
+        std::ffi::CString::new(string)
+            .map_err(|error| Error::InvalidInput(Some(format!("Could not convert string to CString: {error}"))))
+    }
+
+    pub fn path_as_null_terminated_string(
+        path: &Path,
+    ) -> Result<std::ffi::CString, Error> {
+        let path = path.to_str().ok_or(Error::InvalidInput(Some(format!("Could not convert the path to a string: {}", path.display()))))?;
+        into_null_terminated_string(path)
+    }
 }
 
-fn path_as_null_terminated_string(
-    path: &Path,
-) -> Result<std::ffi::CString, Error> {
-    let path = path.to_str().ok_or(Error::InvalidInput(Some(format!("Could not convert the path to a string: {}", path.display()))))?;
-    into_null_terminated_string(path)
+pub mod inputs {
+    use lbc_types::native::Error;
+    use lbc_types::WitnessInput;
+
+    pub(crate) static DAT: &[u8] = include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
+
+    pub struct PoqWitnessInput<'a> {
+        inner: WitnessInput<'a>
+    }
+
+    impl<'a> PoqWitnessInput<'a> {
+        pub fn new(inputs_json: String) -> Result<Self, Error> {
+            let inner = WitnessInput::new(DAT, inputs_json)?;
+            Ok(Self { inner })
+        }
+    }
+
+    impl<'a> From<PoqWitnessInput<'a>> for WitnessInput<'a> {
+        fn from(value: PoqWitnessInput<'a>) -> Self {
+            value.inner
+        }
+    }
+
+    impl<'a> From<WitnessInput<'a>> for PoqWitnessInput<'a> {
+        fn from(value: WitnessInput<'a>) -> Self {
+            Self { inner: value }
+        }
+    }
 }
 
 pub fn generate_witness(
-    input: WitnessInput,
+    input: inputs::PoqWitnessInput,
 ) -> Result<Bytes, Error> {
+    let input: lbc_types::WitnessInput = input.into();
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
@@ -39,9 +75,9 @@ pub fn generate_witness_from_files(
     inputs: &Path,
     output: &Path,
 ) -> Result<(), Error> {
-    let c_dat = path_as_null_terminated_string(dat)?;
-    let c_inputs = path_as_null_terminated_string(inputs)?;
-    let c_output = path_as_null_terminated_string(output)?;
+    let c_dat = helpers::path_as_null_terminated_string(dat)?;
+    let c_inputs = helpers::path_as_null_terminated_string(inputs)?;
+    let c_output = helpers::path_as_null_terminated_string(output)?;
 
     unsafe {
         poq_generate_witness_from_files (
@@ -55,9 +91,8 @@ pub fn generate_witness_from_files(
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use lbc_types::native::WitnessInput;
     use std::sync::LazyLock;
-    use super::{generate_witness, generate_witness_from_files};
+    use super::{generate_witness, generate_witness_from_files, inputs};
 
     static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
         const ENV_VAR: &str = "LBC_POQ_LIB_DIR";
@@ -78,15 +113,10 @@ mod tests {
         generate_witness_from_files(&dat, &*INPUTS, &witness_output_path)
             .expect("generate_witness_from_files failed.");
 
-        let dat_bytes = {
-            let dat_file = dat.with_extension("dat");
-            std::fs::read(&dat_file)
-                .expect(format!("Failed to read {}.", dat_file.display()).as_str())
-        };
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .expect(format!("Failed to read {}.", INPUTS.display()).as_str());
 
-        let input = WitnessInput::new(dat_bytes.as_slice(), inputs_json).expect("Failed to construct the input for the witness generator.");
+        let input = inputs::PoqWitnessInput::new(inputs_json).expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(input).expect("generate_witness failed.");
 
         let expected = std::fs::read(&witness_output_path).expect(format!("Failed to read the generated witness from {}.", witness_output_path.display()).as_str());
