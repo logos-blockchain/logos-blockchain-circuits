@@ -6,3 +6,5 @@
 
 pub mod native;
 pub mod ffi;
+
+pub use native::witness_input::WitnessInput;
