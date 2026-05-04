@@ -24,6 +24,12 @@ impl From<Vec<u8>> for Bytes {
     }
 }
 
+impl From<Bytes> for Vec<u8> {
+    fn from(value: Bytes) -> Self {
+        value.into_inner()
+    }
+}
+
 impl From<ffi::Bytes> for Bytes {
     fn from(mut ffi_value: ffi::Bytes) -> Self {
         let vec = if ffi_value.size == 0 || ffi_value.data.is_null() {
