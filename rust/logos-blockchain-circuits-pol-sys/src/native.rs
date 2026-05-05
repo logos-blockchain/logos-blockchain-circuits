@@ -2,19 +2,19 @@ use std::path::Path;
 use lbc_types::{ffi, native::{Bytes, Error}};
 use lbc_types::inputs::CircuitDat;
 use lbc_utils::string::path_as_null_terminated_string;
-use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
+use crate::ffi::{pol_generate_witness, pol_generate_witness_from_files};
 
-pub(crate) const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
+pub(crate) const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POL_LIB_DIR"), "/witness_generator.dat"));
 
-pub struct PoqDat;
-impl CircuitDat for PoqDat {
+pub struct PolDat;
+impl CircuitDat for PolDat {
     const DAT: &'static [u8] = RAW_CIRCUIT_DAT;
 }
 
-pub type PoqWitnessInput<'a> = lbc_types::inputs::CircuitWitnessInput<'a, PoqDat>;
+pub type PolWitnessInput<'a> = lbc_types::inputs::CircuitWitnessInput<'a, PolDat>;
 
 pub fn generate_witness(
-    input: PoqWitnessInput,
+    input: PolWitnessInput,
 ) -> Result<Bytes, Error> {
     let input: lbc_types::WitnessInput = input.into();
     let ffi_input_guard = input.as_ffi();
@@ -23,7 +23,7 @@ pub fn generate_witness(
     let mut ffi_output_bytes = ffi::Bytes::null();
 
     let status = unsafe {
-        poq_generate_witness(
+        pol_generate_witness(
             ffi_input as *const ffi::WitnessInput,
             &mut ffi_output_bytes as *mut ffi::Bytes
         )
@@ -42,7 +42,7 @@ pub fn generate_witness_from_files(
     let c_output = path_as_null_terminated_string(output)?;
 
     unsafe {
-        poq_generate_witness_from_files (
+        pol_generate_witness_from_files(
             c_dat.as_ptr(),
             c_inputs.as_ptr(),
             c_output.as_ptr(),
@@ -54,10 +54,10 @@ pub fn generate_witness_from_files(
 mod tests {
     use std::path::PathBuf;
     use std::sync::LazyLock;
-    use super::{generate_witness, generate_witness_from_files, PoqWitnessInput};
+    use super::{generate_witness, generate_witness_from_files, PolWitnessInput};
 
     static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-        const ENV_VAR: &str = "LBC_POQ_LIB_DIR";
+        const ENV_VAR: &str = "LBC_POL_LIB_DIR";
         PathBuf::from(
             std::env::var(ENV_VAR)
                 .expect(format!("Environment variable '{ENV_VAR}' must be available, as provided by the build script.").as_str()),
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
-        let witness_output_path = std::env::temp_dir().join("poq_test_witness.wtns");
+        let witness_output_path = std::env::temp_dir().join("pol_test_witness.wtns");
 
         generate_witness_from_files(&dat, &*INPUTS, &witness_output_path)
             .expect("generate_witness_from_files failed.");
@@ -78,7 +78,7 @@ mod tests {
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .expect(format!("Failed to read {}.", INPUTS.display()).as_str());
 
-        let input = PoqWitnessInput::new(inputs_json).expect("Failed to construct the input for the witness generator.");
+        let input = PolWitnessInput::new(inputs_json).expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(input).expect("generate_witness failed.");
 
         let expected = std::fs::read(&witness_output_path).expect(format!("Failed to read the generated witness from {}.", witness_output_path.display()).as_str());

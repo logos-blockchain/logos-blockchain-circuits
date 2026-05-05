@@ -10,15 +10,23 @@ version     = "0.4.2"
 
 [workspace]
 members = [
+    "logos-blockchain-circuits-poc-sys",
+    "logos-blockchain-circuits-pol-sys",
     "logos-blockchain-circuits-poq-sys",
-    "logos-blockchain-circuits-types"
+    "logos-blockchain-circuits-signature-sys",
+    "logos-blockchain-circuits-types",
+    "logos-blockchain-circuits-utils"
 ]
 resolver = "3"
 
 [workspace.dependencies]
 # Internal
-lbc-poq-sys = { default-features = false, package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
-lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
+lbc-poc-sys       = { default-features = false, package = "logos-blockchain-circuits-poc-sys",       path = "./logos-blockchain-circuits-poc-sys" }
+lbc-pol-sys       = { default-features = false, package = "logos-blockchain-circuits-pol-sys",       path = "./logos-blockchain-circuits-pol-sys" }
+lbc-poq-sys       = { default-features = false, package = "logos-blockchain-circuits-poq-sys",       path = "./logos-blockchain-circuits-poq-sys" }
+lbc-signature-sys = { default-features = false, package = "logos-blockchain-circuits-signature-sys", path = "./logos-blockchain-circuits-signature-sys" }
+lbc-types         = { default-features = false, package = "logos-blockchain-circuits-types",         path = "./logos-blockchain-circuits-types" }
+lbc-utils         = { default-features = false, package = "logos-blockchain-circuits-utils",         path = "./logos-blockchain-circuits-utils" }
 
 # External
 flate2 = "1"

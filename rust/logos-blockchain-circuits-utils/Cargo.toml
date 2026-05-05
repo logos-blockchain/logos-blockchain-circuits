@@ -1,5 +1,5 @@
 [package]
-name = "logos-blockchain-circuits-poq-sys"
+name = "logos-blockchain-circuits-utils"
 categories.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -10,10 +10,4 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-lbc-types = { workspace = true }
-lbc-utils = { workspace = true }
-
-[build-dependencies]
-flate2 = { workspace = true }
-tar = { workspace = true }
-ureq = { workspace = true }
+lbc-types = { workspace = true}
