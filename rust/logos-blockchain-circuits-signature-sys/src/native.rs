@@ -1,22 +1,20 @@
 use std::path::Path;
 use lbc_types::{ffi, native::{Bytes, Error}};
-use lbc_types::inputs::CircuitDat;
 use lbc_common::string::path_as_null_terminated_string;
 use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
 
-pub(crate) const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_SIGNATURE_LIB_DIR"), "/witness_generator.dat"));
+const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_SIGNATURE_LIB_DIR"), "/witness_generator.dat"));
 
 pub struct SignatureDat;
-impl CircuitDat for SignatureDat {
+impl lbc_types::CircuitDat for SignatureDat {
     const DAT: &'static [u8] = RAW_CIRCUIT_DAT;
 }
 
-pub type SignatureWitnessInput<'a> = lbc_types::inputs::CircuitWitnessInput<'a, SignatureDat>;
+pub type SignatureWitnessInput<'a> = lbc_types::CircuitWitnessInput<'a, SignatureDat>;
 
 pub fn generate_witness(
     input: SignatureWitnessInput,
 ) -> Result<Bytes, Error> {
-    let input: lbc_types::WitnessInput = input.into();
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
