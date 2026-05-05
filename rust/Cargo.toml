@@ -26,7 +26,7 @@ lbc-pol-sys       = { default-features = false, package = "logos-blockchain-circ
 lbc-poq-sys       = { default-features = false, package = "logos-blockchain-circuits-poq-sys",       path = "./logos-blockchain-circuits-poq-sys" }
 lbc-signature-sys = { default-features = false, package = "logos-blockchain-circuits-signature-sys", path = "./logos-blockchain-circuits-signature-sys" }
 lbc-types         = { default-features = false, package = "logos-blockchain-circuits-types",         path = "./logos-blockchain-circuits-types" }
-lbc-common         = { default-features = false, package = "logos-blockchain-circuits-common",       path = "./logos-blockchain-circuits-common" }
+lbc-common        = { default-features = false, package = "logos-blockchain-circuits-common",        path = "./logos-blockchain-circuits-common" }
 
 # External
 flate2 = "1"

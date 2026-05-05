@@ -17,18 +17,6 @@ impl<'input, Dat: CircuitDat> CircuitWitnessInput<'input, Dat> {
     }
 }
 
-impl<'input, Dat> From<CircuitWitnessInput<'input, Dat>> for WitnessInput<'input> {
-    fn from(value: CircuitWitnessInput<'input, Dat>) -> Self {
-        value.inner
-    }
-}
-
-impl<'input, Dat> From<WitnessInput<'input>> for CircuitWitnessInput<'input, Dat> {
-    fn from(value: WitnessInput<'input>) -> Self {
-        Self { inner: value, _phantom: Default::default() }
-    }
-}
-
 impl<'input, Dat> Deref for CircuitWitnessInput<'input, Dat> {
     type Target = WitnessInput<'input>;
 

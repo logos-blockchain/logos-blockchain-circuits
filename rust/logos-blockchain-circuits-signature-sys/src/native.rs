@@ -3,7 +3,7 @@ use lbc_types::{ffi, native::{Bytes, Error}};
 use lbc_common::string::path_as_null_terminated_string;
 use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
 
-const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_SIGNATURE_LIB_DIR"), "/witness_generator.dat"));
+static RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_SIGNATURE_LIB_DIR"), "/witness_generator.dat"));
 
 pub struct SignatureDat;
 impl lbc_types::CircuitDat for SignatureDat {

@@ -3,7 +3,7 @@ use lbc_types::{ffi, native::{Bytes, Error}};
 use lbc_common::string::path_as_null_terminated_string;
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
-const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
+static RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
 
 pub struct PoqDat;
 impl lbc_types::CircuitDat for PoqDat {
