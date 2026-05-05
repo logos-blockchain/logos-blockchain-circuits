@@ -11,7 +11,7 @@ version.workspace = true
 
 [dependencies]
 lbc-types = { workspace = true }
-lbc-utils = { workspace = true }
+lbc-common = { workspace = true }
 
 [build-dependencies]
 flate2 = { workspace = true }

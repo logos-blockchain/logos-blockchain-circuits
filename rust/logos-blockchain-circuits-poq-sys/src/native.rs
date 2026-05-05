@@ -1,7 +1,7 @@
 use std::path::Path;
 use lbc_types::{ffi, native::{Bytes, Error}};
 use lbc_types::inputs::CircuitDat;
-use lbc_utils::string::path_as_null_terminated_string;
+use lbc_common::string::path_as_null_terminated_string;
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
 pub(crate) const RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
