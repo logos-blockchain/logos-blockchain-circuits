@@ -6,11 +6,11 @@ use crate::ffi::{pol_generate_witness, pol_generate_witness_from_files};
 static RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_POL_LIB_DIR"), "/witness_generator.dat"));
 
 pub struct PolDat;
-impl lbc_types::CircuitDat for PolDat {
-    const DAT: &'static [u8] = RAW_CIRCUIT_DAT;
+impl<'dat> lbc_types::CircuitDat<'dat> for PolDat {
+    const DAT: &'dat [u8] = RAW_CIRCUIT_DAT;
 }
 
-pub type PolWitnessInput<'a> = lbc_types::CircuitWitnessInput<'a, PolDat>;
+pub type PolWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PolDat>;
 
 pub fn generate_witness(
     input: PolWitnessInput,

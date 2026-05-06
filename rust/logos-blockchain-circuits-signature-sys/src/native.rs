@@ -6,11 +6,11 @@ use crate::ffi::{signature_generate_witness, signature_generate_witness_from_fil
 static RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(env!("LBC_SIGNATURE_LIB_DIR"), "/witness_generator.dat"));
 
 pub struct SignatureDat;
-impl lbc_types::CircuitDat for SignatureDat {
-    const DAT: &'static [u8] = RAW_CIRCUIT_DAT;
+impl<'dat> lbc_types::CircuitDat<'dat> for SignatureDat {
+    const DAT: &'dat [u8] = RAW_CIRCUIT_DAT;
 }
 
-pub type SignatureWitnessInput<'a> = lbc_types::CircuitWitnessInput<'a, SignatureDat>;
+pub type SignatureWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, SignatureDat>;
 
 pub fn generate_witness(
     input: SignatureWitnessInput,
