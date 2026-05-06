@@ -29,7 +29,7 @@ lbc-types         = { default-features = false, package = "logos-blockchain-circ
 lbc-common        = { default-features = false, package = "logos-blockchain-circuits-common",        path = "./logos-blockchain-circuits-common" }
 
 # External
-flate2 = "1"
-libc = "0.2.185"
-tar = "0.4"
-ureq = "3.3.0"
+flate2 = "^1"
+libc = "^0.2"
+tar = "^0.4"
+ureq = "^3.3"
