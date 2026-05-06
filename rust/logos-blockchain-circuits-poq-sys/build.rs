@@ -65,12 +65,12 @@ fn provision_library() -> PathBuf {
 /// # Arguments
 ///
 /// - `LIB_VAR_NAME` is the name of the environment variable that points to the directory
-///  containing the library. If it is not set, the library will be downloaded from GitHub.
+///   containing the library. If it is not set, the library will be downloaded from GitHub.
 ///
 /// # Output
 ///
 /// - `LIB_VAR_NAME` is always emitted so internals can refer to it regardless of whether the
-///  library was downloaded or provided by the user.
+///   library was downloaded or provided by the user.
 fn main() {
     println!("cargo:rerun-if-env-changed={LIB_VAR_NAME}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
