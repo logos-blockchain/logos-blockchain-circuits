@@ -5,7 +5,6 @@ use ureq::http::Response;
 static CIRCUIT_NAME: &str = "poc";
 static LIB_VAR_NAME: &str = "LBC_POC_LIB_DIR";
 
-
 fn get_artifact_name(version: &str, os: &str, arch: &str) -> String {
     format!("logos-blockchain-circuits-v{version}-{os}-{arch}")
 }
@@ -29,17 +28,27 @@ fn fetch_library(version: &str, os: &str, arch: &str) -> Response<Body> {
     })
 }
 
-fn unpack_library(response: Response<Body>, version: &str, os: &str, arch: &str, output_dir: &Path) -> PathBuf {
+fn unpack_library(
+    response: Response<Body>,
+    version: &str,
+    os: &str,
+    arch: &str,
+    output_dir: &Path,
+) -> PathBuf {
     let gz_decoder = flate2::read::GzDecoder::new(response.into_body().into_reader());
     let mut archive = tar::Archive::new(gz_decoder);
-    archive.unpack(output_dir).expect("Failed to unpack the downloaded archive.");
+    archive
+        .unpack(output_dir)
+        .expect("Failed to unpack the downloaded archive.");
 
     let unpacked_artifact_path = output_dir.join(get_artifact_name(version, os, arch));
     let unpacked_library_directory = unpacked_artifact_path.join(CIRCUIT_NAME);
 
-    if !unpacked_library_directory.exists() {
-        panic!("Failed to find the unpacked library at {}.", unpacked_library_directory.display());
-    }
+    assert!(
+        unpacked_library_directory.is_dir(),
+        "Failed to find the unpacked library at {}",
+        unpacked_library_directory.display()
+    );
 
     unpacked_library_directory
 }
@@ -50,9 +59,14 @@ fn provision_library() -> PathBuf {
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
-    let expected_library_directory = out_dir.join(get_artifact_name(version, &os, &arch)).join(CIRCUIT_NAME);
+    let expected_library_directory = out_dir
+        .join(get_artifact_name(version, &os, &arch))
+        .join(CIRCUIT_NAME);
     if expected_library_directory.exists() {
-        println!("Found an existing library at {}. Reusing it.", expected_library_directory.display());
+        println!(
+            "Found an existing library at {}. Reusing it.",
+            expected_library_directory.display()
+        );
         return expected_library_directory;
     }
 
@@ -66,21 +80,23 @@ fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=build.rs");
 
-    let lib_dir = std::env::var(LIB_VAR_NAME).map(
+    let lib_dir = std::env::var(LIB_VAR_NAME).map_or_else(
+        |_| provision_library(),
         |lib_dir| {
             println!("Using a library directory from {LIB_VAR_NAME}: {lib_dir}");
             let lib_dir_path = PathBuf::from(lib_dir);
-            if !lib_dir_path.exists() {
-                panic!("The library directory specified in {LIB_VAR_NAME} at {} does not exist.", lib_dir_path.display());
-
-            }
+            assert!(
+                lib_dir_path.is_dir(),
+                "The library directory specified in {LIB_VAR_NAME} at {} does not exist.",
+                lib_dir_path.display()
+            );
             lib_dir_path
-        }
-    ).unwrap_or_else(|_| {
-        provision_library()
-    });
+        },
+    );
 
-    let lib_dir = lib_dir.to_str().expect("Failed to convert the library directory path to a string");
+    let lib_dir = lib_dir
+        .to_str()
+        .expect("Failed to convert the library directory path to a string");
     println!("cargo:rustc-env={LIB_VAR_NAME}={lib_dir}");
     println!("cargo:rustc-link-search=native={lib_dir}");
     println!("cargo:rustc-link-lib=static={CIRCUIT_NAME}");

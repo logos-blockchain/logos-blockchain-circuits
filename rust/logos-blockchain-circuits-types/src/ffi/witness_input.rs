@@ -1,5 +1,5 @@
-use std::ffi::c_char;
 use crate::ffi::ConstBytes;
+use std::ffi::c_char;
 
 /// Input to a witness generator function.
 ///

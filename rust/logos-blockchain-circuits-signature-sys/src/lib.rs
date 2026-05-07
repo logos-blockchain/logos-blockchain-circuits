@@ -1,4 +1,4 @@
 mod ffi;
 pub mod native;
 
-pub use native::{generate_witness, generate_witness_from_files, SignatureWitnessInput};
+pub use native::{SignatureWitnessInput, generate_witness, generate_witness_from_files};

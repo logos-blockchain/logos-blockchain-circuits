@@ -1,9 +1,15 @@
+cargo_root      := justfile_directory() + "/rust"
 src             := justfile_directory() + "/src"
 ci_makefile     := justfile_directory() + "/.github/resources/witness-generator/Makefile"
 circom_version  := "2.2.2" # This version must match the version used in the CI
 
 os := `uname -s`
 sed_i := if os == "Darwin" { "sed -i ''" } else { "sed -i" }
+
+# Shortcut to run cargo commands from the repo root (the Cargo workspace lives under ./rust/).
+# Potentially temporary.
+cargo +args:
+    cd {{cargo_root}} && cargo {{args}}
 
 # Verify the installed circom matches the pinned version.
 check-circom:

@@ -1,5 +1,6 @@
+use crate::native::{Error, WitnessInput};
+use std::marker::PhantomData;
 use std::ops::Deref;
-use crate::native::{WitnessInput, Error};
 
 pub trait CircuitDat<'dat> {
     const DAT: &'dat [u8];
@@ -7,13 +8,16 @@ pub trait CircuitDat<'dat> {
 
 pub struct CircuitWitnessInput<'dat, Dat> {
     inner: WitnessInput<'dat>,
-    _phantom: std::marker::PhantomData<Dat>
+    _phantom: PhantomData<Dat>,
 }
 
 impl<'dat, Dat: CircuitDat<'dat>> CircuitWitnessInput<'dat, Dat> {
     pub fn new(inputs_json: String) -> Result<Self, Error> {
         let inner = WitnessInput::new(Dat::DAT, inputs_json)?;
-        Ok(Self { inner, _phantom: Default::default() })
+        Ok(Self {
+            inner,
+            _phantom: PhantomData,
+        })
     }
 }
 

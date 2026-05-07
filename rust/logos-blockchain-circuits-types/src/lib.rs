@@ -4,7 +4,7 @@
 //! [`native`] module re-exposes those through idiomatic Rust types that own their memory and
 //! convert FFI return values into [`Result`]s.
 
-pub mod native;
 pub mod ffi;
+pub mod native;
 
 pub use native::{CircuitDat, CircuitWitnessInput};

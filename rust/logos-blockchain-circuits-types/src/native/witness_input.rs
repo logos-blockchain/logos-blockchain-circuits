@@ -1,6 +1,6 @@
-use std::ffi::CString;
 use crate::ffi;
 use crate::native::Error;
+use std::ffi::CString;
 
 /// Input for witness generators
 pub struct WitnessInput<'dat> {
@@ -12,15 +12,16 @@ pub struct WitnessInput<'dat> {
 
 impl<'dat> WitnessInput<'dat> {
     pub fn new(dat: &'dat [u8], inputs_json: String) -> Result<Self, Error> {
-        let inputs_json = CString::new(inputs_json).map_err(
-            |error| Error::InvalidInput(Some(
-                format!("The parameter inputs_json could not be converted to CString: {}", error)
-            ))
-        )?;
+        let inputs_json = CString::new(inputs_json).map_err(|error| {
+            Error::InvalidInput(Some(format!(
+                "The parameter inputs_json could not be converted to C string: {error}"
+            )))
+        })?;
         Ok(Self { dat, inputs_json })
     }
 
     /// Borrows this value as a temporary FFI-compatible view.
+    #[must_use]
     pub fn as_ffi(&'_ self) -> WitnessInputFfiGuard<'_> {
         WitnessInputFfiGuard::new(self)
     }
@@ -34,7 +35,10 @@ pub struct WitnessInputFfiGuard<'dat> {
 
 impl<'dat> WitnessInputFfiGuard<'dat> {
     fn new(inner: &'dat WitnessInput) -> Self {
-        let dat = ffi::ConstBytes { data: inner.dat.as_ptr(), size: inner.dat.len() };
+        let dat = ffi::ConstBytes {
+            data: inner.dat.as_ptr(),
+            size: inner.dat.len(),
+        };
         let inputs_json = inner.inputs_json.as_ptr();
         let ffi = ffi::WitnessInput { dat, inputs_json };
         Self {
@@ -44,7 +48,7 @@ impl<'dat> WitnessInputFfiGuard<'dat> {
     }
 }
 
-impl<'dat> AsRef<ffi::WitnessInput> for WitnessInputFfiGuard<'dat> {
+impl AsRef<ffi::WitnessInput> for WitnessInputFfiGuard<'_> {
     fn as_ref(&self) -> &ffi::WitnessInput {
         &self.ffi
     }

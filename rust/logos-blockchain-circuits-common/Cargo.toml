@@ -9,5 +9,8 @@ readme.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
-lbc-types = { workspace = true}
+lbc-types = { workspace = true }

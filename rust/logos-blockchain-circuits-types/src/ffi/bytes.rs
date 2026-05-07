@@ -9,7 +9,7 @@ mod inner {
 }
 
 impl<T> inner::Buffer<*const T> {
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self {
             data: std::ptr::null(),
             size: 0,
@@ -18,7 +18,7 @@ impl<T> inner::Buffer<*const T> {
 }
 
 impl<T> inner::Buffer<*mut T> {
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self {
             data: std::ptr::null_mut(),
             size: 0,
@@ -53,9 +53,11 @@ pub unsafe fn free_bytes(bytes: *mut Bytes) {
         return;
     }
 
+    // SAFETY: `bytes` is non-null (checked above).
     let bytes = unsafe { &mut *bytes };
     if !bytes.data.is_null() {
-        unsafe { free(bytes.data as *mut libc::c_void) };
+        // SAFETY: `bytes.data` is non-null (checked above).
+        unsafe { free(bytes.data.cast::<libc::c_void>()) };
     }
     bytes.data = std::ptr::null_mut();
     bytes.size = 0;

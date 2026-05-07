@@ -1,5 +1,5 @@
-use std::ffi::c_char;
 use lbc_types::ffi::{Bytes, Status, WitnessInput};
+use std::ffi::c_char;
 
 unsafe extern "C" {
     pub fn signature_generate_witness(input: *const WitnessInput, output: *mut Bytes) -> Status;

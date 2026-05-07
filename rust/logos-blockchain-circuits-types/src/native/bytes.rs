@@ -41,11 +41,12 @@ impl From<ffi::Bytes> for Bytes {
         let vec = if ffi_value.size == 0 || ffi_value.data.is_null() {
             Vec::new()
         } else {
-            unsafe {
-                std::slice::from_raw_parts(ffi_value.data, ffi_value.size).to_vec()
-            }
+            // SAFETY: `ffi_value.data` is non-null and `ffi_value.size > 0` (checked above),
+            // pointing to a valid C-allocated buffer of at least `size` bytes.
+            unsafe { std::slice::from_raw_parts(ffi_value.data, ffi_value.size).to_vec() }
         };
-        unsafe { ffi::free_bytes(&mut ffi_value) };
+        // SAFETY: `ffi_value` is a local variable, so the raw pointer is valid for this call.
+        unsafe { ffi::free_bytes(&raw mut ffi_value) };
         Self(vec)
     }
 }

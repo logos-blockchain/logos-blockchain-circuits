@@ -10,13 +10,13 @@ impl Code {
     pub const DYN_ERROR: Self = Self(1);
     pub const INVALID_INPUT: Self = Self(2);
     pub const OUT_OF_MEMORY: Self = Self(3);
-}
 
-impl Code {
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self == &Self::OK
     }
 
+    #[must_use]
     pub fn is_error(&self) -> bool {
         !self.is_ok()
     }
@@ -30,22 +30,26 @@ pub struct Status {
 }
 
 impl Status {
-    pub fn ok() -> Self {
-        Status {
+    #[must_use]
+    pub const fn ok() -> Self {
+        Self {
             code: Code::OK,
             message: [0; 256],
         }
     }
 
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self.code.is_ok()
     }
 
+    #[must_use]
     pub fn is_error(&self) -> bool {
         self.code.is_error()
     }
 
-    pub fn has_message(&self) -> bool {
+    #[must_use]
+    pub const fn has_message(&self) -> bool {
         self.message[0] != 0
     }
 }
