@@ -1,7 +1,7 @@
 [package]
-name = "logos-blockchain-circuits-poc-sys"
+name = "logos-blockchain-circuits-build"
 categories.workspace = true
-description.workspace = true
+description = "Shared build script logic for Logos Blockchain Circuits sys crates."
 edition.workspace = true
 keywords.workspace = true
 license.workspace = true
@@ -13,8 +13,6 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-lbc-types = { workspace = true }
-lbc-common = { workspace = true }
-
-[build-dependencies]
-lbc-build = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+ureq = { workspace = true }

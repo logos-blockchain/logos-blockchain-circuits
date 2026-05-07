@@ -152,6 +152,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
+name = "logos-blockchain-circuits-build"
+version = "0.4.2"
+dependencies = [
+ "flate2",
+ "tar",
+ "ureq",
+]
+
+[[package]]
 name = "logos-blockchain-circuits-common"
 version = "0.4.2"
 dependencies = [
@@ -162,44 +171,36 @@ dependencies = [
 name = "logos-blockchain-circuits-poc-sys"
 version = "0.4.2"
 dependencies = [
- "flate2",
+ "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
  "logos-blockchain-circuits-types",
- "tar",
- "ureq",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-pol-sys"
 version = "0.4.2"
 dependencies = [
- "flate2",
+ "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
  "logos-blockchain-circuits-types",
- "tar",
- "ureq",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-poq-sys"
 version = "0.4.2"
 dependencies = [
- "flate2",
+ "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
  "logos-blockchain-circuits-types",
- "tar",
- "ureq",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-signature-sys"
 version = "0.4.2"
 dependencies = [
- "flate2",
+ "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
  "logos-blockchain-circuits-types",
- "tar",
- "ureq",
 ]
 
 [[package]]

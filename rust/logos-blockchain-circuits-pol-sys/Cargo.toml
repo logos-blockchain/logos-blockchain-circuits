@@ -17,6 +17,4 @@ lbc-types = { workspace = true }
 lbc-common = { workspace = true }
 
 [build-dependencies]
-flate2 = { workspace = true }
-tar = { workspace = true }
-ureq = { workspace = true }
+lbc-build = { workspace = true }
