@@ -19,7 +19,9 @@ fn get_artifact_url(version: &str, os: &str, arch: &str) -> String {
 
 fn fetch_library(version: &str, os: &str, arch: &str) -> Response<Body> {
     let url = get_artifact_url(version, os, arch);
-    // TODO: Verify checksum.
+    // We skip checksum verification intentionally. Hardcoded hashes would protect against a
+    // silently replaced release asset, but require a two-step release (build → hash → commit →
+    // tag) which we consider too costly for now.
     ureq::get(&url).call().unwrap_or_else(|error| {
         panic!(
             "Failed to download a prebuilt library for {os}-{arch} v{version}: {error}. \
