@@ -82,11 +82,14 @@ jobs:
       PTAU_URL: "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
     steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
 
       - name: Install Circom
         run: |
@@ -95,12 +98,6 @@ jobs:
           RUSTFLAGS="-A dead_code" cargo build --release
           RUSTFLAGS="-A dead_code" cargo install --path circom
           circom --version
-
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b
@@ -153,11 +150,14 @@ jobs:
       OS: linux
       ARCH: x86_64
     steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
 
       - name: Install Circom
         run: |
@@ -166,12 +166,6 @@ jobs:
           RUSTFLAGS="-A dead_code" cargo build --release
           RUSTFLAGS="-A dead_code" cargo install --path circom
           circom --version
-
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
 
       - name: Setup Dependencies
         working-directory: rapidsnark
@@ -389,11 +383,14 @@ jobs:
       OS: linux
       ARCH: aarch64
     steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
 
       - name: Install Circom
         run: |
@@ -402,12 +399,6 @@ jobs:
           RUSTFLAGS="-A dead_code" cargo build --release
           RUSTFLAGS="-A dead_code" cargo install --path circom
           circom --version
-
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
 
       - name: Setup Dependencies
         working-directory: rapidsnark
@@ -637,11 +628,14 @@ jobs:
             make
             git
 
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
 
       - name: Install Circom
         run: |
@@ -650,12 +644,6 @@ jobs:
           $env:RUSTFLAGS="-A dead_code"; cargo build --release
           $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
           circom --version
-
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
 
       - name: Install Dependencies [Witness Generator]
         shell: msys2 {0}
@@ -902,11 +890,14 @@ jobs:
       ARCH: aarch64
       OS: macos
     steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
 
       - name: Install Circom
         run: |
@@ -915,12 +906,6 @@ jobs:
           RUSTFLAGS="-A dead_code" cargo build --release
           RUSTFLAGS="-A dead_code" cargo install --path circom
           circom --version
-
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
 
       - name: Setup Dependencies
         run: mkdir include

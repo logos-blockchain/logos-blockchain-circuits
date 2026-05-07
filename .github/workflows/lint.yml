@@ -1,0 +1,105 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # Version 4.2.2
+
+      # Stable toolchain for building and clippy, version and components from rust-toolchain.toml.
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+
+      # Nightly toolchain for rustfmt only — nightly is required for formatting features not yet stable.
+      - name: Install Nightly Toolchain (fmt)
+        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        with:
+          toolchain: nightly-2026-02-28
+          profile: minimal
+          components: rustfmt
+
+      - name: Cache Cargo artifacts
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install taplo
+        run: cargo install taplo-cli --version 0.9.3 --locked
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --version 0.19.0 --locked
+
+      - name: Install cargo-machete
+        run: cargo install cargo-machete --version 0.19.1 --locked
+
+      - name: Check Rust formatting
+        id: fmt
+        continue-on-error: true
+        run: cargo +nightly-2026-02-28 fmt --manifest-path rust/Cargo.toml --all -- --check
+
+      - name: Lint (clippy)
+        id: clippy
+        continue-on-error: true
+        run: >
+          cargo clippy
+          --manifest-path rust/Cargo.toml
+          --all
+          --all-targets
+          --all-features
+          --
+          -D warnings
+
+      - name: Audit dependencies
+        id: deny
+        continue-on-error: true
+        run: >
+          cargo deny
+          --manifest-path rust/Cargo.toml
+          --locked
+          --all-features
+          check
+          --hide-inclusion-graph
+          -c .cargo-deny.toml
+          --show-stats
+          -D warnings
+
+      - name: Check TOML formatting
+        id: taplo-fmt
+        continue-on-error: true
+        run: taplo fmt --check
+
+      - name: Lint TOML
+        id: taplo-lint
+        continue-on-error: true
+        run: taplo lint
+
+      - name: Check unused dependencies
+        id: machete
+        continue-on-error: true
+        run: cargo machete rust/
+
+      - name: Report
+        if: always()
+        run: |
+          failed=false
+          [ "${{ steps.fmt.outcome }}"        != "success" ] && failed=true
+          [ "${{ steps.clippy.outcome }}"     != "success" ] && failed=true
+          [ "${{ steps.deny.outcome }}"       != "success" ] && failed=true
+          [ "${{ steps.taplo-fmt.outcome }}"  != "success" ] && failed=true
+          [ "${{ steps.taplo-lint.outcome }}" != "success" ] && failed=true
+          [ "${{ steps.machete.outcome }}"    != "success" ] && failed=true
+          $failed && exit 1 || true
