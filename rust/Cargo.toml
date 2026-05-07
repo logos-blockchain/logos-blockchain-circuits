@@ -31,10 +31,11 @@ lbc-signature-sys = { default-features = false, package = "logos-blockchain-circ
 lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
 # External
-flate2 = "^1"
+flate2 = "^1.1"
 libc = "^0.2"
 tar = "^0.4"
 ureq = "^3.3"
+bytes = "^1.11"
 
 # Sourced from https://github.com/logos-co/nomos/blob/main/Cargo.toml
 [workspace.lints.clippy]

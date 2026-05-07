@@ -6,18 +6,18 @@ use ureq::http::Response;
 static REPO: &str = "logos-blockchain/logos-blockchain-circuits";
 static ARTIFACT_PREFIX: &str = "logos-blockchain-circuits";
 
-fn get_artifact_name(version: &str, os: &str, arch: &str) -> String {
+fn build_artifact_name(version: &str, os: &str, arch: &str) -> String {
     format!("{ARTIFACT_PREFIX}-v{version}-{os}-{arch}")
 }
 
-fn get_artifact_url(version: &str, os: &str, arch: &str) -> String {
-    let artifact = get_artifact_name(version, os, arch);
+fn build_artifact_url(version: &str, os: &str, arch: &str) -> String {
+    let artifact = build_artifact_name(version, os, arch);
     let artifact_tar_gz = format!("{artifact}.tar.gz");
     format!("https://github.com/{REPO}/releases/download/v{version}/{artifact_tar_gz}")
 }
 
 fn fetch_library(version: &str, os: &str, arch: &str, lib_var_name: &str) -> Response<Body> {
-    let url = get_artifact_url(version, os, arch);
+    let url = build_artifact_url(version, os, arch);
     // We skip checksum verification intentionally.
     // Hardcoded hashes would protect against a silently replaced release asset, but require a
     // two-step release (build → hash → commit → tag) which feels overkill for a first-party
@@ -44,7 +44,7 @@ fn unpack_library(
         .unpack(output_dir)
         .expect("Failed to unpack the downloaded archive.");
 
-    let unpacked_artifact_path = output_dir.join(get_artifact_name(version, os, arch));
+    let unpacked_artifact_path = output_dir.join(build_artifact_name(version, os, arch));
     let unpacked_library_directory = unpacked_artifact_path.join(circuit_name);
 
     assert!(
@@ -63,7 +63,7 @@ fn provision_library(circuit_name: &str, lib_var_name: &str) -> PathBuf {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
     let expected_library_directory = out_dir
-        .join(get_artifact_name(version, &os, &arch))
+        .join(build_artifact_name(version, &os, &arch))
         .join(circuit_name);
     if expected_library_directory.is_dir() {
         println!(
