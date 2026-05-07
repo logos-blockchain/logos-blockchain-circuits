@@ -69,8 +69,8 @@ jobs:
             display: PoQ
             file: poq.circom
             dir: blend
-          - name: zksign
-            display: ZKSign
+          - name: signature
+            display: Signature
             file: signature.circom
             dir: mantle
           - name: poc
@@ -259,11 +259,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -291,11 +291,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -326,7 +326,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -346,9 +346,9 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/zksign-artifact/libsignature.a "${BUNDLE_NAME}/zksign/"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
           mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
           cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
@@ -358,8 +358,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -494,11 +494,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -526,11 +526,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -561,7 +561,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -581,9 +581,9 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/zksign-artifact/libsignature.a "${BUNDLE_NAME}/zksign/"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
           mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
           cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
@@ -593,8 +593,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -767,11 +767,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -799,11 +799,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -835,7 +835,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -853,9 +853,9 @@ jobs:
           mv witness-generators/poq-artifact/poq.lib "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/zksign-artifact/signature.lib "${BUNDLE_NAME}/zksign/"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/signature-artifact/signature.lib "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
           mv witness-generators/poc-artifact/poc.lib "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
           cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
@@ -865,8 +865,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -995,11 +995,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -1027,11 +1027,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1062,7 +1062,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -1082,9 +1082,9 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/zksign-artifact/libsignature.a "${BUNDLE_NAME}/zksign/"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          cp -r witness-generators/zksign-artifact/include "${BUNDLE_NAME}/zksign/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
           mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
           cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
@@ -1094,8 +1094,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 

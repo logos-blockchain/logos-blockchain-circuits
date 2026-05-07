@@ -79,7 +79,7 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 │   ├── include/
 │   ├── proving_key.zkey
 │   └── verification_key.json
-├── zksign/
+├── signature/
 │   ├── libsignature.a
 │   ├── witness_generator.dat
 │   ├── include/
