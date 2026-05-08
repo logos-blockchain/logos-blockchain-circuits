@@ -16,14 +16,13 @@ jobs:
 
       # Stable toolchain for building and clippy, version and components from rust-toolchain.toml.
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # Version 1.16.0
 
       # Nightly toolchain for rustfmt only — nightly is required for formatting features not yet stable.
       - name: Install Nightly Toolchain (fmt)
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # Version 1.16.0
         with:
           toolchain: nightly-2026-02-28
-          profile: minimal
           components: rustfmt
 
       - name: Cache Cargo artifacts
