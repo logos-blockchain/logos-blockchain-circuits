@@ -13,4 +13,5 @@ version.workspace = true
 workspace = true
 
 [dependencies]
+bytes = { workspace = true }
 libc = { workspace = true }

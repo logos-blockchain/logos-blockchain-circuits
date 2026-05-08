@@ -4,39 +4,9 @@ use crate::ffi;
 ///
 /// When constructing from [`From<ffi::Bytes>`], it takes ownership of the underlying value and
 /// frees it.
-pub struct Bytes(Vec<u8>);
+pub type Witness = bytes::Bytes;
 
-impl Bytes {
-    #[must_use]
-    pub fn into_inner(self) -> Vec<u8> {
-        self.0
-    }
-
-    #[must_use]
-    pub fn as_slice(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl AsRef<[u8]> for Bytes {
-    fn as_ref(&self) -> &[u8] {
-        self.as_slice()
-    }
-}
-
-impl From<Vec<u8>> for Bytes {
-    fn from(value: Vec<u8>) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Bytes> for Vec<u8> {
-    fn from(value: Bytes) -> Self {
-        value.into_inner()
-    }
-}
-
-impl From<ffi::Bytes> for Bytes {
+impl From<ffi::Bytes> for Witness {
     fn from(mut ffi_value: ffi::Bytes) -> Self {
         let vec = if ffi_value.size == 0 || ffi_value.data.is_null() {
             Vec::new()
@@ -47,6 +17,6 @@ impl From<ffi::Bytes> for Bytes {
         };
         // SAFETY: `ffi_value` is a local variable, so the raw pointer is valid for this call.
         unsafe { ffi::free_bytes(&raw mut ffi_value) };
-        Self(vec)
+        Self::from(vec)
     }
 }

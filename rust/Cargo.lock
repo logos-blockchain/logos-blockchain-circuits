@@ -207,6 +207,7 @@ dependencies = [
 name = "logos-blockchain-circuits-types"
 version = "0.4.2"
 dependencies = [
+ "bytes",
  "libc",
 ]
 

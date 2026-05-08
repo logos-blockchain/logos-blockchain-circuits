@@ -7,4 +7,4 @@
 pub mod ffi;
 pub mod native;
 
-pub use native::{CircuitDat, CircuitWitnessInput};
+pub use native::{CircuitDat, CircuitWitnessInput, Error};

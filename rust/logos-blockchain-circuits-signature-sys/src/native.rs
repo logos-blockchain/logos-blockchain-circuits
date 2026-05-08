@@ -2,7 +2,7 @@ use crate::ffi::{signature_generate_witness, signature_generate_witness_from_fil
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
-    native::{Bytes, Error},
+    native::{Error, Witness},
 };
 use std::path::Path;
 
@@ -18,7 +18,7 @@ impl<'dat> lbc_types::CircuitDat<'dat> for SignatureDat {
 
 pub type SignatureWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, SignatureDat>;
 
-pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Bytes, Error> {
+pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
@@ -29,7 +29,7 @@ pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Bytes, Error> {
         signature_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
     };
 
-    status.try_into().map(|()| Bytes::from(ffi_output_bytes))
+    status.try_into().map(|()| Witness::from(ffi_output_bytes))
 }
 
 pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> Result<(), Error> {
@@ -82,6 +82,6 @@ mod tests {
                 witness_output_path.display()
             )
         });
-        assert_eq!(output.as_slice(), expected.as_slice());
+        assert_eq!(output.iter().as_slice(), expected.as_slice());
     }
 }

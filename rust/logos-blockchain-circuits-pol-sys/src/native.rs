@@ -2,7 +2,7 @@ use crate::ffi::{pol_generate_witness, pol_generate_witness_from_files};
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
-    native::{Bytes, Error},
+    native::{Error, Witness},
 };
 use std::path::Path;
 
@@ -16,7 +16,7 @@ impl<'dat> lbc_types::CircuitDat<'dat> for PolDat {
 
 pub type PolWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PolDat>;
 
-pub fn generate_witness(input: &PolWitnessInput) -> Result<Bytes, Error> {
+pub fn generate_witness(input: &PolWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
@@ -26,7 +26,7 @@ pub fn generate_witness(input: &PolWitnessInput) -> Result<Bytes, Error> {
     let status =
         unsafe { pol_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes) };
 
-    status.try_into().map(|()| Bytes::from(ffi_output_bytes))
+    status.try_into().map(|()| Witness::from(ffi_output_bytes))
 }
 
 pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> Result<(), Error> {
@@ -77,6 +77,6 @@ mod tests {
                 witness_output_path.display()
             )
         });
-        assert_eq!(output.as_slice(), expected.as_slice());
+        assert_eq!(output.iter().as_slice(), expected.as_slice());
     }
 }
