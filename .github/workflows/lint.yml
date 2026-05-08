@@ -24,6 +24,7 @@ jobs:
         with:
           toolchain: nightly-2026-02-28
           components: rustfmt
+          override: 'false'
 
       - name: Cache Cargo artifacts
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
@@ -94,11 +95,24 @@ jobs:
       - name: Report
         if: always()
         run: |
+          pass="✅" fail="❌"
           failed=false
-          [ "${{ steps.fmt.outcome }}"        != "success" ] && failed=true
-          [ "${{ steps.clippy.outcome }}"     != "success" ] && failed=true
-          [ "${{ steps.deny.outcome }}"       != "success" ] && failed=true
-          [ "${{ steps.taplo-fmt.outcome }}"  != "success" ] && failed=true
-          [ "${{ steps.taplo-lint.outcome }}" != "success" ] && failed=true
-          [ "${{ steps.machete.outcome }}"    != "success" ] && failed=true
+
+          check() {
+            local name="$1" outcome="$2"
+            if [ "$outcome" = "success" ]; then
+              echo "$pass $name"
+            else
+              echo "$fail $name ($outcome)"
+              failed=true
+            fi
+          }
+
+          check "rustfmt"       "${{ steps.fmt.outcome }}"
+          check "clippy"        "${{ steps.clippy.outcome }}"
+          check "cargo-deny"    "${{ steps.deny.outcome }}"
+          check "taplo fmt"     "${{ steps.taplo-fmt.outcome }}"
+          check "taplo lint"    "${{ steps.taplo-lint.outcome }}"
+          check "cargo-machete" "${{ steps.machete.outcome }}"
+
           $failed && exit 1 || true
