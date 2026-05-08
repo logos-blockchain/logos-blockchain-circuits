@@ -105,7 +105,7 @@ jobs:
           node-version: '20'
 
       - name: Install snarkjs
-        run: npm install -g snarkjs@latest
+        run: npm install -g snarkjs@0.7.6
 
       - name: Cache Powers of Tau
         id: cache-ptau
@@ -126,6 +126,7 @@ jobs:
           cd ${{ matrix.circuit.dir }}
           circom --r1cs --O2 ${{ matrix.circuit.file }}
           snarkjs groth16 setup ${CIRCUIT_NAME}.r1cs ../${{ env.PTAU_FILE }} ${{ matrix.circuit.name }}-0.zkey
+          # Single-contributor trusted setup: A proper MPC ceremony is required before production (see issue #17).
           head -c 32 /dev/urandom | xxd -p -c 256 | snarkjs zkey contribute ${{ matrix.circuit.name }}-0.zkey ${{ matrix.circuit.name }}.zkey --name="RELEASE" -v
           snarkjs zkey export verificationkey ${{ matrix.circuit.name }}.zkey ${{ matrix.circuit.name }}_verification_key.json
         env:
