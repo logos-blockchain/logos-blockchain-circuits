@@ -12,21 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # Version 4.2.2
+        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
 
       # Stable toolchain for building and clippy, version and components from rust-toolchain.toml.
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # Version 1.16.0
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       # Nightly toolchain for rustfmt only — nightly is required for formatting features not yet stable.
       - name: Install Nightly Toolchain (fmt)
-        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # Version 1.16.0
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
         with:
           toolchain: nightly-2026-02-28
           components: rustfmt
 
       - name: Cache Cargo artifacts
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: |
             ~/.cargo/registry
@@ -37,13 +37,13 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install taplo
-        run: cargo install taplo-cli --version 0.9.3 --locked
+        run: cargo install taplo-cli --version 0.9.3 --locked  # v0.9.3
 
       - name: Install cargo-deny
-        run: cargo install cargo-deny --version 0.19.0 --locked
+        run: cargo install cargo-deny --version 0.19.4 --locked  # v0.19.4
 
       - name: Install cargo-machete
-        run: cargo install cargo-machete --version 0.19.1 --locked
+        run: cargo install cargo-machete --version 0.9.2 --locked  # v0.9.2
 
       - name: Check Rust formatting
         id: fmt
