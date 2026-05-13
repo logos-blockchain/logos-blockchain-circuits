@@ -10,3 +10,9 @@ result
 
 # Rust Codebase
 rust/**/target/
+
+# Build
+.cache
+build
+cmake
+
