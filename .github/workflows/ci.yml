@@ -52,6 +52,27 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Checkout
+        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
+        with:
+          sparse-checkout: rust/Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - name: Verify Cargo version
+        env:
+          VERSION: ${{ steps.define-version.outputs.version }}
+        run: |
+          if [[ "$VERSION" =~ ^v0\.0\.0-pr ]]; then
+            echo "Skipping version check for PR build."
+            exit 0
+          fi
+          CARGO_VERSION=$(grep '^version = ' rust/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          if [ "$CARGO_VERSION" != "${VERSION#v}" ]; then
+            echo "Version mismatch: Cargo.toml has '$CARGO_VERSION' but tag is '$VERSION'."
+            exit 1
+          fi
+          echo "Version check passed: $CARGO_VERSION"
+
   generate-proving-keys:
     name: Generate ${{ matrix.circuit.display }} Proving Key
     runs-on: ubuntu-latest
