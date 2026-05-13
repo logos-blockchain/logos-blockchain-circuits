@@ -110,7 +110,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       - name: Install Circom
         run: |
@@ -179,7 +179,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       - name: Install Circom
         run: |
@@ -412,7 +412,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       - name: Install Circom
         run: |
@@ -657,7 +657,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       - name: Install Circom
         run: |
@@ -919,7 +919,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
       - name: Install Circom
         run: |
@@ -1130,6 +1130,67 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+  # The following `Clippy` and `Test` jobs require the library circuits to compile the target repositories.
+  # To avoid specifying the circuit build job multiple times across the CI, the `Clippy` and `Test` jobs are
+  # defined in the same workflow as the `Build` job.
+  # Ideally, if and when the build system is moved to an agnostic tool (such as `cmake`) and that is integrated into
+  # the sys crates' `build.rs`, these jobs will be moved to their own workflows.
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-linux
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Dependencies
+        run: sudo apt install -y libgmp-dev
+
+      - name: Cache Cargo artifacts
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Download Linux Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Clippy
+        run: >
+          cargo clippy
+          --manifest-path rust/Cargo.toml
+          --all
+          --all-targets
+          --all-features
+          --
+          -D warnings
+        env:
+          LBC_POC_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poc
+          LBC_POL_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/pol
+          LBC_POQ_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poq
+          LBC_SIGNATURE_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/signature
+
+  # See clippy above — same reason.
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -1145,7 +1206,10 @@ jobs:
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@88dc2356392166efad76775c878094f4e83ff746  # Version 1.0.6
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Dependencies
+        run: sudo apt install -y libgmp-dev
 
       - name: Cache Cargo artifacts
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
@@ -1191,6 +1255,7 @@ jobs:
       - build-linux-aarch64
       - build-windows
       - build-macos
+      - clippy
       - test
     env:
       TAG: ${{ needs.setup.outputs.tag }}

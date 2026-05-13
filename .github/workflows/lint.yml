@@ -51,18 +51,6 @@ jobs:
         continue-on-error: true
         run: cargo +nightly-2026-02-28 fmt --manifest-path rust/Cargo.toml --all -- --check
 
-      - name: Lint (clippy)
-        id: clippy
-        continue-on-error: true
-        run: >
-          cargo clippy
-          --manifest-path rust/Cargo.toml
-          --all
-          --all-targets
-          --all-features
-          --
-          -D warnings
-
       - name: Audit dependencies
         id: deny
         continue-on-error: true
@@ -109,7 +97,6 @@ jobs:
           }
 
           check "rustfmt"       "${{ steps.fmt.outcome }}"
-          check "clippy"        "${{ steps.clippy.outcome }}"
           check "cargo-deny"    "${{ steps.deny.outcome }}"
           check "taplo fmt"     "${{ steps.taplo-fmt.outcome }}"
           check "taplo lint"    "${{ steps.taplo-lint.outcome }}"
