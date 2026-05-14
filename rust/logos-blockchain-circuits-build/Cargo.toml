@@ -9,10 +9,14 @@ readme.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+prebuilt = ["dep:dirs", "dep:flate2", "dep:tar", "dep:ureq"]
+
 [lints]
 workspace = true
 
 [dependencies]
-flate2 = { workspace = true }
-tar = { workspace = true }
-ureq = { workspace = true }
+dirs = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
