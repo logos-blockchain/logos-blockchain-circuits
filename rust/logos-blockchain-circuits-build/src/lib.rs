@@ -59,7 +59,18 @@ mod prebuilt {
         unpacked_library_directory
     }
 
-    fn cache_dir() -> PathBuf {
+    /// Produce a lockfile for the given directory
+    fn get_lockfile(directory: &Path) -> fd_lock::RwLock<std::fs::File> {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(directory.join(".lock"))
+            .expect("Failed to open cache lock file.");
+        fd_lock::RwLock::new(file)
+    }
+
+    fn get_cache_dir() -> PathBuf {
         dirs::cache_dir()
             .expect("Could not determine the cache directory for this platform.")
             .join("logos")
@@ -71,12 +82,21 @@ mod prebuilt {
         let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
         let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
-        let cache = cache_dir();
+        let cache = get_cache_dir();
         // The tarball unpacks to a top-level `{artifact_name}/` dir, so the circuit lives at
         // `cache/{artifact_name}/{circuit_name}/`.
         let circuit_dir = cache
             .join(build_artifact_name(version, &os, &arch))
             .join(circuit_name);
+
+        std::fs::create_dir_all(&cache).expect("Failed to create the cache directory.");
+
+        // Since the circuits' libraries are all contained in the same single artifact, each crate
+        // will try to download the same circuits.
+        // To avoid redundant downloads, we use a lock to ensure that only one process fetches the
+        // circuits while the others wait for it to complete and then re-check the cache.
+        let mut lock = get_lockfile(&cache);
+        let _guard = lock.write().expect("Failed to acquire cache lock.");
 
         if circuit_dir.is_dir() {
             println!(
@@ -85,8 +105,6 @@ mod prebuilt {
             );
             return circuit_dir;
         }
-
-        std::fs::create_dir_all(&cache).expect("Failed to create cache directory.");
 
         println!(
             "No cached download found, downloading {circuit_name} v{version} for {os}-{arch}..."

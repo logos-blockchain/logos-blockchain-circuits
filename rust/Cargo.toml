@@ -32,6 +32,7 @@ lbc-types = { default-features = false, package = "logos-blockchain-circuits-typ
 
 # External
 dirs = "^6"
+fd-lock = "^4"
 flate2 = "^1.1"
 libc = "^0.2"
 tar = "^0.4"
