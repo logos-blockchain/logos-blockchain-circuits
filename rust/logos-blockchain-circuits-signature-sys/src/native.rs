@@ -82,6 +82,6 @@ mod tests {
                 witness_output_path.display()
             )
         });
-        assert_eq!(output.iter().as_slice(), expected.as_slice());
+        assert_eq!(output.as_ref().iter().as_slice(), expected.as_slice());
     }
 }
