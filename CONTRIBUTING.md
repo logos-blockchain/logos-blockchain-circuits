@@ -1,5 +1,42 @@
 # Contributor's Guide
 
+## Development Setup
+
+### Prerequisites
+
+- [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
+- [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
+
+### Installing the Pre-Commit Hooks
+
+```bash
+pre-commit install
+```
+
+This only needs to be done once after cloning the repo. Hooks will then run automatically on `git commit`.
+
+### Running Checks Manually
+
+To run all hooks manually against all files:
+
+```bash
+pre-commit run --all-files
+```
+
+### Maintenance
+
+#### Rust Toolchain
+
+When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`. The comment there lists every other place that must be updated in sync (nightly version, CI workflows, pre-commit hooks).
+
+#### Tool Versions
+
+`taplo`, `cargo-deny`, and `cargo-machete` are pinned in two places that must stay in sync:
+- `.pre-commit-config.yaml` (hook `rev`)
+- `.github/workflows/lint.yml` (`cargo install --version`)
+
+---
+
 ## Triggering a New Release for Logos Blockchain Circuits
 
 To trigger a release build:
@@ -8,7 +45,8 @@ To trigger a release build:
 2. This will automatically trigger the `.github/workflows/build_circuits.yml` workflow.
 3. Once the workflow finishes, the generated artifacts will be attached to a new release.
 
-> Currently, releases published this way are marked as **Draft** and **Pre-Release** to ensure that the changelog and pre-release steps are manually reviewed first.
+> Currently, releases published this way are marked as **Draft** and **Pre-Release** to ensure that the changelog and 
+> pre-release steps are manually reviewed first.
 
 ### Generated Artifacts
 
@@ -30,34 +68,41 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── prover[.exe]
 ├── verifier[.exe]
 ├── pol/
-│   ├── witness_generator[.exe]
+│   ├── libpol.a
 │   ├── witness_generator.dat
+│   ├── include/
 │   ├── proving_key.zkey
 │   └── verification_key.json
 ├── poq/
-│   ├── witness_generator[.exe]
+│   ├── libpoq.a
 │   ├── witness_generator.dat
+│   ├── include/
 │   ├── proving_key.zkey
 │   └── verification_key.json
-├── zksign/
-│   ├── witness_generator[.exe]
+├── signature/
+│   ├── libsignature.a
 │   ├── witness_generator.dat
+│   ├── include/
 │   ├── proving_key.zkey
 │   └── verification_key.json
 └── poc/
-    ├── witness_generator[.exe]
+    ├── libpoc.a
     ├── witness_generator.dat
+    ├── include/
     ├── proving_key.zkey
     └── verification_key.json
 ```
+
+> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`).
 
 At the root level:
 - **prover**: Rapidsnark prover binary for generating zk-SNARK proofs
 - **verifier**: Rapidsnark verifier binary for verifying proofs
 
 Each circuit directory contains:
-- **witness_generator**: Compiled C++ binary for generating witnesses from inputs
+- **lib{circuit}.a / {circuit}.lib**: Static library for generating witnesses from inputs
 - **witness_generator.dat**: Required data file for the witness generator
+- **include/**: C headers for linking against the witness generator library
 - **proving_key.zkey**: Groth16 proving key for generating zk-SNARK proofs
 - **verification_key.json**: Verification key for verifying proofs
 

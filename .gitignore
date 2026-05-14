@@ -1,2 +1,18 @@
 .idea/
 result
+*ignore*
+
+# Generated files
+*_cpp/
+*.r1cs
+**/input.json
+**/*-input.json
+
+# Rust Codebase
+rust/**/target/
+
+# Build
+.cache
+build
+cmake
+

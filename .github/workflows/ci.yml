@@ -1,4 +1,4 @@
-name: Build Circuits
+name: CI
 
 on:
   push:
@@ -12,6 +12,9 @@ on:
       tag:
         description: "Tag to release. Must follow the format of 'vX.Y.Z'."
         required: true
+
+env:
+  CIRCOM_TAG: v2.2.2
 
 jobs:
   setup:
@@ -49,6 +52,27 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Checkout
+        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
+        with:
+          sparse-checkout: rust/Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - name: Verify Cargo version
+        env:
+          VERSION: ${{ steps.define-version.outputs.version }}
+        run: |
+          if [[ "$VERSION" =~ ^v0\.0\.0-pr ]]; then
+            echo "Skipping version check for PR build."
+            exit 0
+          fi
+          CARGO_VERSION=$(grep '^version = ' rust/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          if [ "$CARGO_VERSION" != "${VERSION#v}" ]; then
+            echo "Version mismatch: Cargo.toml has '$CARGO_VERSION' but tag is '$VERSION'."
+            exit 1
+          fi
+          echo "Version check passed: $CARGO_VERSION"
+
   generate-proving-keys:
     name: Generate ${{ matrix.circuit.display }} Proving Key
     runs-on: ubuntu-latest
@@ -66,8 +90,8 @@ jobs:
             display: PoQ
             file: poq.circom
             dir: blend
-          - name: zksign
-            display: ZKSign
+          - name: signature
+            display: Signature
             file: signature.circom
             dir: mantle
           - name: poc
@@ -79,25 +103,22 @@ jobs:
       PTAU_URL: "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
     steps:
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
-          circom --version
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo build --release
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
 
       - name: Setup Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b
@@ -105,7 +126,7 @@ jobs:
           node-version: '20'
 
       - name: Install snarkjs
-        run: npm install -g snarkjs@latest
+        run: npm install -g snarkjs@0.7.6
 
       - name: Cache Powers of Tau
         id: cache-ptau
@@ -126,6 +147,7 @@ jobs:
           cd ${{ matrix.circuit.dir }}
           circom --r1cs --O2 ${{ matrix.circuit.file }}
           snarkjs groth16 setup ${CIRCUIT_NAME}.r1cs ../${{ env.PTAU_FILE }} ${{ matrix.circuit.name }}-0.zkey
+          # Single-contributor trusted setup: A proper MPC ceremony is required before production (see issue #17).
           head -c 32 /dev/urandom | xxd -p -c 256 | snarkjs zkey contribute ${{ matrix.circuit.name }}-0.zkey ${{ matrix.circuit.name }}.zkey --name="RELEASE" -v
           snarkjs zkey export verificationkey ${{ matrix.circuit.name }}.zkey ${{ matrix.circuit.name }}_verification_key.json
         env:
@@ -140,7 +162,7 @@ jobs:
             ${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}_verification_key.json
 
   build-linux:
-    name: Build Linux Binaries (Native)
+    name: Build Linux Libraries (Native)
     runs-on: ubuntu-latest
     needs:
       - setup
@@ -150,25 +172,22 @@ jobs:
       OS: linux
       ARCH: x86_64
     steps:
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
-          circom --version
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo build --release
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
 
       - name: Setup Dependencies
         working-directory: rapidsnark
@@ -262,11 +281,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -294,11 +313,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -329,7 +348,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -342,29 +361,27 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
+          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -378,7 +395,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-linux-aarch64:
-    name: Build Linux aarch64 Binaries (Native for RPI5)
+    name: Build Linux aarch64 Libraries (Native for RPI5)
     runs-on: ubuntu-22.04-arm
     needs:
       - setup
@@ -388,25 +405,22 @@ jobs:
       OS: linux
       ARCH: aarch64
     steps:
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
-          circom --version
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo build --release
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
 
       - name: Setup Dependencies
         working-directory: rapidsnark
@@ -502,11 +516,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -534,11 +548,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -569,7 +583,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -582,29 +596,27 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
+          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -618,7 +630,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-windows:
-    name: Build Windows Binaries (Native)
+    name: Build Windows Libraries (Native)
     runs-on: windows-latest
     needs:
       - setup
@@ -638,25 +650,22 @@ jobs:
             make
             git
 
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
-          $env:RUSTFLAGS="-A dead_code"; cargo build --release
-          $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
-          circom --version
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          $env:RUSTFLAGS="-A dead_code"; cargo build --release
+          $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
+          circom --version
 
       - name: Install Dependencies [Witness Generator]
         shell: msys2 {0}
@@ -780,11 +789,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -812,11 +821,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -848,7 +857,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -859,23 +868,27 @@ jobs:
           mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover.exe "${BUNDLE_NAME}/prover.exe"
           mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier.exe "${BUNDLE_NAME}/verifier.exe"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol.exe "${BUNDLE_NAME}/pol/witness_generator.exe"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/pol.lib "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq.exe "${BUNDLE_NAME}/poq/witness_generator.exe"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/poq.lib "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature.exe "${BUNDLE_NAME}/zksign/witness_generator.exe"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc.exe "${BUNDLE_NAME}/poc/witness_generator.exe"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/signature-artifact/signature.lib "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
+          mv witness-generators/poc-artifact/poc.lib "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -889,7 +902,7 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-macos:
-    name: Build MacOS Binaries (Native)
+    name: Build MacOS Libraries (Native)
     runs-on: macos-latest
     needs:
       - setup
@@ -899,31 +912,28 @@ jobs:
       ARCH: aarch64
       OS: macos
     steps:
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@fb51252c7ba57d633bc668f941da052e410add48
-        with:
-          toolchain: stable
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone https://github.com/iden3/circom.git
-          cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
-          circom --version
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
 
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo build --release
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
+
       - name: Setup Dependencies
         run: mkdir include
 
       - name: Install Dependencies [Witness Generator]
-        run: brew install nlohmann-json
+        run: brew install nlohmann-json binutils
 
       - name: Install Dependencies [Prover]
         run: brew install nasm m4
@@ -1007,11 +1017,11 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile ZKSign Witness Generator
+      - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "ZKSign"
-          circuit-name-binary: "zksign"
+          circuit-name-display: "Signature"
+          circuit-name-binary: "signature"
           circuit-path: "mantle/signature.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
@@ -1039,11 +1049,11 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download ZKSign Witness Generator
+      - name: Download Signature Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: zksign-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/zksign-artifact
+          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1074,7 +1084,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,zksign,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -1087,29 +1097,27 @@ jobs:
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
-          # Move witness generators into their respective circuit directories
-          mv witness-generators/pol-artifact/pol "${BUNDLE_NAME}/pol/witness_generator"
+          # Move witness libraries into their respective circuit directories
+          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
           mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          mv witness-generators/poq-artifact/poq "${BUNDLE_NAME}/poq/witness_generator"
+          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
+          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          mv witness-generators/zksign-artifact/signature "${BUNDLE_NAME}/zksign/witness_generator"
-          mv witness-generators/zksign-artifact/signature.dat "${BUNDLE_NAME}/zksign/witness_generator.dat"
-          mv witness-generators/poc-artifact/poc "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
+          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
+          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
+          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
           mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-
-          # Restore execute permissions on witness generators
-          chmod +x "${BUNDLE_NAME}/pol/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poq/witness_generator"
-          chmod +x "${BUNDLE_NAME}/zksign/witness_generator"
-          chmod +x "${BUNDLE_NAME}/poc/witness_generator"
+          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/zksign-proving-key/zksign.zkey "${BUNDLE_NAME}/zksign/proving_key.zkey"
-          cp proving-keys/zksign-proving-key/zksign_verification_key.json "${BUNDLE_NAME}/zksign/verification_key.json"
+          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
+          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
@@ -1121,6 +1129,119 @@ jobs:
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+  # The following `Clippy` and `Test` jobs require the library circuits to compile the target repositories.
+  # To avoid specifying the circuit build job multiple times across the CI, the `Clippy` and `Test` jobs are
+  # defined in the same workflow as the `Build` job.
+  # Ideally, if and when the build system is moved to an agnostic tool (such as `cmake`) and that is integrated into
+  # the sys crates' `build.rs`, these jobs will be moved to their own workflows.
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-linux
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Dependencies
+        run: sudo apt install -y libgmp-dev
+
+      - name: Cache Cargo artifacts
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Download Linux Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Clippy
+        run: >
+          cargo clippy
+          --manifest-path rust/Cargo.toml
+          --all
+          --all-targets
+          --all-features
+          --
+          -D warnings
+        env:
+          LBC_POC_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poc
+          LBC_POL_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/pol
+          LBC_POQ_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poq
+          LBC_SIGNATURE_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/signature
+
+  # See clippy above — same reason.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-linux
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+
+      - name: Install Dependencies
+        run: sudo apt install -y libgmp-dev
+
+      - name: Cache Cargo artifacts
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Download Linux Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Test
+        run: >
+          cargo test
+          --manifest-path rust/Cargo.toml
+          --all
+          --all-features
+        env:
+          LBC_POC_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poc
+          LBC_POL_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/pol
+          LBC_POQ_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/poq
+          LBC_SIGNATURE_LIB_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/signature
 
   publish-release:
     name: Create Release
@@ -1134,6 +1255,8 @@ jobs:
       - build-linux-aarch64
       - build-windows
       - build-macos
+      - clippy
+      - test
     env:
       TAG: ${{ needs.setup.outputs.tag }}
       VERSION: ${{ needs.setup.outputs.version }}

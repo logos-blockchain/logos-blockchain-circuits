@@ -2,7 +2,7 @@
   description = "Logos Blockchain Circuits (GitHub Releases)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   };
 
   outputs =
@@ -19,7 +19,8 @@
 
       forAll = lib.genAttrs systems;
 
-      circuitsVersion = "0.4.1";  # TODO: Parametrize or make package per version available
+      cargoToml = builtins.fromTOML (builtins.readFile ./rust/Cargo.toml);
+      circuitsVersion = cargoToml.workspace.package.version;
       versions = import ./versions.nix;
       circuitsHashes = versions.${circuitsVersion};
 

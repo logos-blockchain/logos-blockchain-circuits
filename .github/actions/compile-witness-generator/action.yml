@@ -9,7 +9,7 @@ inputs:
     description: "The name of the Circom circuit to compile."
     required: true
   circuit-name-binary:
-    description: "The final name of the compiled binary. The name should be extensionless."
+    description: "The name used for artifact labelling. Should match the circuit's canonical name (e.g. pol, poq)."
     required: true
   circuit-path:
     description: "The path to the Circom circuit file relative to the repository root."
@@ -45,10 +45,12 @@ runs:
         CIRCUIT_FILENAME="$(basename ${CIRCUIT_PATH})"
         CIRCUIT_FILESTEM="${CIRCUIT_FILENAME%.circom}"
         CIRCUIT_CPP_DIRNAME="${CIRCUIT_FILESTEM}_cpp"
-        
-        compiled_binary_name="${CIRCUIT_FILESTEM}"
         if [ "${OS}" = "windows" ]; then
-          compiled_binary_name="${compiled_binary_name}.exe"
+          LIB_EXT=".lib"
+          LIB_PREFIX=""
+        else
+          LIB_EXT=".a"
+          LIB_PREFIX="lib"
         fi
 
         {
@@ -59,7 +61,7 @@ runs:
           echo "CIRCUIT_CPP_PATH=${CIRCUIT_DIRECTORY}/${CIRCUIT_CPP_DIRNAME}"
           echo "WITNESS_GENERATOR_RESOURCES_PATH=${RESOURCES_PATH}/witness-generator"
           echo "BUNDLE_TRIPLET=${BUNDLE_TRIPLET}"
-          echo "COMPILED_BINARY_NAME=${compiled_binary_name}"
+          echo "LIB_NAME=${LIB_PREFIX}${CIRCUIT_FILESTEM}${LIB_EXT}"
         } >> "${GITHUB_OUTPUT}"
 
     - name: Generate ${{ inputs.circuit-name-display }}
@@ -69,6 +71,19 @@ runs:
         CIRCUIT_FILENAME: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILENAME }}
       run: circom --c --r1cs --no_asm --O2 "${CIRCUIT_FILENAME}"
 
+    - name: Copy ${{ inputs.circuit-name-display }} FFI Sources
+      shell: bash
+      env:
+        SOURCES_ROOT: ${{ github.workspace }}/src
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
+      run: |
+        cp -r "${SOURCES_ROOT}/${CIRCUIT_FILESTEM}" "${CIRCUIT_CPP_PATH}/${CIRCUIT_FILESTEM}"
+        cp "${SOURCES_ROOT}/circom_adapter.cpp" "${CIRCUIT_CPP_PATH}/circom_adapter.cpp"
+        cp "${SOURCES_ROOT}/circom_adapter.hpp" "${CIRCUIT_CPP_PATH}/circom_adapter.hpp"
+        cp "${SOURCES_ROOT}/circom_fwd.hpp" "${CIRCUIT_CPP_PATH}/circom_fwd.hpp"
+        cp "${SOURCES_ROOT}/types.hpp" "${CIRCUIT_CPP_PATH}/types.hpp"
+
     # TODO: Instead of replace, make a fork that generates the appropriate Makefile
     - name: Replace ${{ inputs.circuit-name-display }}'s Makefile
       shell: bash
@@ -76,6 +91,17 @@ runs:
         WITNESS_GENERATOR_RESOURCES_PATH: ${{ steps.parse-circuit-path.outputs.WITNESS_GENERATOR_RESOURCES_PATH }}
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
       run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/Makefile" "${CIRCUIT_CPP_PATH}/Makefile"
+
+    # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
+    - name: Patch ${{ inputs.circuit-name-display }} Missing Return
+      shell: bash
+      env:
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+        OS: ${{ inputs.os }}
+      run: |
+        SED_I="sed -i"
+        if [ "$OS" = "macos" ]; then SED_I="sed -i ''"; fi
+        $SED_I ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' "${CIRCUIT_CPP_PATH}/main.cpp"
 
     # TODO: Instead of insertion, make a fork that includes the appropriate patch (or the actual fix)
     - name: Patch MacOS GMP
@@ -94,7 +120,7 @@ runs:
       env:
         CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
         OS: ${{ inputs.os }}
-      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}"
+      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
 
     - name: Compile ${{ inputs.circuit-name-display }}
       if: ${{ inputs.os == 'windows' }}
@@ -103,12 +129,26 @@ runs:
       env:
         CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
         OS: ${{ inputs.os }}
-      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}"
+      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
+
+    - name: Stage ${{ inputs.circuit-name-display }} Headers
+      shell: bash
+      env:
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
+      run: |
+        mkdir -p "${CIRCUIT_CPP_PATH}/include"
+        mv "${CIRCUIT_CPP_PATH}/calcwit.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/circom.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/fr.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/${CIRCUIT_FILESTEM}/ffi.hpp" "${CIRCUIT_CPP_PATH}/include/"
+        mv "${CIRCUIT_CPP_PATH}/types.hpp" "${CIRCUIT_CPP_PATH}/include/"
 
     - name: Upload ${{ inputs.circuit-name-display }}
       uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
       with:
         name: ${{ inputs.circuit-name-binary }}-${{ inputs.version }}-${{ inputs.os }}-${{ inputs.arch }}
         path: |
-          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/${{ steps.parse-circuit-path.outputs.COMPILED_BINARY_NAME }}
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/${{ steps.parse-circuit-path.outputs.LIB_NAME }}
           ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}.dat
+          ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}/include

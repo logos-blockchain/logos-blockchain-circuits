@@ -1,0 +1,23 @@
+[package]
+name = "logos-blockchain-circuits-build"
+categories.workspace = true
+description = "Shared build script logic for Logos Blockchain Circuits sys crates."
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[features]
+prebuilt = ["dep:dirs", "dep:fd-lock", "dep:flate2", "dep:tar", "dep:ureq"]
+
+[lints]
+workspace = true
+
+[dependencies]
+dirs = { workspace = true, optional = true }
+fd-lock = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }

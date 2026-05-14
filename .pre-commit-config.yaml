@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: eeee35a89e69d5772bdee97db1a6a898467b686e # 1.0
+    hooks:
+      - id: fmt
+        entry: cargo +nightly-2026-02-28 fmt --manifest-path rust/Cargo.toml --all
+        pass_filenames: false
+      - id: clippy
+        name: cargo clippy
+        entry: cargo clippy --manifest-path rust/Cargo.toml
+        args:
+          ["--all", "--all-targets", "--all-features", "--", "-D", "warnings"]
+        pass_filenames: false
+  - repo: https://github.com/EmbarkStudios/cargo-deny
+    rev: cfe589ec21d70996a3e44d76a8e2b9369f7e0a2f # v0.19.4
+    hooks:
+      - id: cargo-deny
+        args:
+          - --manifest-path
+          - rust/Cargo.toml
+          - --locked
+          - --all-features
+          - check
+          - --hide-inclusion-graph
+          - -c
+          - .cargo-deny.toml
+          - --show-stats
+          - -D
+          - warnings
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: ade0f95ddcf661c697d4670d2cfcbe95d0048a0a # v0.9.3 # Can't update until: https://github.com/tamasfe/taplo/issues/805
+    hooks:
+      - id: taplo-format
+      - id: taplo-lint
+  - repo: https://github.com/bnjbvr/cargo-machete
+    rev: ac30a525c0a8d163a92d727b3ff079ee3f6ecb08 # v0.9.2
+    hooks:
+      - id: cargo-machete
+        args: ["rust/"]
+  - repo: local
+    hooks:
+      - id: cargo-hack-check
+        language: script
+        name: cargo hack check
+        entry: ./hooks/cargo-hack.sh
+        stages: [manual]
