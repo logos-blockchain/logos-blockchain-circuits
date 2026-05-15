@@ -163,7 +163,7 @@ jobs:
 
   build-linux:
     name: Build Linux Libraries (Native)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - setup
       - generate-proving-keys
