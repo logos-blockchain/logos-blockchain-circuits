@@ -117,45 +117,72 @@ mod prebuilt {
     }
 }
 
-pub fn build(circuit_name: &str, lib_var_name: &str) {
-    println!("cargo:rerun-if-env-changed={lib_var_name}");
+mod env_vars {
+    pub const BUNDLE_LIB_DIR: &str = "LBC_LIB_DIR";
+}
+
+pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
+    println!("cargo:rerun-if-env-changed={circuit_lib_dir_var}");
+    println!("cargo:rerun-if-env-changed={}", env_vars::BUNDLE_LIB_DIR);
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=build.rs");
 
-    let lib_dir = std::env::var(lib_var_name).map_or_else(
+    let circuit_lib_dir = std::env::var(circuit_lib_dir_var).map_or_else(
         |_| {
             #[cfg(not(feature = "prebuilt"))]
             panic!(
-                "{lib_var_name} is not set. Either:\n\
-                 - Set {lib_var_name} to point at a local build, or\n\
+                "{circuit_lib_dir_var} is not set. Either:\n\
+                 - Set {circuit_lib_dir_var} to point at a local build, or\n\
                  - Enable the `prebuilt` feature to download from GitHub Releases."
             );
 
             #[cfg(feature = "prebuilt")]
             {
-                println!("{lib_var_name} not set, falling back to prebuilt download.");
-                prebuilt::provision_library(circuit_name, lib_var_name)
+                println!("Environment variable '{circuit_lib_dir_var}' not set, falling back to prebuilt download");
+                prebuilt::provision_library(circuit_name, circuit_lib_dir_var)
             }
         },
         |lib_dir| {
-            println!("Found {lib_var_name}, using local library at {lib_dir}.");
+            println!("Environment variable '{circuit_lib_dir_var}' set, using local library at '{lib_dir}'");
             let lib_dir_path = PathBuf::from(lib_dir);
             assert!(
                 lib_dir_path.is_dir(),
-                "The library directory specified in {lib_var_name} at {} does not exist.",
+                "The library directory specified in '{circuit_lib_dir_var}' at {} does not exist.",
                 lib_dir_path.display()
             );
             lib_dir_path
         },
     );
 
-    let lib_dir = lib_dir
+    let circuit_lib_dir_str = circuit_lib_dir
         .to_str()
         .expect("Failed to convert the library directory path to a string");
-    println!("cargo:rustc-env={lib_var_name}={lib_dir}");
-    println!("cargo:rustc-link-search=native={lib_dir}");
+
+    let bundle_lib_dir = std::env::var(env_vars::BUNDLE_LIB_DIR).map_or_else(
+        |_| {
+            let default = circuit_lib_dir
+                .parent()
+                .expect("Failed to determine the circuit library directory's parent.")
+                .join("lib");
+            println!(
+                "Environment variable '{}' not set, falling back to sibling 'lib/' at '{}'.",
+                env_vars::BUNDLE_LIB_DIR,
+                default.display()
+            );
+            default
+        },
+        PathBuf::from,
+    );
+
+    let bundle_lib_dir_str = bundle_lib_dir
+        .to_str()
+        .expect("Failed to convert the bundle library directory path to a string");
+
+    println!("cargo:rustc-env={circuit_lib_dir_var}={circuit_lib_dir_str}"); // Ensure it's always defined for downstream crates.
+    println!("cargo:rustc-link-search=native={circuit_lib_dir_str}");
+    println!("cargo:rustc-link-search=native={bundle_lib_dir_str}");
     println!("cargo:rustc-link-lib=static={circuit_name}");
     println!("cargo:rustc-link-lib=stdc++");
-    println!("cargo:rustc-link-lib=gmp");
+    println!("cargo:rustc-link-lib=static=gmp");
 }
