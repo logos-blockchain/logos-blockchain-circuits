@@ -179,6 +179,8 @@ pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
         .to_str()
         .expect("Failed to convert the bundle library directory path to a string");
 
+    println!("cargo:rerun-if-changed={circuit_lib_dir_str}");
+    println!("cargo:rerun-if-changed={bundle_lib_dir_str}");
     println!("cargo:rustc-env={circuit_lib_dir_var}={circuit_lib_dir_str}"); // Ensure it's always defined for downstream crates.
     println!("cargo:rustc-link-search=native={circuit_lib_dir_str}");
     println!("cargo:rustc-link-search=native={bundle_lib_dir_str}");
