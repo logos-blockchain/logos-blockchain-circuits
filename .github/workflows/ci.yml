@@ -385,6 +385,10 @@ jobs:
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
+          # Bundle GMP static library
+          mkdir -p "${BUNDLE_NAME}/lib"
+          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
@@ -619,6 +623,10 @@ jobs:
           cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+
+          # Bundle GMP static library
+          mkdir -p "${BUNDLE_NAME}/lib"
+          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
 
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
@@ -892,6 +900,10 @@ jobs:
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
 
+          # Bundle GMP static library
+          mkdir -p "${BUNDLE_NAME}/lib"
+          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
@@ -1120,6 +1132,10 @@ jobs:
           cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
           cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
           cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+
+          # Bundle GMP static library
+          mkdir -p "${BUNDLE_NAME}/lib"
+          cp rapidsnark/depends/gmp/package_macos_arm64/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
 
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
