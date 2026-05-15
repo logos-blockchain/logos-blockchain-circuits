@@ -66,7 +66,7 @@ mod prebuilt {
             .truncate(false)
             .write(true)
             .open(directory.join(".lock"))
-            .expect("Failed to open cache lock file.");
+            .expect("Failed to open the cache lock file.");
         fd_lock::RwLock::new(file)
     }
 
@@ -139,7 +139,7 @@ pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
 
             #[cfg(feature = "prebuilt")]
             {
-                println!("Environment variable '{circuit_lib_dir_var}' not set, falling back to prebuilt download");
+                println!("Environment variable '{circuit_lib_dir_var}' is not set, falling back to prebuilt download");
                 prebuilt::provision_library(circuit_name, circuit_lib_dir_var)
             }
         },
@@ -166,7 +166,7 @@ pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
                 .expect("Failed to determine the circuit library directory's parent.")
                 .join("lib");
             println!(
-                "Environment variable '{}' not set, falling back to sibling 'lib/' at '{}'.",
+                "Environment variable '{}' is not set, falling back to sibling 'lib/' at '{}'.",
                 env_vars::BUNDLE_LIB_DIR,
                 default.display()
             );
