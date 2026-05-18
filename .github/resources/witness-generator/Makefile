@@ -52,11 +52,15 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
-# Localizes internal C++ symbols so multiple circuit libraries can coexist in the same binary without symbol conflicts.
-# See CONTRIBUTING.md § "Symbol Isolation".
-# Default derived from PROJECT; override with PUBLIC_SYMBOLS= to skip localization.
-PUBLIC_SYMBOLS ?= $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
-LOCAL_OBJ   := $(PROJECT)_local.o # Intermediate object file for symbol localization
+# Localizes circuit-specific symbols so multiple circuit libraries can coexist in the
+# same binary without symbol conflicts. See CONTRIBUTING.md § "Symbol Isolation".
+# Only the 9 constants in $(PROJECT).cpp differ per circuit — everything else is
+# identical across circuits and can be safely deduplicated by the linker as normal.
+# Override with LOCALIZE_SYMS= to skip localization.
+LOCALIZE_SYMS ?= get_size_of_witness get_size_of_constants get_size_of_input_hashmap \
+                 get_main_input_signal_no get_main_input_signal_start get_total_signal_no \
+                 get_number_of_components get_size_of_io_map get_size_of_bus_field_map
+LOCAL_OBJ     := $(PROJECT)_local.o
 
 UNAME := $(shell uname -s)
 
@@ -65,14 +69,13 @@ $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-ifeq ($(strip $(PUBLIC_SYMBOLS)),)
+ifeq ($(strip $(LOCALIZE_SYMS)),)
 	ar rcs $@ $^  # Localization disabled
 else ifeq ($(UNAME),Darwin)
-	ar rcs $@ $^  # On macOS there already is a two-level namespace so conflicts don't occur
+	ar rcs $@ $^  # On macOS two-level namespace, conflicts don't arise
 else
-	ld -r -o $(LOCAL_OBJ) $^
-	objcopy $(foreach s,$(PUBLIC_SYMBOLS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
-	ar rcs $@ $(LOCAL_OBJ)
+	objcopy $(foreach s,$(LOCALIZE_SYMS),--localize-symbol=$(s)) $(PROJECT).o $(LOCAL_OBJ)
+	ar rcs $@ $(filter-out $(PROJECT).o,$^) $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
 endif
 
