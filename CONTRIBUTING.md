@@ -6,6 +6,7 @@
 
 - [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
 - [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
+- `llvm-objcopy` — required to build circuit static libraries (symbol isolation). Install via `sudo apt install -y llvm` on Linux or `pacman -S mingw-w64-x86_64-llvm` on Windows (MSYS2).
 
 ### Installing the Pre-Commit Hooks
 
