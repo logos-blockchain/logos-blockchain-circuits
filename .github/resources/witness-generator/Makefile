@@ -52,15 +52,10 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
-# Localizes circuit-specific symbols so multiple circuit libraries can coexist in the
-# same binary without symbol conflicts. See CONTRIBUTING.md § "Symbol Isolation".
-# Override with LOCALIZE_SYMS= to skip localization.
-MERGE_OBJS    := $(PROJECT).o $(PROJECT)/ffi.o circom_adapter.o
-LOCALIZE_SYMS ?= loadCircuit writeBinWitness \
-                 get_size_of_witness get_size_of_constants get_size_of_input_hashmap \
-                 get_main_input_signal_no get_main_input_signal_start get_total_signal_no \
-                 get_number_of_components get_size_of_io_map get_size_of_bus_field_map
-LOCAL_OBJ     := $(PROJECT)_local.o
+# Localizes all circuit-specific code to prevent conflicts when multiple circuit
+# libraries are linked into the same binary. See CONTRIBUTING.md § "Symbol Isolation".
+PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
+LOCAL_OBJ   := $(PROJECT)_local.o
 
 UNAME := $(shell uname -s)
 
@@ -69,14 +64,12 @@ $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-ifeq ($(strip $(LOCALIZE_SYMS)),)
-	ar rcs $@ $^  # Localization disabled
-else ifeq ($(UNAME),Darwin)
+ifeq ($(UNAME),Darwin)
 	ar rcs $@ $^  # On macOS two-level namespace, conflicts don't arise
 else
-	ld -r -o $(LOCAL_OBJ) $(MERGE_OBJS)
-	objcopy $(foreach s,$(LOCALIZE_SYMS),--localize-symbol=$(s)) $(LOCAL_OBJ)
-	ar rcs $@ $(filter-out $(MERGE_OBJS),$^) $(LOCAL_OBJ)
+	ld -r -o $(LOCAL_OBJ) $(filter-out fr.o,$^)
+	llvm-objcopy $(foreach s,$(PUBLIC_SYMS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
+	ar rcs $@ fr.o $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
 endif
 
