@@ -37,6 +37,55 @@ When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`. Th
 
 ---
 
+## Symbol Isolation in Circuit Libraries
+
+Each circuit (PoQ, PoL, PoC, Signature) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.). 
+All four archives share the same internal C++ runtime — `loadCircuit`, `get_size_of_witness`, the `fr_*` field 
+arithmetic functions, `calcwit_*` functions, and others. They are compiled from the same source files but with 
+**different constant values per circuit** (e.g. `get_size_of_witness()` returns 18149 for PoQ and 20531 for PoL).
+
+### The Problem
+
+When two or more circuit libraries are linked into the same binary, the GNU linker silently picks the first definition 
+it encounters for each symbol and discards the rest. 
+No error, no warning. 
+The result is that one circuit's constants end up hardwired into functions shared by both circuits, corrupting witness 
+parsing. 
+In practice: the wrong `get_size_of_witness()` value causes `loadCircuit` to compute an incorrect buffer size, `pu32` 
+walks off the end of the buffer, reads garbage as a length field, and the subsequent `memcpy` reads past the stack guard
+page, which results in a **SIGSEGV**.
+
+### The Fix
+
+The Makefile's `$(LIB)` rule uses a two-step process on Linux and Windows to localize all internal symbols before 
+archiving:
+
+1. **Partial link** (`ld -r`): merges all `.o` files into a single relocatable object without producing a final 
+executable.
+No symbols are resolved yet; this is consolidation only.
+2. **Symbol localization** (`objcopy --keep-global-symbol`): demotes every global symbol to local *except* the circuit's
+two public FFI entry points. 
+Local symbols are invisible to the final linker, so each archive retains a private copy of every internal symbol. This 
+means no conflict is possible regardless of how many circuits are linked together.
+
+The public symbols are derived automatically from `PROJECT`: a circuit built with `PROJECT=poq` keeps 
+`poq_generate_witness` and `poq_generate_witness_from_files` global and localizes everything else.
+
+> To skip localization for a specific build (e.g. for debugging), pass `PUBLIC_SYMBOLS=` explicitly on the `make` command 
+> line.
+
+On macOS, localization is skipped because `objcopy` is a GNU Binutils tool unavailable by default there.
+This is safe: macOS uses a two-level namespace by default, meaning symbols are qualified by which library they come
+from, so the conflict does not arise.
+
+### Maintenance
+
+`PUBLIC_SYMBOLS` defaults to `$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`.
+If the public FFI API ever changes, meaning the entrypoints are renamed or new ones added, the Makefile default must be 
+updated, otherwise the affected symbols will be localized and linking will fail.
+
+---
+
 ## Triggering a New Release for Logos Blockchain Circuits
 
 To trigger a release build:

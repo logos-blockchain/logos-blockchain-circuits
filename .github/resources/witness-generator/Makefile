@@ -52,15 +52,32 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
+# Localizes internal C++ symbols so multiple circuit libraries can coexist in the same binary without symbol conflicts.
+# See CONTRIBUTING.md § "Symbol Isolation".
+# Default derived from PROJECT; override with PUBLIC_SYMBOLS= to skip localization.
+PUBLIC_SYMBOLS ?= $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
+LOCAL_OBJ   := $(PROJECT)_local.o # Intermediate object file for symbol localization
+
+UNAME := $(shell uname -s)
+
 # ---- Rules ----
 $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-	ar rcs $@ $^
+ifeq ($(strip $(PUBLIC_SYMBOLS)),)
+	ar rcs $@ $^  # Localization disabled
+else ifeq ($(UNAME),Darwin)
+	ar rcs $@ $^  # On macOS there already is a two-level namespace so conflicts don't occur
+else
+	ld -r -o $(LOCAL_OBJ) $^
+	objcopy $(foreach s,$(PUBLIC_SYMBOLS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
+	ar rcs $@ $(LOCAL_OBJ)
+	rm $(LOCAL_OBJ)
+endif
 
 %.o: %.cpp $(DEPS_HPP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(COMMON_OBJS) $(LIB_ONLY_OBJS) $(BIN) $(LIB)
+	rm -f $(COMMON_OBJS) $(LIB_ONLY_OBJS) $(BIN) $(LIB) $(LOCAL_OBJ)
