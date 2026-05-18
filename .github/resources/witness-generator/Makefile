@@ -54,10 +54,10 @@ windows-lib: $(LIB)
 
 # Localizes circuit-specific symbols so multiple circuit libraries can coexist in the
 # same binary without symbol conflicts. See CONTRIBUTING.md § "Symbol Isolation".
-# Only the 9 constants in $(PROJECT).cpp differ per circuit — everything else is
-# identical across circuits and can be safely deduplicated by the linker as normal.
 # Override with LOCALIZE_SYMS= to skip localization.
-LOCALIZE_SYMS ?= get_size_of_witness get_size_of_constants get_size_of_input_hashmap \
+MERGE_OBJS    := $(PROJECT).o $(PROJECT)/ffi.o circom_adapter.o
+LOCALIZE_SYMS ?= loadCircuit writeBinWitness \
+                 get_size_of_witness get_size_of_constants get_size_of_input_hashmap \
                  get_main_input_signal_no get_main_input_signal_start get_total_signal_no \
                  get_number_of_components get_size_of_io_map get_size_of_bus_field_map
 LOCAL_OBJ     := $(PROJECT)_local.o
@@ -74,8 +74,9 @@ ifeq ($(strip $(LOCALIZE_SYMS)),)
 else ifeq ($(UNAME),Darwin)
 	ar rcs $@ $^  # On macOS two-level namespace, conflicts don't arise
 else
-	objcopy $(foreach s,$(LOCALIZE_SYMS),--localize-symbol=$(s)) $(PROJECT).o $(LOCAL_OBJ)
-	ar rcs $@ $(filter-out $(PROJECT).o,$^) $(LOCAL_OBJ)
+	ld -r -o $(LOCAL_OBJ) $(MERGE_OBJS)
+	objcopy $(foreach s,$(LOCALIZE_SYMS),--localize-symbol=$(s)) $(LOCAL_OBJ)
+	ar rcs $@ $(filter-out $(MERGE_OBJS),$^) $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
 endif
 
