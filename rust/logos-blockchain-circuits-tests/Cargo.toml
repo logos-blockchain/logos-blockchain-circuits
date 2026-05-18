@@ -1,0 +1,10 @@
+[package]
+name = "logos-blockchain-circuits-tests"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+[dev-dependencies]
+lbc-pol-sys = { workspace = true, features = ["prebuilt"] }
+lbc-poq-sys = { workspace = true, features = ["prebuilt"] }

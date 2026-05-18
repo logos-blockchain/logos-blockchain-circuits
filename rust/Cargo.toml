@@ -15,6 +15,7 @@ members = [
   "logos-blockchain-circuits-pol-sys",
   "logos-blockchain-circuits-poq-sys",
   "logos-blockchain-circuits-signature-sys",
+  "logos-blockchain-circuits-tests",
   "logos-blockchain-circuits-types",
   "logos-blockchain-circuits-common",
 ]
