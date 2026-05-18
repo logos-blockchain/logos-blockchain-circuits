@@ -81,6 +81,12 @@ It is safe to deduplicate across circuits — the linker picks one copy, which i
 On macOS, localization is skipped. macOS uses a two-level namespace by default, meaning symbols are qualified by which
 library they come from, so the conflict does not arise.
 
+On Windows, GNU `objcopy` (from MinGW binutils) is used instead of `llvm-objcopy`. `llvm-objcopy --keep-global-symbol`
+is not supported for COFF objects, but GNU `objcopy --keep-global-symbol` works correctly on COFF — it maps the local
+binding to COFF storage class `C_STAT`. The ELF `GRP_COMDAT` problem that required `llvm-objcopy` on Linux does not
+apply on Windows: COFF COMDAT is per-section rather than group-based, and the linker already deduplicates it
+automatically.
+
 ### Maintenance
 
 `PUBLIC_SYMS` is hardcoded to `$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files` in the
