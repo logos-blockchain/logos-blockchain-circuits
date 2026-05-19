@@ -21,7 +21,7 @@
 
       cargoToml = builtins.fromTOML (builtins.readFile ./rust/Cargo.toml);
       circuitsVersion = cargoToml.workspace.package.version;
-      versions = import ./versions.nix;
+      versions = builtins.fromJSON (builtins.readFile ./circuits-nix-hashes.json);
       circuitsHashes = versions.${circuitsVersion};
 
       githubBase = "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download";

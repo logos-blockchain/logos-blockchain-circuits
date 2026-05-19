@@ -167,6 +167,8 @@ jobs:
     needs:
       - setup
       - generate-proving-keys
+    outputs:
+      hash: ${{ steps.hash.outputs.value }}
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       OS: linux
@@ -392,6 +394,12 @@ jobs:
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
+      - name: Compute SRI Hash
+        id: hash
+        run: |
+          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
+
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
@@ -404,6 +412,8 @@ jobs:
     needs:
       - setup
       - generate-proving-keys
+    outputs:
+      hash: ${{ steps.hash.outputs.value }}
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       OS: linux
@@ -631,6 +641,12 @@ jobs:
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
+      - name: Compute SRI Hash
+        id: hash
+        run: |
+          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
+
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
@@ -643,6 +659,8 @@ jobs:
     needs:
       - setup
       - generate-proving-keys
+    outputs:
+      hash: ${{ steps.hash.outputs.value }}
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       OS: windows
@@ -907,6 +925,13 @@ jobs:
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
+      - name: Compute SRI Hash
+        id: hash
+        shell: bash
+        run: |
+          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
+
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
@@ -919,6 +944,8 @@ jobs:
     needs:
       - setup
       - generate-proving-keys
+    outputs:
+      hash: ${{ steps.hash.outputs.value }}
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       ARCH: aarch64
@@ -1140,6 +1167,12 @@ jobs:
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
+      - name: Compute SRI Hash
+        id: hash
+        run: |
+          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
+
       - name: Upload Unified Release Bundle
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
@@ -1298,7 +1331,6 @@ jobs:
             - [ ] Description is complete
             - [ ] Changelog is correct
             - [ ] Assets for all platforms exist
-            - [ ] `flake.nix`'s `circuitsVersion` points to the latest version 
             - [ ] Pre-release is checked if necessary
             - [ ] Remove this checklist before publishing the release.
           draft: true
@@ -1342,3 +1374,46 @@ jobs:
           asset_path: ${{ env.ARTIFACT_NAME }}
           asset_name: ${{ env.ARTIFACT_NAME }}
           asset_content_type: application/octet-stream
+
+  update-nix-hashes:
+    name: Update Nix Hashes
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    needs:
+      - setup
+      - build-linux
+      - build-linux-aarch64
+      - build-windows
+      - build-macos
+      - upload-artifacts
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update versions.nix
+        env:
+          CIRCUITS_NIX_HASHES_FILE: circuits-nix-hashes.json
+          CIRCUIT_HASH_LINUX_X86_64: ${{ needs.build-linux.outputs.hash }}
+          CIRCUIT_HASH_LINUX_AARCH64: ${{ needs.build-linux-aarch64.outputs.hash }}
+          CIRCUIT_HASH_WINDOWS_X86_64: ${{ needs.build-windows.outputs.hash }}
+          CIRCUIT_HASH_DARWIN_AARCH64: ${{ needs.build-macos.outputs.hash }}
+        run: python3 scripts/update-nix-hashes.py
+
+      - name: Commit and Push
+        env:
+          GIT_USER_NAME: ${{ github.actor }}
+          GIT_USER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+        run: |
+          git config user.name "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
+          git add circuits-nix-hashes.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(ci): auto-update Nix hashes for ${{ env.VERSION }}"
+          git push origin main
