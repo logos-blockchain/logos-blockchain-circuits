@@ -1,5 +1,6 @@
-use lbc_types::native::Error;
 use std::path::Path;
+
+use lbc_types::native::Error;
 
 pub fn as_null_terminated_string(string: &str) -> Result<std::ffi::CString, Error> {
     std::ffi::CString::new(string).map_err(|error| {

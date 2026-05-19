@@ -1,6 +1,8 @@
 pub mod roots {
-    use std::path::{Path, PathBuf};
-    use std::sync::LazyLock;
+    use std::{
+        path::{Path, PathBuf},
+        sync::LazyLock,
+    };
 
     pub static TESTS: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
@@ -13,9 +15,9 @@ pub mod roots {
 }
 
 pub mod inputs {
+    use std::{path::PathBuf, sync::LazyLock};
+
     use super::roots;
-    use std::path::PathBuf;
-    use std::sync::LazyLock;
 
     pub static POL: LazyLock<PathBuf> = LazyLock::new(|| roots::POL.join("sample.input.json"));
     pub static POQ: LazyLock<PathBuf> = LazyLock::new(|| roots::POQ.join("sample.input.json"));
