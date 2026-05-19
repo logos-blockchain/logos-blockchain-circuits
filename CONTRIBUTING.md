@@ -6,7 +6,7 @@
 
 - [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
 - [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
-- `llvm-objcopy` — required to build circuit static libraries (symbol isolation). Install via `sudo apt install -y llvm` on Linux or `pacman -S mingw-w64-x86_64-llvm` on Windows (MSYS2).
+- `llvm-objcopy` — required to build circuit static libraries (symbol isolation) on Linux. Install via `sudo apt install -y llvm`. On Windows (MSYS2), GNU `objcopy` from `mingw-w64-x86_64-toolchain` is used instead (no extra install needed). On macOS, symbol isolation is skipped entirely, so no objcopy tool is required.
 
 ### Installing the Pre-Commit Hooks
 
@@ -64,7 +64,7 @@ archiving:
 1. **Partial link** (`ld -r`): merges all circuit-specific `.o` files — everything except `fr.o` (pure field
 arithmetic, no circuit-specific calls) — into a single relocatable object. No symbols are resolved yet; this is
 consolidation only.
-2. **Symbol localization** (`llvm-objcopy --keep-global-symbol`): demotes every global symbol to local *except* the
+2. **Symbol localization** (`llvm-objcopy --keep-global-symbol` on Linux, `objcopy --keep-global-symbol` on Windows): demotes every global symbol to local *except* the
 circuit's two public FFI entry points (`$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`).
 Local symbols are invisible to the final linker, so each archive retains a private copy of every internal symbol — no
 conflict is possible regardless of how many circuits are linked together.
