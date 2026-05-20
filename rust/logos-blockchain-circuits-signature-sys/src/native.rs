@@ -66,6 +66,18 @@ mod tests {
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 
     #[test]
+    fn test_generate_witness_invalid_json_returns_err() {
+        let input = SignatureWitnessInput::new("{".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_missing_inputs_returns_err() {
+        let input = SignatureWitnessInput::new("{}".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("signature_test_witness.wtns");

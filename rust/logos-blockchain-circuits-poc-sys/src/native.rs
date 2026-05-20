@@ -61,6 +61,29 @@ mod tests {
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 
     #[test]
+    fn test_generate_witness_invalid_json_returns_err() {
+        let input = PocWitnessInput::new("{".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_missing_inputs_returns_err() {
+        let input = PocWitnessInput::new("{}".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_constraint_violation_returns_err() {
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let bad_json = json.replace(
+            "\"voucher_root\": \"20810875415353676096192834577269613981524168537821543897016159330974871397924\"",
+            "\"voucher_root\": \"1\"",
+        );
+        let input = PocWitnessInput::new(bad_json).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("poc_test_witness.wtns");
