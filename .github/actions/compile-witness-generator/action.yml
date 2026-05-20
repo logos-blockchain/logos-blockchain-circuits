@@ -83,6 +83,7 @@ runs:
         cp "${SOURCES_ROOT}/circom_adapter.hpp" "${CIRCUIT_CPP_PATH}/circom_adapter.hpp"
         cp "${SOURCES_ROOT}/circom_fwd.hpp" "${CIRCUIT_CPP_PATH}/circom_fwd.hpp"
         cp "${SOURCES_ROOT}/types.hpp" "${CIRCUIT_CPP_PATH}/types.hpp"
+        cp "${SOURCES_ROOT}/assert.h" "${CIRCUIT_CPP_PATH}/assert.h"
 
     # TODO: Instead of replace, make a fork that generates the appropriate Makefile
     - name: Replace ${{ inputs.circuit-name-display }}'s Makefile

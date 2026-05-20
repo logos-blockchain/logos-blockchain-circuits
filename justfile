@@ -35,7 +35,7 @@ poq: check-circom
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
     cp -r {{src}}/poq blend/poq_cpp/poq
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp blend/poq_cpp/
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h blend/poq_cpp/
     cp {{ci_makefile}} blend/poq_cpp/Makefile
     cp blend/test_ffi.cpp blend/poq_cpp/test_ffi.cpp
     make -C blend/poq_cpp PROJECT=poq linux-lib
@@ -51,7 +51,7 @@ pol: check-circom
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/pol_cpp/main.cpp
     cp -r {{src}}/pol mantle/pol_cpp/pol
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/pol_cpp/
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/pol_cpp/
     cp {{ci_makefile}} mantle/pol_cpp/Makefile
     cp mantle/test_pol.cpp mantle/pol_cpp/test_pol.cpp
     make -C mantle/pol_cpp PROJECT=pol linux-lib
@@ -67,7 +67,7 @@ poc: check-circom
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
     cp -r {{src}}/poc mantle/poc_cpp/poc
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/poc_cpp/
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/poc_cpp/
     cp {{ci_makefile}} mantle/poc_cpp/Makefile
     cp mantle/test_poc.cpp mantle/poc_cpp/test_poc.cpp
     make -C mantle/poc_cpp PROJECT=poc linux-lib
@@ -83,7 +83,7 @@ signature: check-circom
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
     cp -r {{src}}/signature mantle/signature_cpp/signature
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp mantle/signature_cpp/
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/signature_cpp/
     cp {{ci_makefile}} mantle/signature_cpp/Makefile
     cp mantle/test_signature.cpp mantle/signature_cpp/test_signature.cpp
     make -C mantle/signature_cpp PROJECT=signature linux-lib

@@ -92,7 +92,13 @@ static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     Circom_Circuit* circuit = loadCircuit(circuit_bytes);
     Circom_CalcWit* ctx = new Circom_CalcWit(circuit);
 
-    loadJson(ctx, input->inputs_json);
+    try {
+        loadJson(ctx, input->inputs_json);
+    } catch (...) {
+        delete ctx;
+        delete circuit;
+        throw;
+    }
     if (ctx->getRemaingInputsToBeSet()!=0) {
         const std::string message = "Not all inputs have been set. Only " + std::to_string(get_main_input_signal_no()-ctx->getRemaingInputsToBeSet()) + " out of " + std::to_string(get_main_input_signal_no()) + ".";
         delete ctx;
