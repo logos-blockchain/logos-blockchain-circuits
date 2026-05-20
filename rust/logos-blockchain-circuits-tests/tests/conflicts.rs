@@ -22,4 +22,23 @@ mod tests {
         let poq_result = lbc_poq_sys::generate_witness(&inputs_json);
         assert!(poq_result.is_ok());
     }
+
+    #[test]
+    fn test_concurrent_poq_calls() {
+        let inputs_json_raw = std::fs::read_to_string(inputs::POQ.as_path()).unwrap();
+
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let json = inputs_json_raw.clone();
+                std::thread::spawn(move || {
+                    let input = PoqWitnessInput::new(json).unwrap();
+                    lbc_poq_sys::generate_witness(&input)
+                })
+            })
+            .collect();
+
+        for h in handles {
+            assert!(h.join().unwrap().is_ok());
+        }
+    }
 }

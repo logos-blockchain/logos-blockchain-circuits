@@ -61,6 +61,29 @@ mod tests {
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 
     #[test]
+    fn test_generate_witness_invalid_json_returns_err() {
+        let input = PolWitnessInput::new("{".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_missing_inputs_returns_err() {
+        let input = PolWitnessInput::new("{}".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_constraint_violation_returns_err() {
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let bad_json = json.replace(
+            "\"ledger_aged\": \"9907496234164738674719754286318998202143315407023653151112941050435603056651\"",
+            "\"ledger_aged\": \"1\"",
+        );
+        let input = PolWitnessInput::new(bad_json).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("pol_test_witness.wtns");
