@@ -22,4 +22,6 @@
 #include_next <assert.h>
 #undef assert
 #include <stdexcept>
-#define assert(cond) ((cond) ? void(0) : throw std::runtime_error("Failed assert: " #cond))
+#define assert(cond) \
+    ((cond) ? void(0) : throw std::runtime_error( \
+        std::string("Circuit constraint violated in ") + __FILE__ + ":" + std::to_string(__LINE__) + ": " + #cond))
