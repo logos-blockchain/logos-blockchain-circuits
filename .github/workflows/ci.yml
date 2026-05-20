@@ -130,7 +130,7 @@ jobs:
 
       - name: Cache Powers of Tau
         id: cache-ptau
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ env.PTAU_FILE }}
           key: ptau-${{ env.PTAU_FILE }}
@@ -206,7 +206,7 @@ jobs:
 
       - name: Cache GMP Archive
         id: cache-gmp
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: rapidsnark/depends/gmp-6.2.1.tar.xz
           key: gmp-6.2.1
@@ -451,7 +451,7 @@ jobs:
 
       - name: Cache GMP Archive
         id: cache-gmp
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: rapidsnark/depends/gmp-6.2.1.tar.xz
           key: gmp-6.2.1
@@ -734,7 +734,7 @@ jobs:
 
       - name: Cache GMP Archive
         id: cache-gmp
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: rapidsnark/depends/gmp-6.2.1.tar.xz
           key: gmp-6.2.1
@@ -979,7 +979,7 @@ jobs:
 
       - name: Cache GMP Archive
         id: cache-gmp
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: rapidsnark/depends/gmp-6.2.1.tar.xz
           key: gmp-6.2.1
