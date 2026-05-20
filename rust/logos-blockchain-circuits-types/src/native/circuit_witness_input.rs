@@ -1,6 +1,6 @@
+use std::{marker::PhantomData, ops::Deref};
+
 use crate::native::{Error, WitnessInput};
-use std::marker::PhantomData;
-use std::ops::Deref;
 
 pub trait CircuitDat<'dat> {
     const DAT: &'dat [u8];

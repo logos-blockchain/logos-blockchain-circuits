@@ -1,6 +1,6 @@
+use std::{ffi::CStr, fmt::Display};
+
 use crate::ffi::status::Code as FfiStatusCode;
-use std::ffi::CStr;
-use std::fmt::Display;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -33,7 +33,8 @@ impl TryFrom<crate::ffi::Status> for () {
 
     fn try_from(status: crate::ffi::Status) -> Result<()> {
         let message: Option<String> = status.has_message().then(|| {
-            // SAFETY: `status.message` is non-empty (checked by `has_message()`) and null-terminated as guaranteed by the C API.
+            // SAFETY: `status.message` is non-empty (checked by `has_message()`) and
+            // null-terminated as guaranteed by the C API.
             let status_message = unsafe { CStr::from_ptr(status.message.as_ptr()) };
             status_message.to_string_lossy().into_owned()
         });

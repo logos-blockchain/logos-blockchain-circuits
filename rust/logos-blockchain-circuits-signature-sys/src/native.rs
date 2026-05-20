@@ -1,10 +1,12 @@
-use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
+use std::path::Path;
+
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
     native::{Error, Witness},
 };
-use std::path::Path;
+
+use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
 
 static RAW_CIRCUIT_DAT: &[u8] = include_bytes!(concat!(
     env!("LBC_SIGNATURE_LIB_DIR"),
@@ -24,7 +26,8 @@ pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error>
 
     let mut ffi_output_bytes = ffi::Bytes::null();
 
-    // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally initialized null Bytes.
+    // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
+    // initialized null Bytes.
     let status = unsafe {
         signature_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
     };
@@ -37,7 +40,8 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     let c_inputs = path_as_null_terminated_string(inputs)?;
     let c_output = path_as_null_terminated_string(output)?;
 
-    // SAFETY: c_dat, c_inputs, and c_output are valid null-terminated C strings for the duration of the call.
+    // SAFETY: c_dat, c_inputs, and c_output are valid null-terminated C strings for
+    // the duration of the call.
     unsafe {
         signature_generate_witness_from_files(c_dat.as_ptr(), c_inputs.as_ptr(), c_output.as_ptr())
     }
@@ -46,9 +50,9 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
 
 #[cfg(test)]
 mod tests {
+    use std::{path::PathBuf, sync::LazyLock};
+
     use super::{SignatureWitnessInput, generate_witness, generate_witness_from_files};
-    use std::path::PathBuf;
-    use std::sync::LazyLock;
 
     static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
         const ENV_VAR: &str = "LBC_SIGNATURE_LIB_DIR";

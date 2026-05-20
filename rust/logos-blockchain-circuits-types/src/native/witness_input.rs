@@ -1,6 +1,6 @@
-use crate::ffi;
-use crate::native::Error;
 use std::ffi::CString;
+
+use crate::{ffi, native::Error};
 
 /// Input for witness generators
 pub struct WitnessInput<'dat> {
@@ -27,7 +27,8 @@ impl<'dat> WitnessInput<'dat> {
     }
 }
 
-/// Temporary FFI view of a [`WitnessInput`], which makes [`ffi::WitnessInput`] lifetime-aware.
+/// Temporary FFI view of a [`WitnessInput`], which makes [`ffi::WitnessInput`]
+/// lifetime-aware.
 pub struct WitnessInputFfiGuard<'dat> {
     ffi: ffi::WitnessInput,
     _lifetime: std::marker::PhantomData<&'dat WitnessInput<'dat>>,

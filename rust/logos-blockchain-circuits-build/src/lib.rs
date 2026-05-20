@@ -3,8 +3,8 @@ use std::path::PathBuf;
 #[cfg(feature = "prebuilt")]
 mod prebuilt {
     use std::path::{Path, PathBuf};
-    use ureq::Body;
-    use ureq::http::Response;
+
+    use ureq::{Body, http::Response};
 
     static REPO: &str = "logos-blockchain/logos-blockchain-circuits";
     static ARTIFACT_PREFIX: &str = "logos-blockchain-circuits";
@@ -22,9 +22,9 @@ mod prebuilt {
     fn fetch_library(version: &str, os: &str, arch: &str, lib_var_name: &str) -> Response<Body> {
         let url = build_artifact_url(version, os, arch);
         // We skip checksum verification intentionally.
-        // Hardcoded hashes would protect against a silently replaced release asset but require a
-        // two-step release (build → hash → commit → tag) which feels overkill for a first-party
-        // library.
+        // Hardcoded hashes would protect against a silently replaced release asset but
+        // require a two-step release (build → hash → commit → tag) which feels
+        // overkill for a first-party library.
         ureq::get(&url).call().unwrap_or_else(|error| {
             panic!(
                 "Failed to download a prebuilt library for {os}-{arch} v{version}: {error}. \
@@ -83,18 +83,19 @@ mod prebuilt {
         let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
         let cache = get_cache_dir();
-        // The tarball unpacks to a top-level `{artifact_name}/` dir, so the circuit lives at
-        // `cache/{artifact_name}/{circuit_name}/`.
+        // The tarball unpacks to a top-level `{artifact_name}/` dir, so the circuit
+        // lives at `cache/{artifact_name}/{circuit_name}/`.
         let circuit_dir = cache
             .join(build_artifact_name(version, &os, &arch))
             .join(circuit_name);
 
         std::fs::create_dir_all(&cache).expect("Failed to create the cache directory.");
 
-        // Since the circuits' libraries are all contained in the same single artifact, each crate
-        // will try to download the same circuits.
-        // To avoid redundant downloads, we use a lock to ensure that only one process fetches the
-        // circuits while the others wait for it to complete and then re-check the cache.
+        // Since the circuits' libraries are all contained in the same single artifact,
+        // each crate will try to download the same circuits.
+        // To avoid redundant downloads, we use a lock to ensure that only one process
+        // fetches the circuits while the others wait for it to complete and
+        // then re-check the cache.
         let mut lock = get_lockfile(&cache);
         let _guard = lock.write().expect("Failed to acquire cache lock.");
 
