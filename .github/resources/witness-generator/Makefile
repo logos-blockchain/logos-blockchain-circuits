@@ -63,21 +63,15 @@ PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_file
 LOCAL_OBJ   := $(PROJECT)_local.o
 OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
 
-UNAME := $(shell uname -s)
-
 # ---- Rules ----
 $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-ifeq ($(UNAME),Darwin)
-	ar rcs $@ $^  # macOS: two-level namespace, conflicts don't arise
-else
 	ld -r -o $(LOCAL_OBJ) $(filter-out fr.o,$^)
 	$(OBJCOPY) $(foreach s,$(PUBLIC_SYMS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
 	ar rcs $@ fr.o $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
-endif
 
 %.o: %.cpp $(DEPS_HPP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
