@@ -186,6 +186,10 @@ pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
     println!("cargo:rustc-link-search=native={circuit_lib_dir_str}");
     println!("cargo:rustc-link-search=native={bundle_lib_dir_str}");
     println!("cargo:rustc-link-lib=static={circuit_name}");
-    println!("cargo:rustc-link-lib=stdc++");
+    let cpp_lib = std::env::var("CARGO_CFG_TARGET_OS").map_or_else(
+        |_| "stdc++",
+        |os| if os == "macos" { "c++" } else { "stdc++" },
+    );
+    println!("cargo:rustc-link-lib={cpp_lib}");
     println!("cargo:rustc-link-lib=static=gmp");
 }
