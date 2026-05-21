@@ -59,25 +59,21 @@ windows-lib: $(LIB)
 # section" errors that GNU objcopy causes. On Windows/COFF: GNU objcopy suffices
 # because COFF COMDAT is per-section (not group-based) and is already deduplicated
 # automatically by the linker — the ELF GRP_COMDAT problem does not apply.
+# On macOS/Mach-O: llvm-objcopy (from brew install llvm) is used — it supports
+# --keep-global-symbol for Mach-O since LLVM 12.
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
 OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
-
-UNAME := $(shell uname -s)
 
 # ---- Rules ----
 $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-ifeq ($(UNAME),Darwin)
-	ar rcs $@ $^  # macOS: two-level namespace, conflicts don't arise
-else
 	ld -r -o $(LOCAL_OBJ) $(filter-out fr.o,$^)
 	$(OBJCOPY) $(foreach s,$(PUBLIC_SYMS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
 	ar rcs $@ fr.o $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
-endif
 
 %.o: %.cpp $(DEPS_HPP)
 	$(CXX) $(CXXFLAGS) -c $< -o $@

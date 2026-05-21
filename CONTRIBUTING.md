@@ -6,7 +6,7 @@
 
 - [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
 - [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
-- `llvm-objcopy` — required to build circuit static libraries (symbol isolation) on Linux. Install via `sudo apt install -y llvm`. On Windows (MSYS2), GNU `objcopy` from `mingw-w64-x86_64-toolchain` is used instead (no extra install needed). On macOS, symbol isolation is skipped entirely, so no objcopy tool is required.
+- `llvm-objcopy` — required to build circuit static libraries (symbol isolation).
 
 ### Installing the Pre-Commit Hooks
 
@@ -58,13 +58,12 @@ page, which results in a **SIGSEGV**.
 
 ### The Fix
 
-The Makefile's `$(LIB)` rule uses a two-step process on Linux and Windows to localize all circuit-specific code before
-archiving:
+The Makefile's `$(LIB)` rule uses a two-step process to localize all circuit-specific code before archiving:
 
 1. **Partial link** (`ld -r`): merges all circuit-specific `.o` files — everything except `fr.o` (pure field
 arithmetic, no circuit-specific calls) — into a single relocatable object. No symbols are resolved yet; this is
 consolidation only.
-2. **Symbol localization** (`llvm-objcopy --keep-global-symbol` on Linux, `objcopy --keep-global-symbol` on Windows): demotes every global symbol to local *except* the
+2. **Symbol localization** (`llvm-objcopy --keep-global-symbol` / `objcopy --keep-global-symbol`): demotes every global symbol to local *except* the
 circuit's two public FFI entry points (`$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`).
 Local symbols are invisible to the final linker, so each archive retains a private copy of every internal symbol — no
 conflict is possible regardless of how many circuits are linked together.
@@ -78,8 +77,8 @@ regular non-COMDAT sections that are simply kept as-is rather than deduplicated.
 `fr.o` is excluded from the merge because it contains only field arithmetic (`Fr_*`) with no circuit-specific calls.
 It is safe to deduplicate across circuits — the linker picks one copy, which is correct since the code is identical.
 
-On macOS, localization is skipped. macOS uses a two-level namespace by default, meaning symbols are qualified by which
-library they come from, so the conflict does not arise.
+On macOS/Mach-O, `llvm-objcopy` (from `brew install llvm`) is used — it supports `--keep-global-symbol` for
+Mach-O since LLVM 12. It is not available in Xcode's toolchain and must be installed separately.
 
 On Windows, GNU `objcopy` (from MinGW binutils) is used instead of `llvm-objcopy`. `llvm-objcopy --keep-global-symbol`
 is not supported for COFF objects, but GNU `objcopy --keep-global-symbol` works correctly on COFF — it maps the local
