@@ -77,6 +77,9 @@ regular non-COMDAT sections that are simply kept as-is rather than deduplicated.
 `fr.o` is excluded from the merge because it contains only field arithmetic (`Fr_*`) with no circuit-specific calls.
 It is safe to deduplicate across circuits — the linker picks one copy, which is correct since the code is identical.
 
+On macOS/Mach-O, `llvm-objcopy` (from `brew install llvm`) is used — it supports `--keep-global-symbol` for
+Mach-O since LLVM 12. It is not available in Xcode's toolchain and must be installed separately.
+
 On Windows, GNU `objcopy` (from MinGW binutils) is used instead of `llvm-objcopy`. `llvm-objcopy --keep-global-symbol`
 is not supported for COFF objects, but GNU `objcopy --keep-global-symbol` works correctly on COFF — it maps the local
 binding to COFF storage class `C_STAT`. The ELF `GRP_COMDAT` problem that required `llvm-objcopy` on Linux does not

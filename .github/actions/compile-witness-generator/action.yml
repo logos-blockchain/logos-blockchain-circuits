@@ -104,10 +104,12 @@ runs:
         if [ "$OS" = "macos" ]; then SED_I="sed -i ''"; fi
         $SED_I ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' "${CIRCUIT_CPP_PATH}/main.cpp"
 
-    - name: Set up LLVM tools (macOS)
+    - name: Install llvm-objcopy (macOS)
       if: ${{ inputs.os == 'macos' }}
       shell: bash
-      run: echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+      run: |
+        brew install llvm
+        echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
     # TODO: Instead of insertion, make a fork that includes the appropriate patch (or the actual fix)
     - name: Patch MacOS GMP
