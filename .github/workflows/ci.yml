@@ -705,6 +705,10 @@ jobs:
           $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
           circom --version
 
+      - name: Check GMP Before Deps
+        shell: msys2 {0}
+        run: pacman -Q | grep gmp || echo "gmp not installed"
+
       - name: Install Dependencies [Witness Generator]
         shell: msys2 {0}
         run: |
@@ -720,9 +724,17 @@ jobs:
           make install
           popd
 
+      - name: Check GMP After Witness Generator Deps
+        shell: msys2 {0}
+        run: pacman -Q | grep gmp || echo "gmp not installed"
+
       - name: Install Dependencies [Prover]
         shell: msys2 {0}
         run: pacman --noconfirm -Sy --needed cmake nasm mingw-w64-ucrt-x86_64-libsodium
+
+      - name: Check GMP After Prover Deps
+        shell: msys2 {0}
+        run: pacman -Q | grep gmp || echo "gmp not installed"
 
       - name: Replace Prover Makefile # TODO: Make a fork generate the appropriate Windows Makefile
         shell: msys2 {0}
