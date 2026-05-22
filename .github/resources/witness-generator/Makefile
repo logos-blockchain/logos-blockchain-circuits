@@ -35,12 +35,12 @@ linux-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC
 linux-lib: $(LIB)
 
 # ---- macOS ----
-macos: CXXFLAGS=$(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp
+macos: CXXFLAGS=$(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos: LDFLAGS=-Wl,-search_paths_first -Wl,-dead_strip
 macos: LDLIBS=/opt/homebrew/lib/libgmp.a
 macos: $(BIN)
 
-macos-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/include -include gmp_patch.hpp
+macos-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos-lib: $(LIB)
 
 # ---- Windows (MinGW) ----

@@ -195,8 +195,14 @@ jobs:
         working-directory: rapidsnark
         run: sudo apt update -y
 
+      - name: Check GMP Before Deps
+        run: dpkg -l | grep libgmp || echo "gmp not installed"
+
       - name: Install Dependencies [Prover]
         run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+
+      - name: Check GMP After Prover Deps
+        run: dpkg -l | grep libgmp || echo "gmp not installed"
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
@@ -440,8 +446,14 @@ jobs:
         working-directory: rapidsnark
         run: sudo apt update -y
 
+      - name: Check GMP Before Deps
+        run: dpkg -l | grep libgmp || echo "gmp not installed"
+
       - name: Install Dependencies [Prover]
         run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+
+      - name: Check GMP After Prover Deps
+        run: dpkg -l | grep libgmp || echo "gmp not installed"
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
@@ -971,11 +983,20 @@ jobs:
       - name: Setup Dependencies
         run: mkdir include
 
+      - name: Check GMP Before Deps
+        run: brew list --versions | grep gmp || echo "gmp not installed"
+
       - name: Install Dependencies [Witness Generator]
         run: brew install nlohmann-json binutils
 
+      - name: Check GMP After Witness Generator Deps
+        run: brew list --versions | grep gmp || echo "gmp not installed"
+
       - name: Install Dependencies [Prover]
         run: brew install nasm m4
+
+      - name: Check GMP After Prover Deps
+        run: brew list --versions | grep gmp || echo "gmp not installed"
 
       - name: Cache GMP Archive
         id: cache-gmp
