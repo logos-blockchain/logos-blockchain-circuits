@@ -54,16 +54,10 @@ windows-lib: $(LIB)
 
 # Localizes all circuit-specific code to prevent conflicts when multiple circuit
 # libraries are linked into the same binary. See CONTRIBUTING.md § "Symbol Isolation".
-# On Linux/ELF: llvm-objcopy is required — it clears GRP_COMDAT when localizing
-# COMDAT signature symbols, preventing "relocation refers to symbol in discarded
-# section" errors that GNU objcopy causes. On Windows/COFF: GNU objcopy suffices
-# because COFF COMDAT is per-section (not group-based) and is already deduplicated
-# automatically by the linker — the ELF GRP_COMDAT problem does not apply.
-# On macOS/Mach-O: llvm-objcopy (from brew install llvm) is used — it supports
-# --keep-global-symbol for Mach-O since LLVM 12.
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
 OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+SYM_PREFIX  := $(if $(filter macos,$(OS)),_,)
 
 # ---- Rules ----
 $(BIN): $(COMMON_OBJS)

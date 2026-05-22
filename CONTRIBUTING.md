@@ -6,7 +6,7 @@
 
 - [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
 - [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
-- `llvm-objcopy` — required to build circuit static libraries (symbol isolation).
+- `llvm-objcopy` — required to build circuit static libraries (symbol isolation). On macOS, install via `brew install llvm` (LLVM 20+ required).
 
 ### Installing the Pre-Commit Hooks
 
@@ -47,7 +47,7 @@ arithmetic functions, `calcwit_*` functions, and others. They are compiled from 
 
 ### The Problem
 
-When two or more circuit libraries are linked into the same binary, the GNU linker silently picks the first definition 
+When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition 
 it encounters for each symbol and discards the rest. 
 No error, no warning. 
 The result is that one circuit's constants end up hardwired into functions shared by both circuits, corrupting witness 
@@ -78,7 +78,10 @@ regular non-COMDAT sections that are simply kept as-is rather than deduplicated.
 It is safe to deduplicate across circuits — the linker picks one copy, which is correct since the code is identical.
 
 On macOS/Mach-O, `llvm-objcopy` (from `brew install llvm`) is used — it supports `--keep-global-symbol` for
-Mach-O since LLVM 12. It is not available in Xcode's toolchain and must be installed separately.
+Mach-O since LLVM 20. It is not available in Xcode's toolchain and must be installed separately.
+Mach-O prepends an underscore to every C symbol (`poc_generate_witness` → `_poc_generate_witness`),
+so `--keep-global-symbol` arguments must include the leading `_`. The Makefile's `SYM_PREFIX` variable
+handles this: it is set to `_` on macOS and empty on other platforms.
 
 On Windows, GNU `objcopy` (from MinGW binutils) is used instead of `llvm-objcopy`. `llvm-objcopy --keep-global-symbol`
 is not supported for COFF objects, but GNU `objcopy --keep-global-symbol` works correctly on COFF — it maps the local
