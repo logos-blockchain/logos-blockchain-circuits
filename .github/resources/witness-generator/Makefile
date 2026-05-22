@@ -65,7 +65,7 @@ $(BIN): $(COMMON_OBJS)
 
 $(LIB): $(LIB_OBJS)
 	ld -r -o $(LOCAL_OBJ) $(filter-out fr.o,$^)
-	$(OBJCOPY) $(foreach s,$(PUBLIC_SYMS),--keep-global-symbol=$(s)) $(LOCAL_OBJ)
+	$(OBJCOPY) $(foreach sym,$(PUBLIC_SYMS),--keep-global-symbol=$(SYM_PREFIX)$(sym)) $(LOCAL_OBJ)
 	ar rcs $@ fr.o $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
 
