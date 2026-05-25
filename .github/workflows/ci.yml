@@ -1012,13 +1012,12 @@ jobs:
           echo "Download complete."
 
       - name: Compile Prover and Verifier
-        env:
-          # Ensures gmp and the prover are built targeting macOS 11.0 (the minimum for
-          # aarch64-apple-darwin), preventing rust-lld deployment target mismatch warnings
-          # when nomos links against the bundled libgmp.a.
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
         working-directory: rapidsnark
         run: |
+          # build_gmp.sh hardcodes -mmacos-version-min=14.0 in CFLAGS, ignoring
+          # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
+          # aarch64-apple-darwin toolchain target (macOS 11.0+).
+          sed -i 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
           ./build_gmp.sh macos_arm64
           make macos_arm64
 
