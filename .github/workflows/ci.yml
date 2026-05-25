@@ -1017,7 +1017,7 @@ jobs:
           # build_gmp.sh hardcodes -mmacos-version-min=14.0 in CFLAGS, ignoring
           # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
           # aarch64-apple-darwin toolchain target (macOS 11.0+).
-          sed -i 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
+          sed -i '' 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
           ./build_gmp.sh macos_arm64
           make macos_arm64
 
