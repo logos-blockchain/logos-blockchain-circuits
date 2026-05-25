@@ -196,7 +196,7 @@ jobs:
         run: sudo apt update -y
 
       - name: Install Dependencies [Prover]
-        run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+        run: sudo apt install -y build-essential cmake libsodium-dev nasm curl m4
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
@@ -224,6 +224,12 @@ jobs:
         run: |
           ./build_gmp.sh host
           make host_linux_x86_64_static
+
+      - name: Prioritize Built GMP Headers Over System GMP
+        run: |
+          # System gmp (6.2.1) is preinstalled on the runner. Prepend our built gmp headers
+          # so the witness generator compiles against the same gmp version as the prover.
+          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
 
       - name: Bundle Rapidsnark Prover
         env:
@@ -441,7 +447,7 @@ jobs:
         run: sudo apt update -y
 
       - name: Install Dependencies [Prover]
-        run: sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4
+        run: sudo apt install -y build-essential cmake libsodium-dev nasm curl m4
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
@@ -471,6 +477,12 @@ jobs:
           # Create symlink for TARGET_PLATFORM=aarch64 to find GMP
           ln -s package depends/gmp/package_aarch64
           make host_linux_aarch64_static
+
+      - name: Prioritize Built GMP Headers Over System GMP
+        run: |
+          # System gmp (6.2.1) is preinstalled on the runner. Prepend our built gmp headers
+          # so the witness generator compiles against the same gmp version as the prover.
+          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
 
       - name: Bundle Rapidsnark Prover
         env:
@@ -755,6 +767,13 @@ jobs:
           ./build_gmp.sh host
           make host_windows_x86_64_static
 
+      - name: Prioritize Built GMP Headers Over System GMP
+        shell: msys2 {0}
+        run: |
+          # System gmp (6.3.0) is preinstalled on the runner. Prepend our built gmp headers
+          # so the witness generator compiles against the same gmp version as the prover.
+          echo "PRIORITY_FLAGS=-I$(cygpath -u "$GITHUB_WORKSPACE")/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
+
       - name: Bundle Rapidsnark Prover
         shell: msys2 {0}
         env:
@@ -995,8 +1014,19 @@ jobs:
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
         run: |
+          # build_gmp.sh hardcodes -mmacos-version-min=14.0 in CFLAGS, ignoring
+          # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
+          # aarch64-apple-darwin toolchain target (macOS 11.0+).
+          sed -i '' 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
           ./build_gmp.sh macos_arm64
           make macos_arm64
+
+      - name: Prioritize Built GMP Headers Over System GMP
+        run: |
+          # System gmp (6.3.0) is preinstalled on the runner. Prepend our built gmp headers
+          # so the witness generator compiles against the same gmp version as the prover,
+          # and the built gmp targets macOS 11.0 rather than the runner's current OS version.
+          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_macos_arm64/include" >> $GITHUB_ENV
 
       - name: Bundle Rapidsnark Prover
         env:
@@ -1201,9 +1231,6 @@ jobs:
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
 
-      - name: Install Dependencies
-        run: sudo apt install -y libgmp-dev
-
       - name: Cache Cargo artifacts
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
         with:
@@ -1256,9 +1283,6 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
-
-      - name: Install Dependencies
-        run: sudo apt install -y libgmp-dev
 
       - name: Cache Cargo artifacts
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3

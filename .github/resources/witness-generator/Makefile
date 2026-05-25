@@ -7,6 +7,7 @@ endif
 
 # ---- Common ----
 CXX             := g++
+PRIORITY_FLAGS  ?=
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
 COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
 COMMON_OBJS     := $(COMMON_SRCS:.cpp=.o)
@@ -26,30 +27,36 @@ endif
 LIB             := $(LIB_PREFIX)$(PROJECT)$(LIB_EXT)
 
 # ---- Linux (x86_64 and aarch64) ----
-linux: CXXFLAGS=$(CXXFLAGS_COMMON)
+# NOTE: linux (bin) links system gmp via -lgmp. CI uses linux-lib only, which
+# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
+linux: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
 linux: $(BIN)
 
-linux-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC
+linux-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC
 linux-lib: $(LIB)
 
 # ---- macOS ----
-macos: CXXFLAGS=$(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp
+# NOTE: macos (bin) hardcodes Homebrew gmp for both includes and linking. CI uses
+# macos-lib only, which relies on PRIORITY_FLAGS to prefer the gmp built from source.
+macos: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos: LDFLAGS=-Wl,-search_paths_first -Wl,-dead_strip
 macos: LDLIBS=/opt/homebrew/lib/libgmp.a
 macos: $(BIN)
 
-macos-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/include -include gmp_patch.hpp
+macos-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos-lib: $(LIB)
 
 # ---- Windows (MinGW) ----
-windows: CXXFLAGS=$(CXXFLAGS_COMMON) -I/include -Duint="unsigned int"
+# NOTE: windows (bin) links system gmp via -lgmp. CI uses windows-lib only, which
+# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
+windows: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/include -Duint="unsigned int"
 windows: LDFLAGS=-static
 windows: LDLIBS=-L/lib -lgmp -lmman
 windows: $(BIN)
 
-windows-lib: CXXFLAGS=$(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
+windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
 # Localizes all circuit-specific code to prevent conflicts when multiple circuit
