@@ -12,7 +12,6 @@ ZK-SNARK circuits for the [Logos Blockchain](https://github.com/logos-blockchain
 | **PoC** — Proof of Claim      | A voucher is validly owned and its nullifier is correctly derived |
 | **Signature**                 | Knowledge of secret keys and their corresponding public keys      |
 
-
 ## Architecture
 
 ```mermaid
@@ -40,7 +39,8 @@ flowchart TD
     DAT -->|Embedded into| G
 ```
 
-Each circuit is compiled from Circom source to C++, combined with shared common files (`circom_adapter`, `types`, ...) and a circuit-specific FFI layer (`src/{circuit}/ffi.cpp`), and built into a static library.
+Each circuit is compiled from Circom source to C++, combined with shared common files (`circom_adapter`, `types`, ...)
+and a circuit-specific FFI layer (`src/{circuit}/ffi.cpp`), and built into a static library.
 
 The Rust sys crates link directly against these libraries.
 

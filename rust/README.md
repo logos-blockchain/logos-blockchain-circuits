@@ -32,6 +32,7 @@ lbc-poq-sys = { version = "0.5", features = ["prebuilt"] }
 ```
 
 The cache location depends on the operating system:
+
 - Linux: `~/.cache/logos/blockchain/`
 - macOS: `~/Library/Caches/logos/blockchain/`
 - Windows: `%LOCALAPPDATA%\logos\blockchain\`
@@ -51,10 +52,10 @@ LBC_LIB_DIR=/path/to/lib                 # Directory containing the required lib
                                          # If using a release bundle, this is the included lib/ directory
 ```
 
-> The `justfile` at the repo root contains recipes (`just poq`, `just pol`, etc.) that build the circuit libraries from 
+> The `justfile` at the repo root contains recipes (`just poq`, `just pol`, etc.) that build the circuit libraries from
 > source.
-> 
-> This is not yet an officially supported workflow, but it can serve as a reference if you need to produce the 
+>
+> This is not yet an officially supported workflow, but it can serve as a reference if you need to produce the
 > libraries yourself.
 
 ## Usage
@@ -90,7 +91,6 @@ fn main() -> Result<(), Error> {
 ```
 
 The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_poc_sys` and `lbc_signature_sys`.
-
 
 ## Running tests
 

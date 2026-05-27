@@ -61,7 +61,7 @@ It consists of two groups of files copied into `{circuit}_cpp/` before compilati
 - **Circuit-specific entry points** (`src/{circuit}/ffi.cpp`): The public `extern "C"` functions
   that become the library's API.
 
-```
+```text
 src/
   types.hpp           → copied into {circuit}_cpp/
   circom_adapter.cpp  → copied into {circuit}_cpp/

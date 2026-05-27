@@ -13,9 +13,9 @@ All notable changes to this project will be documented in this file.
    Each circuit is now a linkable static archive (`lib{circuit}.a`) with a stable C FFI.
 
    Two entry points per circuit:
-   - `{circuit}_generate_witness(WitnessInput*, Bytes*)`: Generates a witness in memory from a
+  - `{circuit}_generate_witness(WitnessInput*, Bytes*)`: Generates a witness in memory from a
      JSON input string and an embedded `.dat` buffer; the caller owns the output buffer.
-   - `{circuit}_generate_witness_from_files(dat, inputs, output)`: Generates a witness from a `.dat` file and a JSON
+  - `{circuit}_generate_witness_from_files(dat, inputs, output)`: Generates a witness from a `.dat` file and a JSON
      input file, writing the witness to an output file.
 
    The Rust crates (`lbc-{circuit}-sys`) wrap this FFI directly and can either link against a local build or download a
@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 
 - **Bundled static GMP** (#19)
 
-   `libgmp` is now compiled from source and statically linked, removing the runtime dependency on a system GMP 
+   `libgmp` is now compiled from source and statically linked, removing the runtime dependency on a system GMP
    installation, and standardizing the GMP version used across all platforms.
 
 - **Older glibc compatibility** (#21)
@@ -38,7 +38,7 @@ All notable changes to this project will be documented in this file.
 
 - **Symbol resolution conflicts** (#22, #28, #29)
 
-   When multiple circuit libraries are linked into the same binary, the linker silently collapsed shared internal 
+   When multiple circuit libraries are linked into the same binary, the linker silently collapsed shared internal
    symbols to a single definition, corrupting witness parsing and causing SIGSEGV.
 
    See [CONTRIBUTING.md](CONTRIBUTING.md#symbol-isolation-in-circuit-libraries) for a full explanation and maintenance
