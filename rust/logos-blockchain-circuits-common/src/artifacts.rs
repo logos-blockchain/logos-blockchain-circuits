@@ -1,8 +1,8 @@
 /// Generates a `pub mod artifacts` containing the circuit compilation
 /// artifacts.
 ///
-/// The artifacts are loaded from the directory pointed to by
-/// `LBC_{CIRCUIT}_LIB_DIR`, set by the crate's build script.
+/// The artifacts are loaded from `LBC_ROOT_DIR/{circuit_dir}/`, set by the
+/// crate's build script.
 ///
 /// # Generated items
 ///
@@ -18,15 +18,17 @@
 /// # Example
 ///
 /// ```ignore
-/// lbc_common::circuit_artifacts!("POQ"); // uses LBC_POQ_LIB_DIR
+/// lbc_common::circuit_artifacts!("poq"); // uses {LBC_ROOT_DIR}/poq/
 /// ```
 #[macro_export]
 macro_rules! circuit_artifacts {
-    ($circuit_stem:literal) => {
+    ($circuit_dir:literal) => {
         pub mod artifacts {
             macro_rules! __circuit_file {
                 ($file:literal) => {
-                    concat!(env!(concat!("LBC_", $circuit_stem, "_LIB_DIR")), "/", $file)
+                    // "LBC_ROOT_DIR" must stay in sync with the constant in `lbc-build`.
+                    // env!() requires a literal so the name cannot be shared.
+                    concat!(env!("LBC_ROOT_DIR"), "/", $circuit_dir, "/", $file)
                 };
             }
 
