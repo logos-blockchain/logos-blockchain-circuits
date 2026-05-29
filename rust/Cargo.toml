@@ -18,6 +18,7 @@ members = [
   "logos-blockchain-circuits-tests",
   "logos-blockchain-circuits-types",
   "logos-blockchain-circuits-common",
+  "logos-blockchain-circuits-rapidsnark-sys",
 ]
 resolver = "3"
 
@@ -28,6 +29,7 @@ lbc-build = { package = "logos-blockchain-circuits-build", path = "./logos-block
 lbc-poc-sys = { package = "logos-blockchain-circuits-poc-sys", path = "./logos-blockchain-circuits-poc-sys" }
 lbc-pol-sys = { package = "logos-blockchain-circuits-pol-sys", path = "./logos-blockchain-circuits-pol-sys" }
 lbc-poq-sys = { package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
+lbc-rapidsnark-sys = { package = "logos-blockchain-circuits-rapidsnark-sys", path = "./logos-blockchain-circuits-rapidsnark-sys" }
 lbc-signature-sys = { package = "logos-blockchain-circuits-signature-sys", path = "./logos-blockchain-circuits-signature-sys" }
 lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
