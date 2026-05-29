@@ -115,6 +115,13 @@ mod prebuilt {
     }
 }
 
+/// Resolves the circuits root directory, either from the environment variable
+/// or by downloading a prebuilt version.
+///
+/// If called more than once per build script (e.g. `build_circuit` +
+/// `build_rapidsnark`), `cargo:rustc-env=LBC_ROOT_DIR` is emitted twice. Cargo
+/// takes last-wins for duplicate keys, but this is safe here since both calls
+/// resolve to the same path.
 fn resolve_root() -> PathBuf {
     println!("cargo:rerun-if-env-changed={LBC_ROOT_DIR}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
@@ -188,8 +195,13 @@ pub fn build_circuit(circuit_name: &str) {
 pub fn build_rapidsnark() {
     let root = resolve_root();
 
+    let extension = if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        ".exe"
+    } else {
+        ""
+    };
     for binary in ["prover", "verifier"] {
-        let path = root.join(binary);
+        let path = root.join(format!("{binary}{extension}"));
         println!("cargo:rerun-if-changed={}", path.display());
     }
 }
