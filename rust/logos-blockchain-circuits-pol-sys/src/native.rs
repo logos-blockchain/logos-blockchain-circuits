@@ -75,11 +75,9 @@ mod tests {
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        let bad_json = json.replace(
-            "\"ledger_aged\": \"9907496234164738674719754286318998202143315407023653151112941050435603056651\"",
-            "\"ledger_aged\": \"1\"",
-        );
-        let input = PolWitnessInput::new(bad_json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["ledger_aged"] = serde_json::json!("1");
+        let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 

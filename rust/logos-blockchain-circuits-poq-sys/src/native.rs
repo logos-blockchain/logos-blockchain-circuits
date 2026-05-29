@@ -75,13 +75,9 @@ mod tests {
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        // Swap core_root for a wrong value; the Merkle path no longer verifies,
-        // so is_registered.out = 0 and the constraint at circom line 108 fires.
-        let bad_json = json.replace(
-            "\"core_root\": \"20423847801203321296654759690878714805328777188198550442842378955293864405749\"",
-            "\"core_root\": \"1\"",
-        );
-        let input = PoqWitnessInput::new(bad_json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["core_root"] = serde_json::json!("1");
+        let input = PoqWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
