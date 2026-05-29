@@ -232,6 +232,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-blockchain-circuits-rapidsnark-sys"
+version = "0.5.0"
+dependencies = [
+ "logos-blockchain-circuits-build",
+]
+
+[[package]]
 name = "logos-blockchain-circuits-signature-sys"
 version = "0.5.0"
 dependencies = [

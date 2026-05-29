@@ -1,0 +1,22 @@
+[package]
+name = "logos-blockchain-circuits-rapidsnark-sys"
+categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[features]
+default = ["prebuilt"]
+prebuilt = ["lbc-build/prebuilt"]
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[build-dependencies]
+lbc-build = { workspace = true }

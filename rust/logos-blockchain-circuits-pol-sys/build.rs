@@ -1,3 +1,3 @@
 fn main() {
-    lbc_build::build("pol");
+    lbc_build::build_circuit("pol");
 }

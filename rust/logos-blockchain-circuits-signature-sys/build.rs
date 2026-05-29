@@ -1,3 +1,3 @@
 fn main() {
-    lbc_build::build("signature");
+    lbc_build::build_circuit("signature");
 }

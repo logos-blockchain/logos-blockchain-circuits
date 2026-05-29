@@ -115,13 +115,13 @@ mod prebuilt {
     }
 }
 
-pub fn build(circuit_name: &str) {
+fn resolve_root() -> PathBuf {
     println!("cargo:rerun-if-env-changed={LBC_ROOT_DIR}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=build.rs");
 
-    let lbc_root_dir = std::env::var(LBC_ROOT_DIR).map_or_else(
+    let root = std::env::var(LBC_ROOT_DIR).map_or_else(
         |_| {
             #[cfg(not(feature = "prebuilt"))]
             panic!(
@@ -150,23 +150,30 @@ pub fn build(circuit_name: &str) {
         },
     );
 
-    let lbc_root_dir_str = lbc_root_dir
+    let root_str = root
         .to_str()
         .expect("Failed to convert the root directory path to a string");
 
-    let circuit_dir = lbc_root_dir.join(circuit_name);
+    println!("cargo:rustc-env={LBC_ROOT_DIR}={root_str}");
+
+    root
+}
+
+pub fn build_circuit(circuit_name: &str) {
+    let root = resolve_root();
+
+    let circuit_dir = root.join(circuit_name);
     let circuit_dir_str = circuit_dir
         .to_str()
         .expect("Failed to convert the circuit directory path to a string");
 
-    let lib_dir = lbc_root_dir.join("lib");
+    let lib_dir = root.join("lib");
     let lib_dir_str = lib_dir
         .to_str()
         .expect("Failed to convert the lib directory path to a string");
 
     println!("cargo:rerun-if-changed={circuit_dir_str}");
     println!("cargo:rerun-if-changed={lib_dir_str}");
-    println!("cargo:rustc-env={LBC_ROOT_DIR}={lbc_root_dir_str}");
     println!("cargo:rustc-link-search=native={circuit_dir_str}");
     println!("cargo:rustc-link-search=native={lib_dir_str}");
     println!("cargo:rustc-link-lib=static={circuit_name}");
@@ -176,4 +183,13 @@ pub fn build(circuit_name: &str) {
     );
     println!("cargo:rustc-link-lib={cpp_lib}");
     println!("cargo:rustc-link-lib=static=gmp");
+}
+
+pub fn build_rapidsnark() {
+    let root = resolve_root();
+
+    for binary in ["prover", "verifier"] {
+        let path = root.join(binary);
+        println!("cargo:rerun-if-changed={}", path.display());
+    }
 }
