@@ -8,7 +8,7 @@ use lbc_types::{
 
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
-lbc_common::circuit_artifacts!("POQ");
+lbc_common::circuit_artifacts!("poq");
 
 pub struct PoqDat;
 impl<'dat> lbc_types::CircuitDat<'dat> for PoqDat {
@@ -48,14 +48,8 @@ mod tests {
 
     use super::{PoqWitnessInput, generate_witness, generate_witness_from_files};
 
-    static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-        const ENV_VAR: &str = "LBC_POQ_LIB_DIR";
-        PathBuf::from(
-            std::env::var(ENV_VAR).unwrap_or_else(
-                |_| panic!("Environment variable '{ENV_VAR}' must be available, as provided by the build script."),
-            )
-        )
-    });
+    static LIB_DIR: LazyLock<PathBuf> =
+        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("poq"));
     static INPUTS: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 

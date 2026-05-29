@@ -1,5 +1,9 @@
 use std::path::PathBuf;
 
+// Canonical definition of the env var name. Also hardcoded as a literal in
+// `lbc-common`'s `circuit_artifacts!` macro (env!() requires a literal).
+const LBC_ROOT_DIR: &str = "LBC_ROOT_DIR";
+
 #[cfg(feature = "prebuilt")]
 mod prebuilt {
     use std::path::{Path, PathBuf};
@@ -19,7 +23,7 @@ mod prebuilt {
         format!("https://github.com/{REPO}/releases/download/v{version}/{artifact_tar_gz}")
     }
 
-    fn fetch_library(version: &str, os: &str, arch: &str, lib_var_name: &str) -> Response<Body> {
+    fn fetch_artifact(version: &str, os: &str, arch: &str) -> Response<Body> {
         let url = build_artifact_url(version, os, arch);
         // We skip checksum verification intentionally.
         // Hardcoded hashes would protect against a silently replaced release asset but
@@ -27,15 +31,15 @@ mod prebuilt {
         // overkill for a first-party library.
         ureq::get(&url).call().unwrap_or_else(|error| {
             panic!(
-                "Failed to download a prebuilt library for {os}-{arch} v{version}: {error}. \
-                 Set {lib_var_name} to point to a local build instead."
+                "Failed to download a prebuilt artifact for {os}-{arch} v{version}: {error}. \
+                 Set {ENV_VAR} to point to a local build instead.",
+                ENV_VAR = super::LBC_ROOT_DIR
             )
         })
     }
 
-    fn unpack_library(
+    fn unpack_artifact(
         response: Response<Body>,
-        circuit_name: &str,
         version: &str,
         os: &str,
         arch: &str,
@@ -47,16 +51,15 @@ mod prebuilt {
             .unpack(output_dir)
             .expect("Failed to unpack the downloaded archive.");
 
-        let unpacked_artifact_path = output_dir.join(build_artifact_name(version, os, arch));
-        let unpacked_library_directory = unpacked_artifact_path.join(circuit_name);
+        let artifact_root = output_dir.join(build_artifact_name(version, os, arch));
 
         assert!(
-            unpacked_library_directory.is_dir(),
-            "Failed to find the unpacked library at {}",
-            unpacked_library_directory.display()
+            artifact_root.is_dir(),
+            "Failed to find the unpacked artifact directory at {}.",
+            artifact_root.display()
         );
 
-        unpacked_library_directory
+        artifact_root
     }
 
     /// Produce a lockfile for the given directory
@@ -77,114 +80,95 @@ mod prebuilt {
             .join("blockchain")
     }
 
-    pub fn provision_library(circuit_name: &str, lib_var_name: &str) -> PathBuf {
+    pub fn provision_artifact() -> PathBuf {
         let version = env!("CARGO_PKG_VERSION");
         let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
         let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
         let cache = get_cache_dir();
-        // The tarball unpacks to a top-level `{artifact_name}/` dir, so the circuit
-        // lives at `cache/{artifact_name}/{circuit_name}/`.
-        let circuit_dir = cache
-            .join(build_artifact_name(version, &os, &arch))
-            .join(circuit_name);
+        let artifact_root = cache.join(build_artifact_name(version, &os, &arch));
 
         std::fs::create_dir_all(&cache).expect("Failed to create the cache directory.");
 
         // Since the circuits' libraries are all contained in the same single artifact,
-        // each crate will try to download the same circuits.
+        // each crate will try to download the same artifact.
         // To avoid redundant downloads, we use a lock to ensure that only one process
-        // fetches the circuits while the others wait for it to complete and
+        // fetches the artifact while the others wait for it to complete and
         // then re-check the cache.
         let mut lock = get_lockfile(&cache);
         let _guard = lock.write().expect("Failed to acquire cache lock.");
 
-        if circuit_dir.is_dir() {
+        if artifact_root.is_dir() {
             println!(
-                "Found a cached {circuit_name} library at {}, reusing.",
-                circuit_dir.display()
+                "Found a cached artifact at {}, reusing.",
+                artifact_root.display()
             );
-            return circuit_dir;
+            return artifact_root;
         }
 
-        println!(
-            "No cached download found, downloading {circuit_name} v{version} for {os}-{arch}..."
-        );
-        let response = fetch_library(version, &os, &arch, lib_var_name);
+        println!("No cached download found, downloading v{version} for {os}-{arch}...");
+        let response = fetch_artifact(version, &os, &arch);
         println!("Download complete, unpacking...");
-        let lib_dir = unpack_library(response, circuit_name, version, &os, &arch, &cache);
-        println!("Ready, {circuit_name} library at {}.", lib_dir.display());
-        lib_dir
+        let root = unpack_artifact(response, version, &os, &arch, &cache);
+        println!("Ready, artifact at {}.", root.display());
+        root
     }
 }
 
-mod env_vars {
-    pub const BUNDLE_LIB_DIR: &str = "LBC_LIB_DIR";
-}
-
-pub fn build(circuit_name: &str, circuit_lib_dir_var: &str) {
-    println!("cargo:rerun-if-env-changed={circuit_lib_dir_var}");
-    println!("cargo:rerun-if-env-changed={}", env_vars::BUNDLE_LIB_DIR);
+pub fn build(circuit_name: &str) {
+    println!("cargo:rerun-if-env-changed={LBC_ROOT_DIR}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=build.rs");
 
-    let circuit_lib_dir = std::env::var(circuit_lib_dir_var).map_or_else(
+    let lbc_root_dir = std::env::var(LBC_ROOT_DIR).map_or_else(
         |_| {
             #[cfg(not(feature = "prebuilt"))]
             panic!(
-                "{circuit_lib_dir_var} is not set. Either:\n\
-                 - Set {circuit_lib_dir_var} to point at a local build, or\n\
+                "{LBC_ROOT_DIR} is not set. Either:\n\
+                 - Set {LBC_ROOT_DIR} to point at a local build, or\n\
                  - Enable the `prebuilt` feature to download from GitHub Releases."
             );
 
             #[cfg(feature = "prebuilt")]
             {
-                println!("Environment variable '{circuit_lib_dir_var}' is not set, falling back to prebuilt download");
-                prebuilt::provision_library(circuit_name, circuit_lib_dir_var)
+                println!(
+                    "Environment variable '{LBC_ROOT_DIR}' is not set, falling back to prebuilt download"
+                );
+                prebuilt::provision_artifact()
             }
         },
-        |lib_dir| {
-            println!("Environment variable '{circuit_lib_dir_var}' set, using local library at '{lib_dir}'");
-            let lib_dir_path = PathBuf::from(lib_dir);
+        |dir| {
+            println!("Environment variable '{LBC_ROOT_DIR}' set, using local artifact at '{dir}'");
+            let dir_path = PathBuf::from(dir);
             assert!(
-                lib_dir_path.is_dir(),
-                "The library directory specified in '{circuit_lib_dir_var}' at {} does not exist.",
-                lib_dir_path.display()
+                dir_path.is_dir(),
+                "The root directory specified in '{LBC_ROOT_DIR}' at {} does not exist.",
+                dir_path.display()
             );
-            lib_dir_path
+            dir_path
         },
     );
 
-    let circuit_lib_dir_str = circuit_lib_dir
+    let lbc_root_dir_str = lbc_root_dir
         .to_str()
-        .expect("Failed to convert the library directory path to a string");
+        .expect("Failed to convert the root directory path to a string");
 
-    let bundle_lib_dir = std::env::var(env_vars::BUNDLE_LIB_DIR).map_or_else(
-        |_| {
-            let default = circuit_lib_dir
-                .parent()
-                .expect("Failed to determine the circuit library directory's parent.")
-                .join("lib");
-            println!(
-                "Environment variable '{}' is not set, falling back to sibling 'lib/' at '{}'.",
-                env_vars::BUNDLE_LIB_DIR,
-                default.display()
-            );
-            default
-        },
-        PathBuf::from,
-    );
-
-    let bundle_lib_dir_str = bundle_lib_dir
+    let circuit_dir = lbc_root_dir.join(circuit_name);
+    let circuit_dir_str = circuit_dir
         .to_str()
-        .expect("Failed to convert the bundle library directory path to a string");
+        .expect("Failed to convert the circuit directory path to a string");
 
-    println!("cargo:rerun-if-changed={circuit_lib_dir_str}");
-    println!("cargo:rerun-if-changed={bundle_lib_dir_str}");
-    println!("cargo:rustc-env={circuit_lib_dir_var}={circuit_lib_dir_str}"); // Ensure it's always defined for downstream crates.
-    println!("cargo:rustc-link-search=native={circuit_lib_dir_str}");
-    println!("cargo:rustc-link-search=native={bundle_lib_dir_str}");
+    let lib_dir = lbc_root_dir.join("lib");
+    let lib_dir_str = lib_dir
+        .to_str()
+        .expect("Failed to convert the lib directory path to a string");
+
+    println!("cargo:rerun-if-changed={circuit_dir_str}");
+    println!("cargo:rerun-if-changed={lib_dir_str}");
+    println!("cargo:rustc-env={LBC_ROOT_DIR}={lbc_root_dir_str}");
+    println!("cargo:rustc-link-search=native={circuit_dir_str}");
+    println!("cargo:rustc-link-search=native={lib_dir_str}");
     println!("cargo:rustc-link-lib=static={circuit_name}");
     let cpp_lib = std::env::var("CARGO_CFG_TARGET_OS").map_or_else(
         |_| "stdc++",
