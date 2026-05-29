@@ -4,21 +4,34 @@
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed automatically by `rustup`.
-- [pre-commit](https://pre-commit.com/) — used to run formatting, linting, and audit checks before each commit.
-- `llvm-objcopy` — required to build circuit static libraries (symbol isolation). On macOS, install via `brew install llvm` (LLVM 20+ required).
+#### Sys development
 
-### Installing the Pre-Commit Hooks
+- [Rust](https://rustup.rs/) — the pinned toolchain version is in `rust-toolchain.toml` and will be installed
+   automatically by `rustup`.
+- Compiled circuit libraries (`.a` files and `witness_generator.dat`) — see [rust/README.md](rust/README.md) for how to
+   provide them.
+
+#### Building circuits
+
+- `llvm-objcopy` — required for symbol isolation when building circuit static libraries. On macOS, install via `brew
+   install llvm` (LLVM 20+ required).
+
+### Pre-Commit
+
+[pre-commit](https://pre-commit.com/) covers most of the lints required by CI. It's not mandatory — you can run checks
+however you like — but it's the easiest way to catch issues before pushing.
+
+#### Installation
 
 ```bash
 pre-commit install
 ```
 
-This only needs to be done once after cloning the repo. Hooks will then run automatically on `git commit`.
+After this, they will be run automatically on every commit.
 
-### Running Checks Manually
+#### Running Manually
 
-To run all hooks manually against all files:
+To run the checks manually against all files:
 
 ```bash
 pre-commit run --all-files
@@ -28,169 +41,135 @@ pre-commit run --all-files
 
 #### Rust Toolchain
 
-When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`. The comment there lists every other place that must be updated in sync (nightly version, CI workflows, pre-commit hooks).
+When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
+The comment there lists every other place that must be updated in sync (nightly version, CI workflows, pre-commit hooks).
 
 #### Tool Versions
 
 `taplo`, `cargo-deny`, and `cargo-machete` are pinned in two places that must stay in sync:
+
 - `.pre-commit-config.yaml` (hook `rev`)
 - `.github/workflows/lint.yml` (`cargo install --version`)
 
 ---
 
-## Symbol Isolation in Circuit Libraries
+## Building
 
-Each circuit (PoQ, PoL, PoC, Signature) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.). 
-All four archives share the same internal C++ runtime — `loadCircuit`, `get_size_of_witness`, the `fr_*` field 
-arithmetic functions, `calcwit_*` functions, and others. They are compiled from the same source files but with 
-**different constant values per circuit** (e.g. `get_size_of_witness()` returns 18149 for PoQ and 20531 for PoL).
+For a full walkthrough of the CI build steps, from `.circom` source to release artifacts, see
+[docs/build-pipeline.md](docs/build-pipeline.md).
 
-### The Problem
+### Symbol Isolation in Circuit Libraries
 
-When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition 
-it encounters for each symbol and discards the rest. 
-No error, no warning. 
-The result is that one circuit's constants end up hardwired into functions shared by both circuits, corrupting witness 
-parsing. 
-In practice: the wrong `get_size_of_witness()` value causes `loadCircuit` to compute an incorrect buffer size, `pu32` 
+#### The Problem
+
+Each circuit (PoQ, PoL, PoC, Signature) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.).
+All archives share the same symbols, compiled from the same source files but with **different
+constant values per circuit** (e.g. `get_size_of_witness()` returns 18149 for PoQ and 20531 for PoL).
+When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition it
+encounters for each symbol and discards the rest without any sort of error or warning.
+The result is that one circuit's constants end up hardwired into functions shared by both circuits, corrupting witness
+parsing.
+In practice: the wrong `get_size_of_witness()` value causes `loadCircuit` to compute an incorrect buffer size, `pu32`
 walks off the end of the buffer, reads garbage as a length field, and the subsequent `memcpy` reads past the stack guard
 page, which results in a **SIGSEGV**.
 
-### The Fix
+#### The Fix
 
-The Makefile's `$(LIB)` rule uses a two-step process to localize all circuit-specific code before archiving:
+The Makefile uses a two-step process to hide all circuit-specific symbols before archiving:
 
-1. **Partial link** (`ld -r`): merges all circuit-specific `.o` files — everything except `fr.o` (pure field
-arithmetic, no circuit-specific calls) — into a single relocatable object. No symbols are resolved yet; this is
-consolidation only.
-2. **Symbol localization** (`llvm-objcopy --keep-global-symbol` / `objcopy --keep-global-symbol`): demotes every global symbol to local *except* the
-circuit's two public FFI entry points (`$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`).
-Local symbols are invisible to the final linker, so each archive retains a private copy of every internal symbol — no
-conflict is possible regardless of how many circuits are linked together.
+1. **Partial link** (`ld -r`): merges all circuit-specific `.o` files into a single relocatable
+   object. `fr.o` is excluded — it contains only field arithmetic with no circuit-specific calls
+   and is safe to deduplicate across circuits.
+2. **Symbol localization**: demotes every global symbol to local except the two public FFI entry
+   points (`$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`). Local
+   symbols are invisible to the final linker, so each archive retains a private copy.
 
-`llvm-objcopy` is required rather than GNU `objcopy`. GNU `objcopy` only changes the binding of COMDAT signature
-symbols to local, which confuses the linker's deduplication logic and causes "relocation refers to symbol in discarded
-section" errors. `llvm-objcopy` additionally clears the `GRP_COMDAT` flag on affected section groups, turning them into
-regular non-COMDAT sections that are simply kept as-is rather than deduplicated. The result is a slightly larger binary
-(each circuit keeps its own copy of shared template instantiations), but no linker errors.
+**`llvm-objcopy` vs GNU `objcopy`**
 
-`fr.o` is excluded from the merge because it contains only field arithmetic (`Fr_*`) with no circuit-specific calls.
-It is safe to deduplicate across circuits — the linker picks one copy, which is correct since the code is identical.
+`llvm-objcopy` is required on Linux. GNU `objcopy` only changes the binding of COMDAT signature
+symbols to local, confusing the linker's deduplication logic and causing "relocation refers to
+symbol in discarded section" errors. `llvm-objcopy` additionally clears the `GRP_COMDAT` flag,
+turning affected sections into regular non-COMDAT sections. Slightly larger binary, no linker errors.
 
-On macOS/Mach-O, `llvm-objcopy` (from `brew install llvm`) is used — it supports `--keep-global-symbol` for
-Mach-O since LLVM 20. It is not available in Xcode's toolchain and must be installed separately.
-Mach-O prepends an underscore to every C symbol (`poc_generate_witness` → `_poc_generate_witness`),
-so `--keep-global-symbol` arguments must include the leading `_`. The Makefile's `SYM_PREFIX` variable
-handles this: it is set to `_` on macOS and empty on other platforms.
+##### macOS
 
-On Windows, GNU `objcopy` (from MinGW binutils) is used instead of `llvm-objcopy`. `llvm-objcopy --keep-global-symbol`
-is not supported for COFF objects, but GNU `objcopy --keep-global-symbol` works correctly on COFF — it maps the local
-binding to COFF storage class `C_STAT`. The ELF `GRP_COMDAT` problem that required `llvm-objcopy` on Linux does not
-apply on Windows: COFF COMDAT is per-section rather than group-based, and the linker already deduplicates it
-automatically.
+Uses `llvm-objcopy` (from `brew install llvm`, LLVM 20+).
 
-### Maintenance
+Mach-O prepends `_` to every C symbol, so `--keep-global-symbol` arguments must include the
+leading `_`. The Makefile's `SYM_PREFIX` variable handles this automatically.
+
+##### Windows
+
+Uses GNU's `objcopy` (from MinGW binutils).
+
+GNU's `objcopy` works correctly on COFF, mapping local binding to storage class `C_STAT`.
+The ELF `GRP_COMDAT` problem doesn't apply: COFF COMDAT is per-section rather than group-based.
+
+#### FFI Maintenance
 
 `PUBLIC_SYMS` is hardcoded to `$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files` in the
-Makefile. If the public FFI API ever changes — entry points renamed or new ones added — update that variable,
-otherwise the affected symbols will be localized and linking will fail.
+Makefile. If the public FFI API ever changes — entry points renamed or new ones added — update that variable, otherwise
+the affected symbols will be localized and linking will fail.
 
 ---
 
-## Triggering a New Release for Logos Blockchain Circuits
+## Releasing
+
+### Triggering a Release Build
 
 To trigger a release build:
 
-1. Create and push a tag in the format `vX.Y.Z`.
+1. Create and push a tag in the format `vX.Y.Z`:
+
+   ```bash
+   git tag v1.2.3 -m "Release v1.2.3"
+   git push --tags
+   ```
+
 2. This will automatically trigger the `.github/workflows/build_circuits.yml` workflow.
 3. Once the workflow finishes, the generated artifacts will be attached to a new release.
 
-> Currently, releases published this way are marked as **Draft** and **Pre-Release** to ensure that the changelog and 
-> pre-release steps are manually reviewed first.
+> Pull Requests will also generate artifacts, which may be found on the job's page, but won't generate a new release.
 
-### Generated Artifacts
+#### Generated artifacts
 
-Each release includes a single unified bundle per platform:
+For each supported platform (Linux x86_64, Linux aarch64, macOS aarch64, Windows x86_64), a release artifact is
+generated:
 
-#### Unified Release Bundles
-
-For each supported platform (Linux x86_64, macOS aarch64, Windows x86_64):
-
-- **`logos-blockchain-circuits-{version}-{os}-{arch}.tar.gz`**
-
-  A complete bundle containing all components needed to generate and verify proofs for all circuits.
+**`logos-blockchain-circuits-{version}-{os}-{arch}.tar.gz`** — a complete bundle containing all components needed to
+generate and verify proofs for all circuits.
 
 **Bundle Structure:**
 
-```
+```text
 logos-blockchain-circuits-{version}-{os}-{arch}/
-├── VERSION
+├── lib/
+│   └── libgmp.a
+├── {circuit}/              (poc/, pol/, poq/, signature/)
+│   ├── include/
+│   ├── lib{circuit}.a
+│   ├── proving_key.zkey
+│   ├── verification_key.json
+│   └── witness_generator.dat
 ├── prover[.exe]
 ├── verifier[.exe]
-├── pol/
-│   ├── libpol.a
-│   ├── witness_generator.dat
-│   ├── include/
-│   ├── proving_key.zkey
-│   └── verification_key.json
-├── poq/
-│   ├── libpoq.a
-│   ├── witness_generator.dat
-│   ├── include/
-│   ├── proving_key.zkey
-│   └── verification_key.json
-├── signature/
-│   ├── libsignature.a
-│   ├── witness_generator.dat
-│   ├── include/
-│   ├── proving_key.zkey
-│   └── verification_key.json
-└── poc/
-    ├── libpoc.a
-    ├── witness_generator.dat
-    ├── include/
-    ├── proving_key.zkey
-    └── verification_key.json
+└── VERSION
 ```
 
-> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`).
+> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
 
-At the root level:
-- **prover**: Rapidsnark prover binary for generating zk-SNARK proofs
-- **verifier**: Rapidsnark verifier binary for verifying proofs
+The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).
 
-Each circuit directory contains:
-- **lib{circuit}.a / {circuit}.lib**: Static library for generating witnesses from inputs
-- **witness_generator.dat**: Required data file for the witness generator
-- **include/**: C headers for linking against the witness generator library
-- **proving_key.zkey**: Groth16 proving key for generating zk-SNARK proofs
-- **verification_key.json**: Verification key for verifying proofs
+### Publishing
 
-The proving keys are generated using the Hermez Powers of Tau ceremony (`powersOfTau28_hez_final_17.ptau`), which supports circuits with up to 2^17 constraints.
-
-### Example
-
-```bash
-git tag v1.2.3 -m "Release v1.2.3"
-git push --tags
-```
-
-## Publishing the Release
-
-After triggering the release, it will appear as a **Draft** and **Pre-Release**.  
-Before making it public, make sure to:
+Releases are marked as **Draft** and **Pre-Release** to ensure the changelog and pre-release steps are manually reviewed
+before going public. Before publishing:
 
 1. **Review the changelog**  
    Ensure that all relevant changes are clearly listed and properly formatted.
 
 2. **Confirm the pre-release checklist**  
    Verify that all required steps have been completed, then remove the checklist from the release notes.
-
-Once everything looks good:
-
 3. **Mark the release as published**  
    - Uncheck **“This is a pre-release.”**  
    - Publish the release (removing the Draft state).
-
-> ⚡ **Important:** Logos Blockchain builds will only pick up the new circuits once the release is published as **Latest** (i.e. not marked as draft or pre-release).
-
