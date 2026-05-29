@@ -75,11 +75,9 @@ mod tests {
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        let bad_json = json.replace(
-            "\"voucher_root\": \"20810875415353676096192834577269613981524168537821543897016159330974871397924\"",
-            "\"voucher_root\": \"1\"",
-        );
-        let input = PocWitnessInput::new(bad_json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["voucher_root"] = serde_json::json!("1");
+        let input = PocWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 

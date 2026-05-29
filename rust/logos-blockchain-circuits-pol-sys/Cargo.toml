@@ -20,5 +20,8 @@ workspace = true
 lbc-types = { workspace = true }
 lbc-common = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [build-dependencies]
 lbc-build = { workspace = true }
