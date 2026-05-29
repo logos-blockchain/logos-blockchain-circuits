@@ -111,6 +111,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
 
       - name: Install Circom
         run: |
@@ -182,6 +184,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
 
       - name: Install Circom
         run: |
@@ -433,6 +437,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
 
       - name: Install Circom
         run: |
@@ -696,6 +702,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
 
       - name: Install Circom
         run: |
@@ -978,6 +986,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
 
       - name: Install Circom
         run: |
@@ -1230,17 +1240,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
-
-      - name: Cache Cargo artifacts
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          rust-src-dir: rust
 
       - name: Download Linux Bundle
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1283,17 +1284,8 @@ jobs:
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
-
-      - name: Cache Cargo artifacts
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # Version 4.2.3
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          rust-src-dir: rust
 
       - name: Download Linux Bundle
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
