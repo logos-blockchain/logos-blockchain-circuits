@@ -8,12 +8,11 @@ use lbc_types::{
 
 use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
-static RAW_CIRCUIT_DAT: &[u8] =
-    include_bytes!(concat!(env!("LBC_POQ_LIB_DIR"), "/witness_generator.dat"));
+lbc_common::circuit_artifacts!("POQ");
 
 pub struct PoqDat;
 impl<'dat> lbc_types::CircuitDat<'dat> for PoqDat {
-    const DAT: &'dat [u8] = RAW_CIRCUIT_DAT;
+    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
 }
 
 pub type PoqWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PoqDat>;
