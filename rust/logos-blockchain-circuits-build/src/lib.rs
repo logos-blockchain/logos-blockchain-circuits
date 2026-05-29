@@ -115,6 +115,10 @@ mod prebuilt {
     }
 }
 
+// Called once per build function (build_circuit, build_rapidsnark). If a build
+// script calls both, cargo:rustc-env=LBC_ROOT_DIR is emitted twice. Cargo takes
+// last-wins for duplicate rustc-env keys; the value is always identical so this
+// is benign, but callers should be aware.
 fn resolve_root() -> PathBuf {
     println!("cargo:rerun-if-env-changed={LBC_ROOT_DIR}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
@@ -188,8 +192,13 @@ pub fn build_circuit(circuit_name: &str) {
 pub fn build_rapidsnark() {
     let root = resolve_root();
 
+    let extension = if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        ".exe"
+    } else {
+        ""
+    };
     for binary in ["prover", "verifier"] {
-        let path = root.join(binary);
+        let path = root.join(format!("{binary}{extension}"));
         println!("cargo:rerun-if-changed={}", path.display());
     }
 }
