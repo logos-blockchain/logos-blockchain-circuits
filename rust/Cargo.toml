@@ -25,10 +25,10 @@ resolver = "3"
 # Internal
 lbc-common = { default-features = false, package = "logos-blockchain-circuits-common", path = "./logos-blockchain-circuits-common" }
 lbc-build = { package = "logos-blockchain-circuits-build", path = "./logos-blockchain-circuits-build" }
-lbc-poc-sys = { default-features = false, package = "logos-blockchain-circuits-poc-sys", path = "./logos-blockchain-circuits-poc-sys" }
-lbc-pol-sys = { default-features = false, package = "logos-blockchain-circuits-pol-sys", path = "./logos-blockchain-circuits-pol-sys" }
-lbc-poq-sys = { default-features = false, package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
-lbc-signature-sys = { default-features = false, package = "logos-blockchain-circuits-signature-sys", path = "./logos-blockchain-circuits-signature-sys" }
+lbc-poc-sys = { package = "logos-blockchain-circuits-poc-sys", path = "./logos-blockchain-circuits-poc-sys" }
+lbc-pol-sys = { package = "logos-blockchain-circuits-pol-sys", path = "./logos-blockchain-circuits-pol-sys" }
+lbc-poq-sys = { package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
+lbc-signature-sys = { package = "logos-blockchain-circuits-signature-sys", path = "./logos-blockchain-circuits-signature-sys" }
 lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
 # External
