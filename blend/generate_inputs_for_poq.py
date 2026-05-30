@@ -206,14 +206,13 @@ def PoseidonSponge(data, capacity, output_len):
 # ———————————————————————
 # Main
 # ———————————————————————
-if len(sys.argv) != 5:
-    print("Usage: python3 generate_inputs_for_poq.py <session> <core_quota> <leader_quota> <core (0) or leader (1)>")
+if len(sys.argv) != 4:
+    print("Usage: python3 generate_inputs_for_poq.py <core_quota> <leader_quota> <core (0) or leader (1)>")
     sys.exit(1)
 
-session   = int(sys.argv[1])
-Qc        = int(sys.argv[2])
-Ql        = int(sys.argv[3])
-core_or_leader = int(sys.argv[4])
+Qc        = int(sys.argv[1])
+Ql        = int(sys.argv[2])
+core_or_leader = int(sys.argv[3])
 if not core_or_leader in [0,1]:
     print("core or leader must be 0 or 1")
     sys.exit(1)
@@ -280,7 +279,6 @@ K_two = F(654321)
 
 # 5) Assemble JSON
 inp = {
-  "session":          str(session),
   "core_quota":               str(Qc),
   "leader_quota":               str(Ql),
   "core_root":          str(core_root),

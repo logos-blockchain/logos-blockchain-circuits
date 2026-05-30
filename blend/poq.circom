@@ -17,7 +17,6 @@ include "../ledger/notes.circom";
  */
 template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     // Public Inputs
-    signal input session;       // session s
     signal input core_quota;
     signal input leader_quota;
     signal input core_root;
@@ -115,7 +114,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     // choose core_sk or pol.secret_key:
     selection_randomness.inp[1] <== selector * (would_win.secret_key - core_sk ) + core_sk;
     selection_randomness.inp[2] <== index;
-    selection_randomness.inp[3] <== selector * (would_win.slot - session) + session;
+    selection_randomness.inp[3] <== selector * (would_win.slot - pol_epoch_nonce) + pol_epoch_nonce;
 
 
     // Derive key_nullifier
@@ -127,5 +126,5 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
 }
 
 // Instantiate with chosen depths: 20 for core PK tree, 25 for PoL secret slot tree
-component main { public [ session, core_quota, leader_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged ] }
+component main { public [ core_quota, leader_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged ] }
     = ProofOfQuota(20, 25, 20);
