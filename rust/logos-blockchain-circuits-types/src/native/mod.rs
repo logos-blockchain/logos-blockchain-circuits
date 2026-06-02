@@ -7,7 +7,7 @@ pub mod status;
 pub mod witness;
 pub mod witness_input;
 
-pub use circuit_witness_input::{CircuitDat, CircuitWitnessInput};
+pub use circuit_witness_input::{Circuit, CircuitWitnessInput};
 pub use status::{Error, Result};
 pub use witness::Witness;
 pub use witness_input::WitnessInput;
