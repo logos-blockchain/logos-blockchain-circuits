@@ -89,11 +89,9 @@ with different circuit-specific constants. When multiple circuits are linked int
 picks one definition per symbol and discards the rest, mixing constants across circuits and corrupting witness
 generation.
 
-To prevent this, every internal symbol is hidden: circuit objects are merged into a single
+To prevent this, every internal symbol is hidden: witness-generator objects are merged into a single
 relocatable object, then all symbols except the two public entry points are demoted to local.
 Local symbols are invisible to the final linker, so each circuit keeps its own private copy.
-
-`fr.o` is the exception: it stays global and is added to the archive separately since it doesn't vary between circuits.
 
 See [CONTRIBUTING.md § Symbol Isolation](../CONTRIBUTING.md#symbol-isolation-in-circuit-libraries) for the full
 explanation and implementation details.

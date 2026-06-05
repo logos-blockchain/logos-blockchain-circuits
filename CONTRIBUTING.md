@@ -75,11 +75,11 @@ page, which results in a **SIGSEGV**.
 
 #### The Fix
 
-The Makefile uses a two-step process to hide all circuit-specific symbols before archiving:
+The Makefile uses a two-step process to hide all witness-generator implementation symbols before archiving:
 
-1. **Partial link** (`ld -r`): merges all circuit-specific `.o` files into a single relocatable
-   object. `fr.o` is excluded — it contains only field arithmetic with no circuit-specific calls
-   and is safe to deduplicate across circuits.
+1. **Partial link** (`ld -r`): merges every witness-generator `.o` file into a single relocatable object.
+   `fr.o` is included because its `Fr_*` symbols also appear in other native ZK libraries, such as rapidsnark, and must
+   not leak into the final link.
 2. **Symbol localization**: demotes every global symbol to local except the two public FFI entry
    points (`$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files`). Local
    symbols are invisible to the final linker, so each archive retains a private copy.
