@@ -59,8 +59,9 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
-# Localizes all circuit-specific code to prevent conflicts when multiple circuit
-# libraries are linked into the same binary. See CONTRIBUTING.md § "Symbol Isolation".
+# Localizes witness-generator implementation symbols to prevent conflicts when multiple circuit libraries are linked
+# into the same binary.
+# See CONTRIBUTING.md § "Symbol Isolation".
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
 OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
@@ -71,9 +72,10 @@ $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-	ld -r -o $(LOCAL_OBJ) $(filter-out fr.o,$^)
+	ld -r -o $(LOCAL_OBJ) $^
 	$(OBJCOPY) $(foreach sym,$(PUBLIC_SYMS),--keep-global-symbol=$(SYM_PREFIX)$(sym)) $(LOCAL_OBJ)
-	ar rcs $@ fr.o $(LOCAL_OBJ)
+	rm -f $@
+	ar rcs $@ $(LOCAL_OBJ)
 	rm $(LOCAL_OBJ)
 
 %.o: %.cpp $(DEPS_HPP)
