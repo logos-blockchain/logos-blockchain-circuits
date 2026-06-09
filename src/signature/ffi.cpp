@@ -89,26 +89,23 @@ static Status validate_witness_arguments(const WitnessInput* input, const Bytes*
 static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     const ConstBytes& circuit_bytes = input->dat;
 
-    Circom_Circuit* circuit = loadCircuit(circuit_bytes);
+    Circom_Circuit* circuit = getCachedCircuit(circuit_bytes);
     Circom_CalcWit* ctx = new Circom_CalcWit(circuit);
 
     try {
         loadJson(ctx, input->inputs_json);
     } catch (...) {
         delete ctx;
-        delete circuit;
         throw;
     }
     if (ctx->getRemaingInputsToBeSet()!=0) {
         const std::string message = "Not all inputs have been set. Only " + std::to_string(get_main_input_signal_no()-ctx->getRemaingInputsToBeSet()) + " out of " + std::to_string(get_main_input_signal_no()) + ".";
         delete ctx;
-        delete circuit;
         return status_new(StatusCode_InvalidInput, message.c_str());
     }
 
     writeBinWitness(ctx, output);
     delete ctx;
-    delete circuit;
 
     return status_ok();
 }

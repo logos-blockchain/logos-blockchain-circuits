@@ -4,6 +4,17 @@
 #include <vector>
 #include <sstream>
 #include <stdexcept>
+#include <mutex>
+
+Circom_Circuit* getCachedCircuit(const ConstBytes& circuit_bytes) {
+    // The circuit is immutable, compiled-in data and has no destructor that
+    // frees its internal buffers, so load it once and keep it for the process
+    // lifetime instead of allocating (and leaking) it on every call.
+    static Circom_Circuit* cached = nullptr;
+    static std::once_flag once;
+    std::call_once(once, [&]() { cached = loadCircuit(circuit_bytes); });
+    return cached;
+}
 
 Circom_Circuit* loadCircuit(const ConstBytes& circuit_bytes) {
     Circom_Circuit* circuit = new Circom_Circuit;
