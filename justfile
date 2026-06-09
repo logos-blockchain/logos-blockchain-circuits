@@ -1,6 +1,7 @@
 cargo_root      := justfile_directory() + "/rust"
 src             := justfile_directory() + "/src"
 ci_makefile     := justfile_directory() + "/.github/resources/witness-generator/Makefile"
+calcwit_fix     := justfile_directory() + "/.github/resources/witness-generator/fix_calcwit_leak.sh"
 circom_version  := "2.2.2" # This version must match the version used in the CI
 
 os := `uname -s`
@@ -34,6 +35,8 @@ poq: check-circom
     circom blend/poq.circom --c --r1cs --no_asm --O2 --output blend
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
+    # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
+    sh {{calcwit_fix}} blend/poq_cpp
     cp -r {{src}}/poq blend/poq_cpp/poq
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h blend/poq_cpp/
     cp {{ci_makefile}} blend/poq_cpp/Makefile
@@ -50,6 +53,8 @@ pol: check-circom
     circom mantle/pol.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/pol_cpp/main.cpp
+    # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
+    sh {{calcwit_fix}} mantle/pol_cpp
     cp -r {{src}}/pol mantle/pol_cpp/pol
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/pol_cpp/
     cp {{ci_makefile}} mantle/pol_cpp/Makefile
@@ -66,6 +71,8 @@ poc: check-circom
     circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
+    # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
+    sh {{calcwit_fix}} mantle/poc_cpp
     cp -r {{src}}/poc mantle/poc_cpp/poc
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/poc_cpp/
     cp {{ci_makefile}} mantle/poc_cpp/Makefile
@@ -82,6 +89,8 @@ signature: check-circom
     circom mantle/signature.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
+    # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
+    sh {{calcwit_fix}} mantle/signature_cpp
     cp -r {{src}}/signature mantle/signature_cpp/signature
     cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/signature_cpp/
     cp {{ci_makefile}} mantle/signature_cpp/Makefile

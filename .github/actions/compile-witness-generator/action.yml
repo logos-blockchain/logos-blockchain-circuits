@@ -104,6 +104,16 @@ runs:
         if [ "$OS" = "macos" ]; then SED_I="sed -i ''"; fi
         $SED_I ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' "${CIRCUIT_CPP_PATH}/main.cpp"
 
+    # circom's --c backend emits an empty ~Circom_CalcWit destructor (the binary
+    # exits after one witness); linked as a library it leaks the signal buffer on
+    # every call. Patch the destructor to free the per-call allocations.
+    - name: Patch ${{ inputs.circuit-name-display }} CalcWit Leak
+      shell: bash
+      env:
+        WITNESS_GENERATOR_RESOURCES_PATH: ${{ steps.parse-circuit-path.outputs.WITNESS_GENERATOR_RESOURCES_PATH }}
+        CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
+      run: sh "${WITNESS_GENERATOR_RESOURCES_PATH}/fix_calcwit_leak.sh" "${CIRCUIT_CPP_PATH}"
+
     - name: Install llvm-objcopy (macOS)
       if: ${{ inputs.os == 'macos' }}
       shell: bash
