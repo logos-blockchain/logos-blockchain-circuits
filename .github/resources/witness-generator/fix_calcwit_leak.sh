@@ -33,20 +33,15 @@ perl -0777 -i -pe '
   // logos: free per-call allocations. circom leaves this destructor empty
   // because the generated binary exits after one witness; we call the
   // generated code in-process as a library, so without these frees every
-  // witness-generation call leaks signalValues (megabytes) + componentMemory
-  // + inputSignalAssigned. The per-component frees mirror circoms own
-  // release_memory_component (guarded), so they are safe to run once here.
-  for (int i = 0; i < get_number_of_components(); i++) {
-    if (componentMemory[i].subcomponents) delete[] componentMemory[i].subcomponents;
-    if (componentMemory[i].subcomponentsParallel) delete[] componentMemory[i].subcomponentsParallel;
-    if (componentMemory[i].outputIsSet) delete[] componentMemory[i].outputIsSet;
-    if (componentMemory[i].mutexes) delete[] componentMemory[i].mutexes;
-    if (componentMemory[i].cvs) delete[] componentMemory[i].cvs;
-    if (componentMemory[i].sbct) delete[] componentMemory[i].sbct;
-  }
-  delete[] componentMemory;
+  // witness-generation call leaks signalValues (megabytes), componentMemory
+  // and inputSignalAssigned. These three are allocated once in the constructor
+  // and freed nowhere else. NOTE: the per-component sub-buffers
+  // (subcomponents/outputIsSet/mutexes/...) are already released during the
+  // witness computation by circoms own release_memory_component, so they must
+  // NOT be freed here -- doing so double-frees.
   delete[] signalValues;
   delete[] inputSignalAssigned;
+  delete[] componentMemory;
 }};
     my $n = (s/Circom_CalcWit::~Circom_CalcWit\s*\(\s*\)\s*\{.*?\n\}/$body/s);
     die "fix_calcwit_leak: could not locate ~Circom_CalcWit() destructor\n" unless $n == 1;
