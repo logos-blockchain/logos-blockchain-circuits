@@ -1425,5 +1425,13 @@ jobs:
           git config user.email "$GIT_USER_EMAIL"
           git add circuits-nix-hashes.json
           git diff --cached --quiet && exit 0
-          git commit -m "chore(ci): auto-update Nix hashes for ${{ env.VERSION }}"
+          git commit -m "chore(ci): auto-update Nix hashes for ${{ env.VERSION }} [skip ci]"
           git push origin main
+
+      # [skip ci] above prevents this force-push from re-triggering the workflow.
+      - name: Move the release tag to include Nix hashes
+        env:
+          TAG: ${{ needs.setup.outputs.tag }}
+        run: |
+          git tag -f "$TAG"
+          git push origin "refs/tags/$TAG" --force
