@@ -206,15 +206,16 @@ def PoseidonSponge(data, capacity, output_len):
 # ———————————————————————
 # Main
 # ———————————————————————
-if len(sys.argv) != 4:
-    print("Usage: python3 generate_inputs_for_poq.py <core_quota> <leader_quota> <core (0) or leader (1)>")
+if len(sys.argv) != 5:
+    print("Usage: python3 generate_inputs_for_poq.py <core_quota> <leader_quota> <pow_quota> <core (0) or leader (1) or pow (2)>")
     sys.exit(1)
 
 Qc        = int(sys.argv[1])
 Ql        = int(sys.argv[2])
-core_or_leader = int(sys.argv[3])
-if not core_or_leader in [0,1]:
-    print("core or leader must be 0 or 1")
+Qp        = int(sys.argv[3])
+role_selector = int(sys.argv[4])
+if not role_selector in [0,1,2]:
+    print("core or leader or pow must be 0 or 1 or 2")
     sys.exit(1)
 
 # 1) Core‐node registry Merkle‐proof
@@ -270,8 +271,18 @@ for i in range(32):
     else:
         aged_root = Compression([aged_nodes[i],aged_root])
 
+# PoW inputs
+pow_block_hash = F(randrange(0,p,1))
+pow_sk = F(randrange(0,p,1))
+pow_pk = Compression([F(4605003),pow_sk])
+pow_ticket = poseidon2_hash([F(epoch_nonce),F(pow_block_hash), F(pow_pk)])
+if role_selector == 2:
+    pow_difficulty = pow_ticket + 1
+else:
+    pow_difficulty = pow_ticket - 1
+
 # 3) Choose branch & index
-index    = randrange(0, Ql if core_or_leader else Qc,1)
+index    = randrange(0, Ql if role_selector == 0 else (Qc if role_selector == 1 else Qp),1)
 
 # 4) One‐time key
 K_one = F(123456)
@@ -281,11 +292,12 @@ K_two = F(654321)
 inp = {
   "core_quota":               str(Qc),
   "leader_quota":               str(Ql),
+  "pow_quota":          str(Qp),
   "core_root":          str(core_root),
   "pol_ledger_aged":        str(aged_root),
   "K_part_one":       str(K_one),
   "K_part_two":       str(K_two),
-  "selector":         str(core_or_leader),
+  "selector":         str(role_selector),
   "index":            str(index),
   "core_sk":          str(core_sk),
   "core_path":        [str(x) for x in core_nodes],
@@ -299,12 +311,15 @@ inp = {
   "pol_noteid_path_selectors":   [str(x) for x in aged_selectors],
   "pol_note_tx_hash": str(tx_hash),
   "pol_note_output_number":    str(output_number),
-  "pol_note_value":            str(value)
+  "pol_note_value":            str(value),
+  "pow_block_hash":             str(pow_block_hash),
+  "pow_blend_difficulty":       str(pow_difficulty),
+  "pow_sk":                     str(pow_sk)
 }
 
-if core_or_leader == 0:
+if role_selector != 1:
     inp["pol_ledger_aged"] = str(randrange(0,p,1))
-else:
+if role_selector != 0:
     inp["core_root"] = str(randrange(0,p,1))
 
 import json

@@ -20,9 +20,12 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     signal input core_quota;
     signal input leader_quota;
     signal input core_root;
+    signal input pow_quota;
     signal input pol_ledger_aged;     // PoL: aged notes root
     signal input K_part_one;  // Blend: one-time signature public key
     signal input K_part_two;  // Blend: one-time signature public key
+    signal input pow_block_hash;
+    signal input pow_blend_difficulty;
 
 
     // dummy constraints to avoid unused public input to be erased after compilation optimisation
@@ -34,7 +37,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     signal output key_nullifier;    //key_nullifier
 
     // Private Inputs
-    signal input selector;      // 0 = core, 1 = leader
+    signal input selector;      // 0 = core, 1 = leader, 2 = pow
     signal input index;         // nullifier index
 
     // Core-nodes inputs
@@ -56,15 +59,29 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
 
     signal input pol_note_value;
 
+    // PoW branch input
+    signal input pow_sk;
 
-    // Constraint the selector to be a bit
-    selector * (1 - selector) === 0;
+
+    // Constraint the selector to be a 0, 1 or 2
+    signal selector_squared;
+    selector_squared <== selector * selector;
+    (selector_squared - selector) * (selector - 2) === 0;
+
+    // compute lagrange polynomial for selectors
+    signal L1;
+    signal L2;
+    component inv_2 = INV_2();
+    L1 <== - selector_squared + 2 * selector;
+    L2 <== (selector_squared - selector) * inv_2.out;
 
 
-    // Quota check: index < core_quota if core, index < leader_quota if leader
+    // Quota check: index < core_quota if core, index < leader_quota if leader, index < pow_quota if pow
+    signal lh_quota_cmp;
+    lh_quota_cmp <== (leader_quota - core_quota) * L1;
     component cmp = SafeLessThan(bitsQuota);
     cmp.in[0] <== index;
-    cmp.in[1] <== selector * (leader_quota - core_quota) + core_quota;
+    cmp.in[1] <== core_quota + lh_quota_cmp + (pow_quota - core_quota) * L2;
     cmp.out === 1;
 
 
@@ -103,18 +120,39 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     would_win.secret_key     <== pol_secret_key;
     would_win.value          <== pol_note_value;
 
+
+    // Derive pow pk
+    signal output pow_pk;
+    component pow_pk_derivation = derive_public_key();
+    pow_pk_derivation.secret_key <== pow_sk;
+    pow_pk <== pow_pk_derivation.out;
+
+    // Get the blend PoW result
+    component pow_ticket = Poseidon2_hash(3);
+    pow_ticket.inp[0] <== pol_epoch_nonce;
+    pow_ticket.inp[1] <== pow_block_hash;
+    pow_ticket.inp[2] <== pow_pk;
+    component is_winning_pow = SafeFullLessThan();
+    is_winning_pow.a <== pow_ticket.out;
+    is_winning_pow.b <== pow_blend_difficulty;
+
+
     // Enforce the selected role is correct
-    selector * (would_win.out - is_registered.out) + is_registered.out === 1;
+    signal lh_correctness_selector;
+    lh_correctness_selector <== (would_win.out - is_registered.out) * L1;
+    is_registered.out + lh_correctness_selector + (is_winning_pow.out - is_registered.out) * L2 === 1;
 
 
     // Derive selection_randomness
     component selection_randomness = Poseidon2_hash(4);
     component dstSel = SELECTION_RANDOMNESS_V1();
     selection_randomness.inp[0] <== dstSel.out;
-    // choose core_sk or pol.secret_key:
-    selection_randomness.inp[1] <== selector * (would_win.secret_key - core_sk ) + core_sk;
+    // choose core_sk, pol.secret_key or pow_sk:
+    signal lh_key_selector;
+    lh_key_selector <== (would_win.secret_key - core_sk) * L1;
+    selection_randomness.inp[1] <== core_sk + lh_key_selector + (pow_sk - core_sk) * L2;
     selection_randomness.inp[2] <== index;
-    selection_randomness.inp[3] <== selector * (would_win.slot - pol_epoch_nonce) + pol_epoch_nonce;
+    selection_randomness.inp[3] <== pol_epoch_nonce + (would_win.slot - pol_epoch_nonce) * L1; // because the last term is (pol_epoch_nonce - pol_epoch_nonce) * L2 = 0
 
 
     // Derive key_nullifier
@@ -126,5 +164,5 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
 }
 
 // Instantiate with chosen depths: 20 for core PK tree, 25 for PoL secret slot tree
-component main { public [ core_quota, leader_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged ] }
+component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged, pow_block_hash, pow_blend_difficulty] }
     = ProofOfQuota(20, 25, 20);
