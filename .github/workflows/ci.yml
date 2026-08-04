@@ -217,17 +217,16 @@ jobs:
 
       - name: Download GMP Archive
         if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: msys2 {0}   # keep/remove depending on job
-        working-directory: rapidsnark/depends
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Downloading GMP archive..."
+          mkdir -p rapidsnark/depends
+          cd rapidsnark/depends
           URLS=(
             "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
             "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
             "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
           )
-
           for url in "${URLS[@]}"; do
             echo "Trying $url"
             if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
@@ -237,7 +236,6 @@ jobs:
               exit 0
             fi
           done
-
           echo "All GMP download sources failed"
           exit 1
 
@@ -488,17 +486,16 @@ jobs:
 
       - name: Download GMP Archive
         if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: msys2 {0}   # keep/remove depending on job
-        working-directory: rapidsnark/depends
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Downloading GMP archive..."
+          mkdir -p rapidsnark/depends
+          cd rapidsnark/depends
           URLS=(
             "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
             "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
             "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
           )
-
           for url in "${URLS[@]}"; do
             echo "Trying $url"
             if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
@@ -508,7 +505,6 @@ jobs:
               exit 0
             fi
           done
-
           echo "All GMP download sources failed"
           exit 1
 
@@ -797,17 +793,16 @@ jobs:
 
       - name: Download GMP Archive
         if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: msys2 {0}   # keep/remove depending on job
-        working-directory: rapidsnark/depends
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Downloading GMP archive..."
+          mkdir -p rapidsnark/depends
+          cd rapidsnark/depends
           URLS=(
             "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
             "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
             "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
           )
-
           for url in "${URLS[@]}"; do
             echo "Trying $url"
             if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
@@ -817,7 +812,6 @@ jobs:
               exit 0
             fi
           done
-
           echo "All GMP download sources failed"
           exit 1
 
@@ -1068,17 +1062,16 @@ jobs:
 
       - name: Download GMP Archive
         if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: msys2 {0}   # keep/remove depending on job
-        working-directory: rapidsnark/depends
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Downloading GMP archive..."
+          mkdir -p rapidsnark/depends
+          cd rapidsnark/depends
           URLS=(
             "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
             "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
             "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
           )
-
           for url in "${URLS[@]}"; do
             echo "Trying $url"
             if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
@@ -1088,7 +1081,6 @@ jobs:
               exit 0
             fi
           done
-
           echo "All GMP download sources failed"
           exit 1
 
