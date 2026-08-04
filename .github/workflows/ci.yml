@@ -219,9 +219,24 @@ jobs:
         if: steps.cache-gmp.outputs.cache-hit != 'true'
         working-directory: rapidsnark/depends
         run: |
+          set -euo pipefail
           echo "Downloading GMP archive..."
-          curl -L -o gmp-6.2.1.tar.xz https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz
-          echo "Download complete."
+          URLS=(
+            "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
+            "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
+            "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
+          )
+          for url in "${URLS[@]}"; do
+            echo "Trying $url"
+            if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
+              --connect-timeout 20 --max-time 300 \
+              -o gmp-6.2.1.tar.xz "$url"; then
+              echo "Download complete from $url"
+              exit 0
+            fi
+          done
+          echo "All GMP download sources failed"
+          exit 1
 
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
