@@ -181,7 +181,7 @@ checksum = "616ec5685824bcc94416c6d4a7a446eea774a31efd7062c8480ba6fd06d7a6e5"
 
 [[package]]
 name = "logos-blockchain-circuits-build"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "dirs",
  "fd-lock",
@@ -192,14 +192,14 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-common"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-types",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-poc-sys"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-pol-sys"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-poq-sys"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -229,14 +229,14 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-rapidsnark-sys"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-build",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-signature-sys"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-tests"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "logos-blockchain-circuits-pol-sys",
  "logos-blockchain-circuits-poq-sys",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-types"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "bytes",
  "libc",

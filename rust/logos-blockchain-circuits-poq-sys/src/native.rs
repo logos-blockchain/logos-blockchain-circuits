@@ -69,7 +69,7 @@ mod tests {
     fn test_generate_witness_constraint_violation_returns_err() {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
         let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
-        inputs["core_root"] = serde_json::json!("1");
+        inputs["core_path_selectors"][0] = serde_json::json!("2");
         let input = PoqWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
