@@ -160,6 +160,6 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     key_nullifier <== nf.out;
 }
 
-// Instantiate with chosen depths: 20 for core PK tree, 25 for PoL secret slot tree
+// Instantiate with chosen depths: 20 for core PK tree
 component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged, pow_blend_difficulty] }
-    = ProofOfQuota(20, 25, 20);
+    = ProofOfQuota(20, 20);
