@@ -123,7 +123,7 @@ template would_win_leadership(secret_depth){
 } 
 
 
-template proof_of_leadership(secret_depth){
+template proof_of_leadership(){
     signal input sl;
     signal input epoch_nonce;  // the epoch nonce eta
     signal input t0;
@@ -149,7 +149,7 @@ template proof_of_leadership(secret_depth){
 
 
     // Verify the note is winning the lottery
-    component lottery_checker = would_win_leadership(secret_depth);
+    component lottery_checker = would_win_leadership();
     lottery_checker.slot <== sl;
     lottery_checker.epoch_nonce <== epoch_nonce;
     lottery_checker.t0 <== t0;
