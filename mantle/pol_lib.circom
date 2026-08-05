@@ -43,7 +43,7 @@ template derive_entropy(){
     out <== hash.out;
 }
 
-template would_win_leadership(secret_depth){
+template would_win_leadership(){
     signal input slot;
     signal input epoch_nonce;
     signal input t0;
@@ -123,7 +123,7 @@ template would_win_leadership(secret_depth){
 } 
 
 
-template proof_of_leadership(secret_depth){
+template proof_of_leadership(){
     signal input sl;
     signal input epoch_nonce;  // the epoch nonce eta
     signal input t0;
@@ -149,7 +149,7 @@ template proof_of_leadership(secret_depth){
 
 
     // Verify the note is winning the lottery
-    component lottery_checker = would_win_leadership(secret_depth);
+    component lottery_checker = would_win_leadership();
     lottery_checker.slot <== sl;
     lottery_checker.epoch_nonce <== epoch_nonce;
     lottery_checker.t0 <== t0;

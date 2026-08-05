@@ -9,13 +9,12 @@ include "../mantle/pol_lib.circom";      // defines proof_of_leadership
 include "../ledger/notes.circom";
 
 /**
- * ProofOfQuota(nLevelsPK, nLevelsPol)
+ * ProofOfQuota(nLevelsPK, bitsQuota)
  *
  * - nLevelsPK   : depth of the core-node public-key registry Merkle tree
- * - nLevelsPol  : depth of the slot-secret tree used in PoL (25)
  * - bitsQuota   : bit-width for the index comparator
  */
-template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
+template ProofOfQuota(nLevelsPK, bitsQuota) {
     // Public Inputs
     signal input core_quota;
     signal input leader_quota;
@@ -105,7 +104,7 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
 
     // enforce potential PoL (without verification that the note is unspent)
     // (All constraints inside pol ensure LeadershipVerify)
-    component would_win = would_win_leadership(nLevelsPol);
+    component would_win = would_win_leadership();
     would_win.slot                <== pol_sl;
     would_win.epoch_nonce         <== pol_epoch_nonce;
     would_win.t0                  <== pol_t0;
@@ -122,16 +121,14 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
 
 
     // Derive pow pk
-    signal output pow_pk;
     component pow_pk_derivation = derive_public_key();
     pow_pk_derivation.secret_key <== pow_sk;
-    pow_pk <== pow_pk_derivation.out;
 
     // Get the blend PoW result
     component pow_ticket = Poseidon2_hash(3);
     pow_ticket.inp[0] <== pol_epoch_nonce;
     pow_ticket.inp[1] <== pow_block_hash;
-    pow_ticket.inp[2] <== pow_pk;
+    pow_ticket.inp[2] <== pow_pk_derivation.out;
     component is_winning_pow = SafeFullLessThan();
     is_winning_pow.a <== pow_ticket.out;
     is_winning_pow.b <== pow_blend_difficulty;
@@ -163,6 +160,6 @@ template ProofOfQuota(nLevelsPK, nLevelsPol, bitsQuota) {
     key_nullifier <== nf.out;
 }
 
-// Instantiate with chosen depths: 20 for core PK tree, 25 for PoL secret slot tree
-component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged, pow_block_hash, pow_blend_difficulty] }
-    = ProofOfQuota(20, 25, 20);
+// Instantiate with chosen depths: 20 for core PK tree
+component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged, pow_blend_difficulty] }
+    = ProofOfQuota(20, 20);
