@@ -43,7 +43,7 @@ template derive_entropy(){
     out <== hash.out;
 }
 
-template would_win_leadership(secret_depth){
+template would_win_leadership(){
     signal input slot;
     signal input epoch_nonce;
     signal input t0;
