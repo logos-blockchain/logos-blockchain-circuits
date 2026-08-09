@@ -1,35 +1,41 @@
 use std::path::Path;
 
 use lbc_common::string::path_as_null_terminated_string;
-use lbc_types::{
-    ffi,
-    native::{Error, Witness},
-};
+use lbc_types::native::Error;
 
-use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
+use crate::ffi::signature_generate_witness_from_files;
 
 lbc_common::circuit_artifacts!("signature");
 
-pub struct SignatureDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for SignatureDat {
-    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
-}
-
-pub type SignatureWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, SignatureDat>;
-
-pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error> {
-    let ffi_input_guard = input.as_ffi();
-    let ffi_input = ffi_input_guard.as_ref();
-
-    let mut ffi_output_bytes = ffi::Bytes::null();
-
-    // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
-    // initialized null Bytes.
-    let status = unsafe {
-        signature_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
+#[cfg(feature = "embed-circuit")]
+pub mod embedded {
+    use lbc_types::{
+        ffi,
+        native::{Circuit, CircuitWitnessInput, Error, Witness},
     };
 
-    status.try_into().map(|()| Witness::from(ffi_output_bytes))
+    use crate::ffi::signature_generate_witness;
+
+    pub struct SignatureCircuit;
+    impl<'dat> Circuit<'dat> for SignatureCircuit {
+        const DAT: &'dat [u8] = super::artifacts::CIRCUIT;
+    }
+    pub type SignatureWitnessInput<'dat> = CircuitWitnessInput<'dat, SignatureCircuit>;
+
+    pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error> {
+        let ffi_input_guard = input.as_ffi();
+        let ffi_input = ffi_input_guard.as_ref();
+
+        let mut ffi_output_bytes = ffi::Bytes::null();
+
+        // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
+        // initialized null Bytes.
+        let status = unsafe {
+            signature_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
+        };
+
+        status.try_into().map(|()| Witness::from(ffi_output_bytes))
+    }
 }
 
 pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> Result<(), Error> {
@@ -45,11 +51,14 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     .try_into()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embed-circuit"))]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{SignatureWitnessInput, generate_witness, generate_witness_from_files};
+    use super::{
+        embedded::{SignatureWitnessInput, generate_witness},
+        generate_witness_from_files,
+    };
 
     static LIB_DIR: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("signature"));

@@ -1,34 +1,41 @@
 use std::path::Path;
 
 use lbc_common::string::path_as_null_terminated_string;
-use lbc_types::{
-    ffi,
-    native::{Error, Witness},
-};
+use lbc_types::native::Error;
 
-use crate::ffi::{pol_generate_witness, pol_generate_witness_from_files};
+use crate::ffi::pol_generate_witness_from_files;
 
 lbc_common::circuit_artifacts!("pol");
 
-pub struct PolDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for PolDat {
-    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
-}
+#[cfg(feature = "embed-circuit")]
+pub mod embedded {
+    use lbc_types::{
+        ffi,
+        native::{Circuit, CircuitWitnessInput, Error, Witness},
+    };
 
-pub type PolWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PolDat>;
+    use crate::ffi::pol_generate_witness;
 
-pub fn generate_witness(input: &PolWitnessInput) -> Result<Witness, Error> {
-    let ffi_input_guard = input.as_ffi();
-    let ffi_input = ffi_input_guard.as_ref();
+    pub struct PolCircuit;
+    impl<'dat> Circuit<'dat> for PolCircuit {
+        const DAT: &'dat [u8] = super::artifacts::CIRCUIT;
+    }
+    pub type PolWitnessInput<'dat> = CircuitWitnessInput<'dat, PolCircuit>;
 
-    let mut ffi_output_bytes = ffi::Bytes::null();
+    pub fn generate_witness(input: &PolWitnessInput) -> Result<Witness, Error> {
+        let ffi_input_guard = input.as_ffi();
+        let ffi_input = ffi_input_guard.as_ref();
 
-    // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
-    // initialized null Bytes.
-    let status =
-        unsafe { pol_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes) };
+        let mut ffi_output_bytes = ffi::Bytes::null();
 
-    status.try_into().map(|()| Witness::from(ffi_output_bytes))
+        // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
+        // initialized null Bytes.
+        let status = unsafe {
+            pol_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
+        };
+
+        status.try_into().map(|()| Witness::from(ffi_output_bytes))
+    }
 }
 
 pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> Result<(), Error> {
@@ -42,11 +49,14 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
         .try_into()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embed-circuit"))]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{PolWitnessInput, generate_witness, generate_witness_from_files};
+    use super::{
+        embedded::{PolWitnessInput, generate_witness},
+        generate_witness_from_files,
+    };
 
     static LIB_DIR: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("pol"));
