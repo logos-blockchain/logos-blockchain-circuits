@@ -282,7 +282,7 @@ else:
     pow_difficulty = pow_ticket - 1
 
 # 3) Choose branch & index
-index    = randrange(0, Ql if role_selector == 0 else (Qc if role_selector == 1 else Qp),1)
+index    = randrange(0, Qc if role_selector == 0 else (Ql if role_selector == 1 else Qp),1)
 
 # 4) One‐time key
 K_one = F(123456)
