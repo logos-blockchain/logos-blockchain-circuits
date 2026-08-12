@@ -23,7 +23,6 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     signal input pol_ledger_aged;     // PoL: aged notes root
     signal input K_part_one;  // Blend: one-time signature public key
     signal input K_part_two;  // Blend: one-time signature public key
-    signal input pow_block_hash;
     signal input pow_blend_difficulty;
 
 
@@ -59,7 +58,7 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     signal input pol_note_value;
 
     // PoW branch input
-    signal input pow_sk;
+    signal input pow_nonce;
 
 
     // Constraint the selector to be a 0, 1 or 2
@@ -120,15 +119,12 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     would_win.value          <== pol_note_value;
 
 
-    // Derive pow pk
-    component pow_pk_derivation = derive_public_key();
-    pow_pk_derivation.secret_key <== pow_sk;
-
     // Get the blend PoW result
+    component pow_dst = BLEND_POW_V1();
     component pow_ticket = Poseidon2_hash(3);
-    pow_ticket.inp[0] <== pol_epoch_nonce;
-    pow_ticket.inp[1] <== pow_block_hash;
-    pow_ticket.inp[2] <== pow_pk_derivation.out;
+    pow_ticket.inp[0] <== pow_dst.out;
+    pow_ticket.inp[1] <== pol_epoch_nonce;
+    pow_ticket.inp[2] <== pow_nonce;
     component is_winning_pow = SafeFullLessThan();
     is_winning_pow.a <== pow_ticket.out;
     is_winning_pow.b <== pow_blend_difficulty;
@@ -144,10 +140,10 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     component selection_randomness = Poseidon2_hash(4);
     component dstSel = SELECTION_RANDOMNESS_V1();
     selection_randomness.inp[0] <== dstSel.out;
-    // choose core_sk, pol.secret_key or pow_sk:
+    // choose core_sk, pol.secret_key or pow_nonce:
     signal lh_key_selector;
     lh_key_selector <== (would_win.secret_key - core_sk) * L1;
-    selection_randomness.inp[1] <== core_sk + lh_key_selector + (pow_sk - core_sk) * L2;
+    selection_randomness.inp[1] <== core_sk + lh_key_selector + (pow_nonce - core_sk) * L2;
     selection_randomness.inp[2] <== index;
     selection_randomness.inp[3] <== pol_epoch_nonce + (would_win.slot - pol_epoch_nonce) * L1; // because the last term is (pol_epoch_nonce - pol_epoch_nonce) * L2 = 0
 
