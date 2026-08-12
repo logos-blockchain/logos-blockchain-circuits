@@ -272,10 +272,8 @@ for i in range(32):
         aged_root = Compression([aged_nodes[i],aged_root])
 
 # PoW inputs
-pow_block_hash = F(randrange(0,p,1))
-pow_sk = F(randrange(0,p,1))
-pow_pk = Compression([F(4605003),pow_sk])
-pow_ticket = poseidon2_hash([F(epoch_nonce),F(pow_block_hash), F(pow_pk)])
+pow_nonce = F(randrange(0,p,1))
+pow_ticket = poseidon2_hash([F(15269183337130546179674033218),F(epoch_nonce), F(pow_nonce)])
 if role_selector == 2:
     pow_difficulty = pow_ticket + 1
 else:
@@ -290,31 +288,30 @@ K_two = F(654321)
 
 # 5) Assemble JSON
 inp = {
-  "core_quota":               str(Qc),
+  "core_quota":                 str(Qc),
   "leader_quota":               str(Ql),
-  "pow_quota":          str(Qp),
-  "core_root":          str(core_root),
-  "pol_ledger_aged":        str(aged_root),
-  "K_part_one":       str(K_one),
-  "K_part_two":       str(K_two),
-  "selector":         str(role_selector),
-  "index":            str(index),
-  "core_sk":          str(core_sk),
-  "core_path":        [str(x) for x in core_nodes],
-  "core_path_selectors":   [str(x) for x in core_selectors],
-  "pol_sl":             str(slot_number),
-  "pol_epoch_nonce":      str(epoch_nonce),
-  "pol_t0":               str(t0),
-  "pol_t1":               str(t1),
-  "pol_secret_key":       str(sk),
-  "pol_noteid_path":       [str(x) for x in aged_nodes],
-  "pol_noteid_path_selectors":   [str(x) for x in aged_selectors],
-  "pol_note_tx_hash": str(tx_hash),
-  "pol_note_output_number":    str(output_number),
-  "pol_note_value":            str(value),
-  "pow_block_hash":             str(pow_block_hash),
+  "pow_quota":                  str(Qp),
+  "core_root":                  str(core_root),
+  "pol_ledger_aged":            str(aged_root),
+  "K_part_one":                 str(K_one),
+  "K_part_two":                 str(K_two),
+  "selector":                   str(role_selector),
+  "index":                      str(index),
+  "core_sk":                    str(core_sk),
+  "core_path":                  [str(x) for x in core_nodes],
+  "core_path_selectors":        [str(x) for x in core_selectors],
+  "pol_sl":                     str(slot_number),
+  "pol_epoch_nonce":            str(epoch_nonce),
+  "pol_t0":                     str(t0),
+  "pol_t1":                     str(t1),
+  "pol_secret_key":             str(sk),
+  "pol_noteid_path":            [str(x) for x in aged_nodes],
+  "pol_noteid_path_selectors":  [str(x) for x in aged_selectors],
+  "pol_note_tx_hash":           str(tx_hash),
+  "pol_note_output_number":     str(output_number),
+  "pol_note_value":             str(value),
   "pow_blend_difficulty":       str(pow_difficulty),
-  "pow_sk":                     str(pow_sk)
+  "pow_nonce":                  str(pow_nonce)
 }
 
 if role_selector != 1:
