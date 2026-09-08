@@ -100,8 +100,8 @@ jobs:
             dir: mantle
     env:
       VERSION: ${{ needs.setup.outputs.version }}
-      PTAU_URL: "https://drive.proton.me/urls/5AY6RPBKV0#iGKMHCXR1qU5"
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
+      PTAU_SHA256: "6b662a324867139fb1a20a324d90b6ff61856dfb23f59326909f14b0e2483ae0"
     steps:
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
@@ -130,19 +130,13 @@ jobs:
       - name: Install snarkjs
         run: npm install -g snarkjs@0.7.6
 
-      - name: Cache Powers of Tau
-        id: cache-ptau
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ${{ env.PTAU_FILE }}
-          key: ptau-${{ env.PTAU_FILE }}
-
-      - name: Download Powers of Tau
-        if: steps.cache-ptau.outputs.cache-hit != 'true'
+      - name: Assemble Powers of Tau
         run: |
-          echo "Downloading Powers of Tau file (this may take a while, ~3GB)..."
-          curl -L -o "${{ env.PTAU_FILE }}" "${{ env.PTAU_URL }}"
-          echo "Download complete."
+          # The ~151MB ptau is stored in-repo as sub-100MB chunks (GitHub rejects
+          # larger single files). Upstream hosting at storage.googleapis.com/zkevm
+          # now returns 403, so the file is vendored rather than downloaded.
+          cat ptau/${{ env.PTAU_FILE }}.part* > "${{ env.PTAU_FILE }}"
+          echo "${{ env.PTAU_SHA256 }}  ${{ env.PTAU_FILE }}" | sha256sum -c -
 
       - name: Generate Proving Key
         run: |
