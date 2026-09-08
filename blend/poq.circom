@@ -120,11 +120,9 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
 
 
     // Get the blend PoW result
-    component pow_dst = BLEND_POW_V1();
-    component pow_ticket = Poseidon2_hash(3);
-    pow_ticket.inp[0] <== pow_dst.out;
+    component pow_ticket = Poseidon2_hash(2);
+    pow_ticket.inp[0] <== pow_nonce;
     pow_ticket.inp[1] <== pol_epoch_nonce;
-    pow_ticket.inp[2] <== pow_nonce;
     component is_winning_pow = SafeFullLessThan();
     is_winning_pow.a <== pow_ticket.out;
     is_winning_pow.b <== pow_blend_difficulty;

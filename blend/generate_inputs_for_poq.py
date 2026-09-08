@@ -273,7 +273,7 @@ for i in range(32):
 
 # PoW inputs
 pow_nonce = F(randrange(0,p,1))
-pow_ticket = poseidon2_hash([F(15269183337130546179674033218),F(epoch_nonce), F(pow_nonce)])
+pow_ticket = poseidon2_hash([F(pow_nonce),F(epoch_nonce)])
 if role_selector == 2:
     pow_difficulty = pow_ticket + 1
 else:
