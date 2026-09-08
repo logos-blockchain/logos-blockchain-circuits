@@ -100,7 +100,7 @@ jobs:
             dir: mantle
     env:
       VERSION: ${{ needs.setup.outputs.version }}
-      PTAU_URL: "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
+      PTAU_URL: "https://drive.proton.me/urls/5AY6RPBKV0#iGKMHCXR1qU5"
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
     steps:
       - name: Checkout
