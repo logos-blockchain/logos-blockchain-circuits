@@ -64,9 +64,3 @@ template VOUCHER_NF(){
     signal output out;
     out <== 332011368467182873038678;
 }
-
-// int.from_bytes(b"BLEND_POW_V1", byteorder="little") = 15269183337130546179674033218
-template BLEND_POW_V1(){
-    signal output out;
-    out <== 15269183337130546179674033218;
-}
