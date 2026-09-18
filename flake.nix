@@ -3,10 +3,16 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    # The MinGW that builds the windows-x86_64-gnu variant. Archives built with
+    # one mingw-w64 do not link with another: GCC 14.3 headers turn fstat into
+    # _fstat64i32 and GCC 15.3 into fstat64i32, and each CRT provides only its
+    # own. Consumers link with logos-nix's toolchain, so the variant is built
+    # with the same one; relock this together with them.
+    logos-nix.url = "github:logos-co/logos-nix";
   };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, logos-nix, ... }:
     let
       lib = nixpkgs.lib;
 
@@ -117,6 +123,24 @@
       nativeSystems = builtins.filter (s: !(lib.hasSuffix "-windows" s)) systems;
     in
     {
+      # `nix develop .#windows-cross` puts the pinned MinGW on PATH and exports
+      # what build-windows-cross.sh needs. CI runs the same command.
+      devShells.x86_64-linux.windows-cross =
+        let
+          pkgs = logos-nix.inputs.nixpkgs.legacyPackages.x86_64-linux;
+          mingw = pkgs.pkgsCross.mingwW64;
+          gmp = mingw.gmp.override { withStatic = true; };
+        in
+        pkgs.mkShell {
+          packages = [ mingw.stdenv.cc pkgs.gnumake pkgs.curl pkgs.git ];
+          CROSS_GMP_LIB = "${gmp}/lib";
+          CROSS_GMP_INCLUDE = "${gmp.dev}/include";
+          CROSS_EXTRA_INCLUDES = "-I${mingw.windows.mcfgthreads.dev}/include -I${mingw.windows.pthreads}/include";
+          # Recorded in the bundle, so a consumer can tell which toolchain the
+          # archives need before it hits an undefined symbol at link.
+          TOOLCHAIN_ID = "x86_64-w64-mingw32-gcc ${mingw.stdenv.cc.cc.version}; logos-nix ${logos-nix.rev or "dirty"}";
+        };
+
       packages = lib.genAttrs nativeSystems (
         system:
         let
