@@ -36,19 +36,28 @@
           "linux"
         else if lib.hasSuffix "-darwin" target then
           "macos"
-        else if lib.hasSuffix "-windows" target then
+        else if lib.hasSuffix "-windows" target || lib.hasSuffix "-windows-gnu" target then
           "windows"
         else
           throw "Unsupported OS in ${target}";
 
+      # The `-gnu` targets are the MinGW cross build, published alongside the
+      # MSYS2 one: same circuits, compiled and symbol-isolated with the
+      # toolchain a cross-compiling consumer links with, so its own libstdc++
+      # and nlohmann COMDATs satisfy the archives. They also ship libmman.a,
+      # which the circuit objects need for mmap/munmap.
       targetArch =
         target:
-        if lib.hasPrefix "x86_64-" target then
-          "x86_64"
-        else if lib.hasPrefix "aarch64-" target then
-          "aarch64"
-        else
-          throw "Unsupported architecture in ${target}";
+        let
+          base =
+            if lib.hasPrefix "x86_64-" target then
+              "x86_64"
+            else if lib.hasPrefix "aarch64-" target then
+              "aarch64"
+            else
+              throw "Unsupported architecture in ${target}";
+        in
+        if lib.hasSuffix "-gnu" target then "${base}-gnu" else base;
 
       # `buildSystem` is what nixpkgs instantiates, `target` is whose archives we
       # fetch. They differ only for cross targets: these are prebuilt artifacts,
@@ -100,7 +109,10 @@
       # Cross targets nix cannot build *on*. Published under each build platform
       # as `circuits-<os>-<arch>`, the same shape zerokit and logos-delivery use,
       # so a consumer cross-compiling for Windows can reach them.
-      crossTargets = [ "x86_64-windows" ];
+      crossTargets = [
+        "x86_64-windows"
+        "x86_64-windows-gnu"
+      ];
 
       nativeSystems = builtins.filter (s: !(lib.hasSuffix "-windows" s)) systems;
     in
