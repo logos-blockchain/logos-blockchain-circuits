@@ -10,14 +10,15 @@
     let
       lib = nixpkgs.lib;
 
+      # Nix cannot instantiate a Windows package set: there is no
+      # `nixpkgs.legacyPackages.x86_64-windows`, so the old entry here made
+      # `packages.x86_64-windows` fail with "attribute 'x86_64-windows'
+      # missing". Windows is a cross TARGET, listed in `crossTargets` below.
       systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
-        "x86_64-windows"
       ];
-
-      forAll = lib.genAttrs systems;
 
       cargoToml = builtins.fromTOML (builtins.readFile ./rust/Cargo.toml);
       circuitsVersion = cargoToml.workspace.package.version;
@@ -26,34 +27,45 @@
 
       githubBase = "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download";
 
-      mkCircuits =
-        system:
+      # Which release asset a target system maps to. Derived from the system
+      # string rather than from stdenv, so a target nixpkgs cannot instantiate
+      # (x86_64-windows) can still be named.
+      targetOs =
+        target:
+        if lib.hasSuffix "-linux" target then
+          "linux"
+        else if lib.hasSuffix "-darwin" target then
+          "macos"
+        else if lib.hasSuffix "-windows" target then
+          "windows"
+        else
+          throw "Unsupported OS in ${target}";
+
+      targetArch =
+        target:
+        if lib.hasPrefix "x86_64-" target then
+          "x86_64"
+        else if lib.hasPrefix "aarch64-" target then
+          "aarch64"
+        else
+          throw "Unsupported architecture in ${target}";
+
+      # `buildSystem` is what nixpkgs instantiates, `target` is whose archives we
+      # fetch. They differ only for cross targets: these are prebuilt artifacts,
+      # so unpacking them needs no toolchain for the target at all.
+      mkCircuitsFor =
+        { buildSystem, target }:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = nixpkgs.legacyPackages.${buildSystem};
 
-          os =
-            if pkgs.stdenv.isLinux then
-              "linux"
-            else if pkgs.stdenv.isDarwin then
-              "macos"
-            else if pkgs.stdenv.isWindows then
-              "windows"
-            else
-              throw "Unsupported OS";
-
-          arch =
-            if pkgs.stdenv.isx86_64 then
-              "x86_64"
-            else if pkgs.stdenv.isAarch64 then
-              "aarch64"
-            else
-              throw "Unsupported architecture.";
+          os = targetOs target;
+          arch = targetArch target;
 
           sha256 =
-            if circuitsHashes ? ${system} then
-              circuitsHashes.${system}
+            if circuitsHashes ? ${target} then
+              circuitsHashes.${target}
             else
-              throw "logos-blockchain-circuits ${circuitsVersion} does not support ${system}.";
+              throw "logos-blockchain-circuits ${circuitsVersion} does not support ${target}.";
         in
         pkgs.stdenv.mkDerivation {
           pname = "logos-blockchain-circuits";
@@ -73,16 +85,27 @@
           '';
 
           meta = {
-            platforms = [ system ];
+            platforms = [ buildSystem ];
           };
 
           passthru = {
             version = circuitsVersion;
           };
         };
+      mkCircuits = system: mkCircuitsFor {
+        buildSystem = system;
+        target = system;
+      };
+
+      # Cross targets nix cannot build *on*. Published under each build platform
+      # as `circuits-<os>-<arch>`, the same shape zerokit and logos-delivery use,
+      # so a consumer cross-compiling for Windows can reach them.
+      crossTargets = [ "x86_64-windows" ];
+
+      nativeSystems = builtins.filter (s: !(lib.hasSuffix "-windows" s)) systems;
     in
     {
-      packages = forAll (
+      packages = lib.genAttrs nativeSystems (
         system:
         let
           circuits = mkCircuits system;
@@ -91,6 +114,15 @@
           inherit circuits;
           default = circuits;
         }
+        // lib.listToAttrs (
+          map (target: {
+            name = "circuits-${targetOs target}-${targetArch target}";
+            value = mkCircuitsFor {
+              buildSystem = system;
+              target = target;
+            };
+          }) (builtins.filter (t: circuitsHashes ? ${t}) crossTargets)
+        )
       );
     };
 }
