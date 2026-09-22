@@ -1,6 +1,5 @@
-#[cfg(test)]
+#[cfg(all(test, feature = "embed-circuits"))]
 mod tests {
-    use lbc_poq_sys::PoqWitnessInput;
     use logos_blockchain_circuits_tests::inputs;
 
     #[test]
@@ -18,9 +17,9 @@ mod tests {
         let _pol_witness = lbc_pol_sys::generate_witness(&pol_witness_input);
 
         let inputs_json_raw = std::fs::read_to_string(inputs::POQ.as_path()).unwrap();
-        let inputs_json = PoqWitnessInput::new(inputs_json_raw).unwrap();
-        let poq_result = lbc_poq_sys::generate_witness(&inputs_json);
-        assert!(poq_result.is_ok());
+        let poq_witness_input = lbc_poq_sys::PoqWitnessInput::new(inputs_json_raw).unwrap();
+        let poq_witness_result = lbc_poq_sys::generate_witness(&poq_witness_input);
+        assert!(poq_witness_result.is_ok());
     }
 
     #[test]
@@ -31,14 +30,15 @@ mod tests {
             .map(|_| {
                 let json = inputs_json_raw.clone();
                 std::thread::spawn(move || {
-                    let input = PoqWitnessInput::new(json).unwrap();
-                    lbc_poq_sys::generate_witness(&input)
+                    let poq_witness_input = lbc_poq_sys::PoqWitnessInput::new(json)
+                        .expect("PoqWitnessInput::new failed.");
+                    lbc_poq_sys::generate_witness(&poq_witness_input)
                 })
             })
             .collect();
 
-        for h in handles {
-            assert!(h.join().unwrap().is_ok());
+        for handle in handles {
+            assert!(handle.join().unwrap().is_ok());
         }
     }
 }

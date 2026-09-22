@@ -1,4 +1,6 @@
 mod ffi;
 pub mod native;
 
-pub use native::{PoqWitnessInput, artifacts, generate_witness, generate_witness_from_files};
+#[cfg(feature = "embed-circuit")]
+pub use native::embedded::{PoqWitnessInput, generate_witness};
+pub use native::{artifacts, generate_witness_from_files};

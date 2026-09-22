@@ -5,6 +5,10 @@ license.workspace = true
 version.workspace = true
 publish = false
 
+[features]
+default = ["embed-circuits"]
+embed-circuits = ["lbc-pol-sys/embed-circuit", "lbc-poq-sys/embed-circuit"]
+
 [dev-dependencies]
 lbc-pol-sys = { workspace = true }
 lbc-poq-sys = { workspace = true }
