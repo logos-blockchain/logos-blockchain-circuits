@@ -51,16 +51,14 @@ template KEY_NULLIFIER_V1(){
     out <== 65580642670359595206974785265459610955;
 }
 
-
-// int.from_bytes(b"REWARD_VOUCHER", byteorder="little") = 1668646695034522932676805048878418
-template REWARD_VOUCHER(){
+// int.from_bytes(b"NOTE_CM_V1", byteorder="little") = 232989244870034910891854
+template NOTE_CM_V1(){
     signal output out;
-    out <== 1668646695034522932676805048878418;
+    out <== 232989244870034910891854;
 }
 
-
-// int.from_bytes(b"VOUCHER_NF", byteorder="little") = 332011368467182873038678
-template VOUCHER_NF(){
+// int.from_bytes(b"NOTE_NF_V1", byteorder="little") = 232989242911804701822798
+template NOTE_NF_V1(){
     signal output out;
-    out <== 332011368467182873038678;
+    out <== 232989242911804701822798;
 }
