@@ -1,11 +1,21 @@
-#!/usr/bin/sage
-# -*- mode: python ; -*-
+#!/usr/bin/env python3
 
-
-from sage.all import *
+import sys
+from random import randrange
 
 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-F = FiniteField(p)
+Integer = int
+
+class F:
+    def __init__(self, v): self.v = int(v) % p
+    def __int__(self): return self.v
+    def __add__(self, o): return F(self.v + int(o))
+    __radd__ = __add__
+    def __mul__(self, o): return F(self.v * int(o))
+    __rmul__ = __mul__
+    def __pow__(self, e): return F(pow(self.v, e, p))
+    def __eq__(self, o): return self.v == int(o) % p
+    def __repr__(self): return str(self.v)
 
 def poseidon2_hash(data):
     return PoseidonSponge(data,2,1)[0]

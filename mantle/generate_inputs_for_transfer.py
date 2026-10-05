@@ -135,6 +135,7 @@ def ExternalRound(inp, i):
       , F(0x0fc1bbceba0590f5abbdffa6d3b35e3297c021a3a409926d0e2d54dc1c84fda6)
       ]]
 
+
     sb = [F(0) for j in range(3)]
     for j in range(3):
         sb[j] = SBox(F(inp[j] + round_consts[i][j]))
@@ -213,86 +214,58 @@ def PoseidonSponge(data, capacity, output_len):
 
     return output
 
+def is_power_of_two(n):
+    if n <= 0:
+        return False
+    return (n & (n - 1)) == 0
 
-if len(sys.argv) != Integer(4):
-    print("Usage: <script> <epoch_nonce> <slot_number> <total_stake>")
+
+
+
+if len(sys.argv) != Integer(3):
+    print("Usage: <script> <maxInputs> <maxOutputs>")
     exit()
 
-epoch_nonce = int(sys.argv[Integer(1)])
-slot_number = int(sys.argv[Integer(2)])
-total_stake = int(sys.argv[Integer(3)])
+maxInputs = int(sys.argv[Integer(1)])
+maxOutputs = int(sys.argv[Integer(2)])
 
-if epoch_nonce >= p:
-    print("epoch nonce must be less than p")
-    exit()
-if total_stake >= p:
-    print("total stake must be less than p")
-    exit()
-    
-t0_constant = F(0x1a3fb997fd58374772808c13d1c2ddacb5ab3ea77413f86fd6e0d3d978e5438)
-t1_constant = F(0x71e790b41991052e30c93934b5612412e7958837bac8b1c524c24d84cc7d0)
+inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_value = [F(randrange(0,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
-t0 = F(int(t0_constant) // total_stake)
-t1 = F(p- (int(t1_constant) // total_stake**2))
+inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i]]) for i in range(maxInputs)]
+inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_value[i] == 0 else 0 for i in range(maxInputs)]
+inputs_selectors = [format(i,'032b') for i in range(maxInputs//2)] + [format(randrange(0,2**32,1),'032b') for i in range(maxInputs - maxInputs//2)]
+cm_merkle_root = inputs_cm[:maxInputs//2]
+inputs_path = [[] for i in range(maxInputs//2)]
+for d in range(32):
+    cm_merkle_root = cm_merkle_root + [F(0)] * (len(cm_merkle_root) % 2)
+    for i in range(maxInputs//2):
+        inputs_path[i].append(cm_merkle_root[(i >> d) ^ 1])
+    cm_merkle_root = [Compression([cm_merkle_root[2*j], cm_merkle_root[2*j+1]]) for j in range(len(cm_merkle_root)//2)]
+cm_merkle_root = cm_merkle_root[0]
+inputs_path += [[F(randrange(0,p,1)) for d in range(32)] for i in range(maxInputs - maxInputs//2)]
 
-
-value = F(total_stake / 100)
-threshold = (t0 + t1 * value) * value
-
-sk = F(randrange(0,p,1))
-tx_hash = F(randrange(0,p,1))
-output_number = F(randrange(0,50,1))
-pk = Compression([F(4605003),sk])
-
-note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
-ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
-while(ticket > threshold):
-    output_number += 1
-    note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
-    ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
- 
-aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
-aged_selectors = randrange(0,2**32,1)
-aged_selectors = format(aged_selectors,'032b')
-aged_root = note_id
-for i in range(32):
-    if int(aged_selectors[31-i]) == 0:
-        aged_root = Compression([aged_root,aged_nodes[i]])
-    else:
-        aged_root = Compression([aged_nodes[i],aged_root])
-
-unspent_nodes = [F(randrange(0,p,1)) for i in range(32)]
-unspent_selectors = randrange(0,2**32,1)
-unspent_selectors = format(unspent_selectors,'032b')
-
-latest_root = note_id
-for i in range(32):
-    if int(unspent_selectors[31-i]) == 0:
-        latest_root = Compression([latest_root,unspent_nodes[i]])
-    else:
-        latest_root = Compression([unspent_nodes[i],latest_root])
-   
+outputs_pk = [F(randrange(0,p,1)) for i in range(maxOutputs)]
+outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
+total_input_value = sum(inputs_value)
+outputs_value = [F((int(total_input_value) - 50) // maxOutputs) for i in range(maxOutputs)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i]]) for i in range(maxOutputs)]
 
 
-
-# 5) Assemble JSON
+# Assemble JSON
 inp = {
-  "sl":                       str(slot_number),
-  "epoch_nonce":                str(epoch_nonce),
-  "t0":                         str(t0),
-  "t1":                         str(t1),
-  "secret_key":                 str(sk),
-  "P_lead_part_one":            str(F(123456)),
-  "P_lead_part_two":            str(F(654321)),
-  "noteid_aged_path":           [str(x) for x in aged_nodes],
-  "noteid_aged_selectors":      [str(x) for x in aged_selectors],
-  "ledger_aged":                str(aged_root),
-  "note_tx_hash":               str(tx_hash),
-  "note_output_number":         str(output_number),
-  "noteid_latest_path":         [str(x) for x in unspent_nodes],
-  "noteid_latest_selectors":    [str(x) for x in unspent_selectors],
-  "ledger_latest":              str(latest_root),
-  "v":                          str(value)
+  "inputs_sk":                  [str(x) for x in inputs_sk],
+  "inputs_nonce":               [str(x) for x in inputs_nonce],
+  "inputs_value":               [str(x) for x in inputs_value],
+  "inputs_selectors":           [[str(x) for x in string] for string in inputs_selectors],
+  "inputs_path":                [[str(x) for x in inputs_path[i]] for i in range(maxInputs)],
+  "outputs_pk":                 [str(x) for x in outputs_pk],
+  "outputs_nonce":              [str(x) for x in outputs_nonce],
+  "outputs_value":              [str(x) for x in outputs_value],
+  "cm_merkle_root":             str(cm_merkle_root),
+  "msg":                        str(F(randrange(0,p,1))),
 }
 
 import json
@@ -300,4 +273,4 @@ import json
 with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
-print("Wrote input of pol")
+print("Wrote input of zkTransfer")

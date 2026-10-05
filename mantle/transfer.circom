@@ -78,7 +78,7 @@ template zkTransfer(maxInput, maxOutput){
             merkle_root[i].selector[j] <== inputs_selectors[i][j];
         }
         // then check equality if not of value 0
-        is_input_zero[i].out * (merkle_root[i].root - cm_merkle_root) === 0;
+        (1 - is_input_zero[i].out) * (merkle_root[i].root - cm_merkle_root) === 0;
     }
 
     // Each output commitment is derived from the public key, the nonce and the value.
