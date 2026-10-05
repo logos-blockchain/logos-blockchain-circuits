@@ -114,4 +114,4 @@ template zkTransfer(maxInput, maxOutput){
     excess_value <== value_inputs.out - value_outputs.out;
 }
 
-component main {public [cm_merkle_root, msg]}= zkTransfer(8, 8);
+component main {public [cm_merkle_root, msg]}= zkTransfer(4, 8);
