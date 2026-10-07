@@ -292,6 +292,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          upload-sources: "true"
 
       - name: Compile PoQ Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -302,6 +303,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          upload-sources: "true"
 
       - name: Compile Signature Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -312,6 +314,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          upload-sources: "true"
 
       - name: Compile PoC Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -322,6 +325,7 @@ jobs:
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
+          upload-sources: "true"
 
       - name: Download PoL Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -425,6 +429,32 @@ jobs:
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
+      # The circom-generated C++ is target-independent, so it is published once (from this job)
+      # as a separate release asset rather than being added to every per-platform bundle.
+      - name: Download Witness Generator Sources
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          pattern: "*-${{ env.VERSION }}-witness-sources"
+          path: witness-sources-artifacts/
+
+      - name: Create Witness Generator Sources Bundle
+        env:
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-witness-sources
+        run: |
+          mkdir -p "${BUNDLE_NAME}"
+          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+          circom --version > "${BUNDLE_NAME}/CIRCOM_VERSION"
+          for circuit in pol poq signature poc; do
+            mv "witness-sources-artifacts/${circuit}-${{ env.VERSION }}-witness-sources" "${BUNDLE_NAME}/${circuit}_cpp"
+          done
+          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
+
+      - name: Upload Witness Generator Sources Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-witness-sources.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-witness-sources.tar.gz
 
   build-linux-aarch64:
     name: Build Linux aarch64 Libraries (Native for RPI5)
@@ -1434,6 +1464,33 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
 
       - name: Upload Unified Bundle to Release
+        uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ${{ env.ARTIFACT_NAME }}
+          asset_name: ${{ env.ARTIFACT_NAME }}
+          asset_content_type: application/octet-stream
+
+  upload-witness-sources:
+    name: Upload Witness Generator Sources to Release
+    runs-on: ubuntu-latest
+    # Only upload to release for tags, not for PRs
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    needs:
+      - setup
+      - publish-release
+    env:
+      UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
+      ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-witness-sources.tar.gz
+    steps:
+      - name: Download Witness Generator Sources Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+
+      - name: Upload Witness Generator Sources Bundle to Release
         uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -28,6 +28,11 @@ Produces three outputs:
 - `{circuit}.r1cs` — the constraint system, used for proving key generation.
 - `{circuit}.dat` — binary circuit data.
 
+The generated `{circuit}_cpp/` sources, exactly as compiled (with the Step 3 patch and Step 4 FFI files, without the
+`.dat`), are published with each release as `logos-blockchain-circuits-{version}-witness-sources.tar.gz`. They are
+target-independent, so they are published once rather than in every per-platform bundle. Use them to map runtime
+assertion failures such as `Circuit constraint violated in poq.cpp:52038` back to the `.circom` source.
+
 ---
 
 ## Step 2 — Proving key generation
