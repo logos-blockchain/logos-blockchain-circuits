@@ -6,18 +6,18 @@ use lbc_types::{
     native::{Error, Witness},
 };
 
-use crate::ffi::{poc_generate_witness, poc_generate_witness_from_files};
+use crate::ffi::{program_spend_generate_witness, program_spend_generate_witness_from_files};
 
-lbc_common::circuit_artifacts!("poc");
+lbc_common::circuit_artifacts!("program_spend");
 
-pub struct PocDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for PocDat {
+pub struct ProgramSpendDat;
+impl<'dat> lbc_types::CircuitDat<'dat> for ProgramSpendDat {
     const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
 }
 
-pub type PocWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PocDat>;
+pub type ProgramSpendWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, ProgramSpendDat>;
 
-pub fn generate_witness(input: &PocWitnessInput) -> Result<Witness, Error> {
+pub fn generate_witness(input: &ProgramSpendWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
@@ -25,8 +25,9 @@ pub fn generate_witness(input: &PocWitnessInput) -> Result<Witness, Error> {
 
     // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
     // initialized null Bytes.
-    let status =
-        unsafe { poc_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes) };
+    let status = unsafe {
+        program_spend_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
+    };
 
     status.try_into().map(|()| Witness::from(ffi_output_bytes))
 }
@@ -38,8 +39,14 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
 
     // SAFETY: c_dat, c_inputs, and c_output are valid null-terminated C strings for
     // the duration of the call.
-    unsafe { poc_generate_witness_from_files(c_dat.as_ptr(), c_inputs.as_ptr(), c_output.as_ptr()) }
-        .try_into()
+    unsafe {
+        program_spend_generate_witness_from_files(
+            c_dat.as_ptr(),
+            c_inputs.as_ptr(),
+            c_output.as_ptr(),
+        )
+    }
+    .try_into()
 }
 
 #[cfg(any(test, feature = "test-inputs"))]
@@ -49,34 +56,37 @@ pub const SAMPLE_INPUTS: &str = include_str!("../sample.input.json");
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{PocWitnessInput, SAMPLE_INPUTS, generate_witness, generate_witness_from_files};
+    use super::{
+        ProgramSpendWitnessInput, SAMPLE_INPUTS, generate_witness, generate_witness_from_files,
+    };
 
-    static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| lbc_common::lbc_root_dir!().join("poc"));
+    static LIB_DIR: LazyLock<PathBuf> =
+        LazyLock::new(|| lbc_common::lbc_root_dir!().join("program_spend"));
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = PocWitnessInput::new("{".to_owned()).unwrap();
+        let input = ProgramSpendWitnessInput::new("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = PocWitnessInput::new("{}".to_owned()).unwrap();
+        let input = ProgramSpendWitnessInput::new("{}".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
-        inputs["voucher_root"] = serde_json::json!("1");
-        let input = PocWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        inputs["tx_cm_root"] = serde_json::json!("1");
+        let input = ProgramSpendWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
-        let witness_output_path = std::env::temp_dir().join("poc_test_witness.wtns");
+        let witness_output_path = std::env::temp_dir().join("program_spend_test_witness.wtns");
         // Write the embedded inputs to a file, so the test also runs on a machine other
         // than the one that built it.
         let inputs = lbc_common::test_utils::temp_file(SAMPLE_INPUTS);
@@ -84,7 +94,7 @@ mod tests {
         generate_witness_from_files(&dat, inputs.path(), &witness_output_path)
             .expect("generate_witness_from_files failed.");
 
-        let input = PocWitnessInput::new(SAMPLE_INPUTS.to_owned())
+        let input = ProgramSpendWitnessInput::new(SAMPLE_INPUTS.to_owned())
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 

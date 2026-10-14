@@ -91,7 +91,7 @@ For a full walkthrough of the CI build steps, from `.circom` source to release a
 
 #### The Problem
 
-Each circuit (PoC, PoL, PoQ, Signature) is compiled into a static archive (`libpoc.a`, `libpol.a`, etc.).
+Each circuit (PoL, PoQ, Program Spend, Transfer) is compiled into a static archive (`libpol.a`, `libpoq.a`, etc.).
 All archives share the same symbols, compiled from the same source files but with **different
 constant values per circuit** (e.g. `get_size_of_witness()` returns 20531 for PoL and 18149 for PoQ).
 When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition it
@@ -265,7 +265,7 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── lib/
 │   ├── libgmp.a
 │   └── libmman.a           (Windows only)
-├── {circuit}/              (poc/, pol/, poq/, signature/)
+├── {circuit}/              (pol/, poq/, program_spend/, transfer/)
 │   ├── include/
 │   ├── lib{circuit}.a
 │   ├── proving_key.zkey

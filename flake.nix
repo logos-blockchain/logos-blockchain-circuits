@@ -114,10 +114,10 @@
       windowsWitnessGeneratorLibs =
         buildPkgs.linkFarm "logos-blockchain-circuits-witness-generator-libs-windows-x86_64" (
           lib.mapAttrs (_: mkWindowsWitnessGeneratorLib) {
-            poc = "mantle/poc.circom";
             pol = "mantle/pol.circom";
             poq = "blend/poq.circom";
-            signature = "mantle/signature.circom";
+            program_spend = "mantle/program_spend.circom";
+            transfer = "mantle/transfer.circom";
           }
           // {
             # Windows has no `mmap`, so clients must also link libmman.a.
