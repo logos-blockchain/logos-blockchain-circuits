@@ -20,10 +20,13 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     signal input leader_quota;
     signal input core_root;
     signal input pow_quota;
-    signal input pol_ledger_aged;     // PoL: aged notes root
-    signal input K_part_one;  // Blend: one-time signature public key
-    signal input K_part_two;  // Blend: one-time signature public key
+    signal input pol_eligible_aged;     // PoL eligible root when the stake distribution was frozen
+    signal input K_part_one;            // Blend: one-time signature public key
+    signal input K_part_two;            // Blend: one-time signature public key
     signal input pow_blend_difficulty;
+    signal input pol_epoch_nonce;
+    signal input pol_t0;
+    signal input pol_t1;
 
 
     // dummy constraints to avoid unused public input to be erased after compilation optimisation
@@ -45,17 +48,15 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
 
     // PoL branch inputs (all the PoL private data)
     signal input pol_sl;
-    signal input pol_epoch_nonce;
-    signal input pol_t0;
-    signal input pol_t1;
-
-    signal input pol_noteid_path[32];
-    signal input pol_noteid_path_selectors[32];
     signal input pol_secret_key;
-    signal input pol_note_tx_hash;
-    signal input pol_note_output_number;
-
     signal input pol_note_value;
+    signal input pol_note_nonce;
+    signal input pol_cm_aged_path[32];
+    signal input pol_cm_aged_selectors[32];
+    signal input pol_nf_root_aged;
+    signal input pol_set_aged_path[32];
+    signal input pol_set_selectors[32];
+
 
     // PoW branch input
     signal input pow_nonce;
@@ -104,19 +105,21 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     // enforce potential PoL (without verification that the note is unspent)
     // (All constraints inside pol ensure LeadershipVerify)
     component would_win = would_win_leadership();
-    would_win.slot                <== pol_sl;
-    would_win.epoch_nonce         <== pol_epoch_nonce;
-    would_win.t0                  <== pol_t0;
-    would_win.t1                  <== pol_t1;
+    would_win.sl <== pol_sl;
+    would_win.epoch_nonce <== pol_epoch_nonce;
+    would_win.t0 <== pol_t0;
+    would_win.t1 <== pol_t1;
+    would_win.eligible_aged <== pol_eligible_aged;
+    would_win.sk <== pol_secret_key;
+    would_win.value <== pol_note_value;
+    would_win.nonce <== pol_note_nonce;
+    would_win.nf_root_aged <== pol_nf_root_aged;
     for (var i = 0; i < 32; i++) {
-        would_win.aged_nodes[i]      <== pol_noteid_path[i];
-        would_win.aged_selectors[i]  <== pol_noteid_path_selectors[i];
+        would_win.set_selectors[i] <== pol_set_selectors[i];
+        would_win.cm_aged_path[i] <== pol_cm_aged_path[i];
+        would_win.cm_aged_selectors[i] <== pol_cm_aged_selectors[i];
+        would_win.set_aged_path[i] <== pol_set_aged_path[i];
     }
-    would_win.aged_root      <== pol_ledger_aged;
-    would_win.transaction_hash <== pol_note_tx_hash;
-    would_win.output_number    <== pol_note_output_number;
-    would_win.secret_key     <== pol_secret_key;
-    would_win.value          <== pol_note_value;
 
 
     // Get the blend PoW result
