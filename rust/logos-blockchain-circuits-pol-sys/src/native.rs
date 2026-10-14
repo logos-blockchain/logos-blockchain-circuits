@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
-        inputs["ledger_aged"] = serde_json::json!("1");
+        inputs["eligible_aged"] = serde_json::json!("1");
         let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
