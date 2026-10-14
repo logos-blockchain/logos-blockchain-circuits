@@ -90,13 +90,13 @@ jobs:
             display: PoQ
             file: poq.circom
             dir: blend
-          - name: signature
-            display: Signature
-            file: signature.circom
+          - name: transfer
+            display: Transfer
+            file: transfer.circom
             dir: mantle
-          - name: poc
-            display: PoC
-            file: poc.circom
+          - name: program_spend
+            display: Program Spend
+            file: program_spend.circom
             dir: mantle
     env:
       VERSION: ${{ needs.setup.outputs.version }}
@@ -147,7 +147,7 @@ jobs:
           head -c 32 /dev/urandom | xxd -p -c 256 | snarkjs zkey contribute ${{ matrix.circuit.name }}-0.zkey ${{ matrix.circuit.name }}.zkey --name="RELEASE" -v
           snarkjs zkey export verificationkey ${{ matrix.circuit.name }}.zkey ${{ matrix.circuit.name }}_verification_key.json
         env:
-          CIRCUIT_NAME: ${{ matrix.circuit.file == 'signature.circom' && 'signature' || matrix.circuit.name }}
+          CIRCUIT_NAME: ${{ matrix.circuit.name }}
 
       - name: Upload Proving Key
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
@@ -303,22 +303,22 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile PoC Witness Generator
+      - name: Compile Program Spend Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
+          circuit-name-display: "Program Spend"
+          circuit-name-binary: "program_spend"
+          circuit-path: "mantle/program_spend.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -335,17 +335,17 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download Signature Witness Generator
+      - name: Download Transfer Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
+          name: transfer-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/transfer-artifact
 
-      - name: Download PoC Witness Generator
+      - name: Download Program Spend Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
+          name: program_spend-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/program_spend-artifact
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -370,7 +370,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer,program_spend}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -390,22 +390,22 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv witness-generators/transfer-artifact/libtransfer.a "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/transfer-artifact/transfer.dat "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r witness-generators/transfer-artifact/include "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/program_spend-artifact/libprogram_spend.a "${BUNDLE_NAME}/program_spend/"
+          mv witness-generators/program_spend-artifact/program_spend.dat "${BUNDLE_NAME}/program_spend/witness_generator.dat"
+          cp -r witness-generators/program_spend-artifact/include "${BUNDLE_NAME}/program_spend/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
+          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -574,22 +574,22 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile PoC Witness Generator
+      - name: Compile Program Spend Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
+          circuit-name-display: "Program Spend"
+          circuit-name-binary: "program_spend"
+          circuit-path: "mantle/program_spend.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -606,17 +606,17 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download Signature Witness Generator
+      - name: Download Transfer Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
+          name: transfer-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/transfer-artifact
 
-      - name: Download PoC Witness Generator
+      - name: Download Program Spend Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
+          name: program_spend-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/program_spend-artifact
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -641,7 +641,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer,program_spend}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -661,22 +661,22 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv witness-generators/transfer-artifact/libtransfer.a "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/transfer-artifact/transfer.dat "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r witness-generators/transfer-artifact/include "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/program_spend-artifact/libprogram_spend.a "${BUNDLE_NAME}/program_spend/"
+          mv witness-generators/program_spend-artifact/program_spend.dat "${BUNDLE_NAME}/program_spend/witness_generator.dat"
+          cp -r witness-generators/program_spend-artifact/include "${BUNDLE_NAME}/program_spend/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
+          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -883,22 +883,22 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile PoC Witness Generator
+      - name: Compile Program Spend Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
+          circuit-name-display: "Program Spend"
+          circuit-name-binary: "program_spend"
+          circuit-path: "mantle/program_spend.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -915,17 +915,17 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download Signature Witness Generator
+      - name: Download Transfer Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
+          name: transfer-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/transfer-artifact
 
-      - name: Download PoC Witness Generator
+      - name: Download Program Spend Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
+          name: program_spend-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/program_spend-artifact
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -951,7 +951,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer,program_spend}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -969,22 +969,22 @@ jobs:
           mv witness-generators/poq-artifact/poq.lib "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/signature.lib "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/poc.lib "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv witness-generators/transfer-artifact/transfer.lib "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/transfer-artifact/transfer.dat "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r witness-generators/transfer-artifact/include "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/program_spend-artifact/program_spend.lib "${BUNDLE_NAME}/program_spend/"
+          mv witness-generators/program_spend-artifact/program_spend.dat "${BUNDLE_NAME}/program_spend/witness_generator.dat"
+          cp -r witness-generators/program_spend-artifact/include "${BUNDLE_NAME}/program_spend/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
+          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -1154,22 +1154,22 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile PoC Witness Generator
+      - name: Compile Program Spend Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
+          circuit-name-display: "Program Spend"
+          circuit-name-binary: "program_spend"
+          circuit-path: "mantle/program_spend.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -1186,17 +1186,17 @@ jobs:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
-      - name: Download Signature Witness Generator
+      - name: Download Transfer Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
+          name: transfer-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/transfer-artifact
 
-      - name: Download PoC Witness Generator
+      - name: Download Program Spend Witness Generator
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
+          name: program_spend-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          path: witness-generators/program_spend-artifact
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -1221,7 +1221,7 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer,program_spend}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -1241,22 +1241,22 @@ jobs:
           mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
           mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv witness-generators/transfer-artifact/libtransfer.a "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/transfer-artifact/transfer.dat "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r witness-generators/transfer-artifact/include "${BUNDLE_NAME}/transfer/"
+          mv witness-generators/program_spend-artifact/libprogram_spend.a "${BUNDLE_NAME}/program_spend/"
+          mv witness-generators/program_spend-artifact/program_spend.dat "${BUNDLE_NAME}/program_spend/witness_generator.dat"
+          cp -r witness-generators/program_spend-artifact/include "${BUNDLE_NAME}/program_spend/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
+          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"

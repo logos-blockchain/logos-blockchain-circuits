@@ -231,20 +231,22 @@ maxOutputs = int(sys.argv[Integer(2)])
 
 inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
-inputs_value = [F(randrange(0,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
+inputs_value = [F(randrange(50,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
 inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
 inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i], F(0), F(0)]) for i in range(maxInputs)]
-inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_value[i] == 0 else 0 for i in range(maxInputs)]
+inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
 inputs_selectors = [format(i,'032b') for i in range(maxInputs//2)] + [format(randrange(0,2**32,1),'032b') for i in range(maxInputs - maxInputs//2)]
 tx_cm_root = inputs_cm[:maxInputs//2]
 inputs_path = [[] for i in range(maxInputs//2)]
+empty_root = F(0)   # root of an empty subtree of the current height, every leaf holding 0
 for d in range(32):
-    tx_cm_root = tx_cm_root + [F(0)] * (len(tx_cm_root) % 2)
+    tx_cm_root = tx_cm_root + [empty_root] * (len(tx_cm_root) % 2)
     for i in range(maxInputs//2):
         inputs_path[i].append(tx_cm_root[(i >> d) ^ 1])
     tx_cm_root = [Compression([tx_cm_root[2*j], tx_cm_root[2*j+1]]) for j in range(len(tx_cm_root)//2)]
+    empty_root = Compression([empty_root, empty_root])
 tx_cm_root = tx_cm_root[0]
 inputs_path += [[F(randrange(0,p,1)) for d in range(32)] for i in range(maxInputs - maxInputs//2)]
 

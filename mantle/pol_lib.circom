@@ -64,13 +64,13 @@ template would_win_leadership(){
 
     // selectors are bits
     for(var i = 0; i < 32; i++){
-        set_selectors[i] * (1 - set_selector[i]) === 0;
+        set_selectors[i] * (1 - set_selectors[i]) === 0;
         cm_aged_selectors[i] * (1 - cm_aged_selectors[i]) === 0;
     }
 
     // Derive the public key from the secret key
     component note_pk = derive_public_key();
-    note_pk.secret_key <== secret_key;
+    note_pk.secret_key <== sk;
     pk <== note_pk.out;
 
 
@@ -111,7 +111,7 @@ template would_win_leadership(){
     // Compute the lottery ticket
     component ticket = ticket_calculator();
     ticket.epoch_nonce <== epoch_nonce;
-    ticket.slot <== slot;
+    ticket.slot <== sl;
     ticket.note_id <== cm;
     ticket.secret_key <== sk;
 
@@ -156,12 +156,12 @@ template proof_of_leadership(){
     signal input nf_root_aged;              // nullifier IMT root of the set when the stake distribution was frozen
     signal input set_aged_path[32];         // path of the leaf of the set to eligible_aged
     signal input low_leaf_nf;               // greatest nullifier of the set lower than the note nullifier
-    low_leaf_next_nf;                       // next greater nullifier of the set, 0 if none
-    low_leaf_next_index;                    // index of the IMT leaf holding low_leaf_next_nf, 0 if none
+    signal input low_leaf_next_nf;          // next greater nullifier of the set, 0 if none
+    signal input low_leaf_next_index;       // index of the IMT leaf holding low_leaf_next_nf, 0 if none
     signal input low_leaf_path[32];
     signal input low_leaf_selectors[32];
     signal input cm_root_latest;            // latest commitment MMR root of the set
-    signal input set_latest_path[32],       // path of the leaf of the set to eligible_latest
+    signal input set_latest_path[32];       // path of the leaf of the set to eligible_latest
 
 
     // Verify the note is winning the lottery

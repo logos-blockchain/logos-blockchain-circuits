@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-10-14
+
+Circuits of the private note ledger of Mantle: every note is private and lives in a note set, the ledger, the SDP or a
+channel, each with its commitment MMR and nullifier IMT.
+
+### Added
+
+- **Transfer** (`transfer`, `lbc-transfer-sys`): consumes up to 4 user notes and creates up to 8, outputting the
+  excess value. Public flags mark the used inputs and outputs, and inputs are proven against the commitment MMR root
+  extended with the transaction buffer.
+- **Program Spend** (`program_spend`, `lbc-program-spend-sys`): consumes notes of a program and creates notes of the
+  program or user notes, balancing exactly with the value paid to the program, and outputs `spend_notes_hash`, the hash
+  read by the program proof.
+
+### Changed
+
+- **Note commitment** gains the `program` and `data` fields.
+- **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
+  non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
+  are derived from the note commitment.
+- **PoQ** leader branch follows the PoL, without the unspent check.
+- The input generators run with plain Python 3: `just gen-inputs` replaces `just sage-run`.
+
+### Removed
+
+- **PoC** (`lbc-poc-sys`) and **Signature** (`lbc-signature-sys`).
+
 ## [0.5.0] — 2026-05-25
 
 ### Added
