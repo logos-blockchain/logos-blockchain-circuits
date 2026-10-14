@@ -114,23 +114,25 @@ template zkProgramSpend(maxInput, maxOutput){
         outputs[i] <== outputs_active[i] * outputs_cm[i].out;
     }
 
-    // `spend_notes_hash` commits to the flag and the note of every input and output, 
+    // `spend_notes_hash` commits to the flag and the note of every input and output, nonce included,
     // which the program proof opens to check its rule. Their fields are hashed one after the other, input by input, then output by output.
-    component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 4 + maxOutput * 5);
+    component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 5 + maxOutput * 6);
     component dst = PROGRAM_SPEND_NOTES_V1();
     spend_notes_hasher.inp[0] <== dst.out;
     for(var i = 0; i < maxInput; i++){
-        spend_notes_hasher.inp[1 + i * 4] <== inputs_active[i];
-        spend_notes_hasher.inp[2 + i * 4] <== inputs_value[i];
-        spend_notes_hasher.inp[3 + i * 4] <== inputs_pk[i].out;
-        spend_notes_hasher.inp[4 + i * 4] <== inputs_data[i];
+        spend_notes_hasher.inp[1 + i * 5] <== inputs_active[i];
+        spend_notes_hasher.inp[2 + i * 5] <== inputs_value[i];
+        spend_notes_hasher.inp[3 + i * 5] <== inputs_nonce[i];
+        spend_notes_hasher.inp[4 + i * 5] <== inputs_pk[i].out;
+        spend_notes_hasher.inp[5 + i * 5] <== inputs_data[i];
     }
     for(var i = 0; i < maxOutput; i++){
-        spend_notes_hasher.inp[1 + maxInput * 4 + i * 5] <== outputs_active[i];
-        spend_notes_hasher.inp[2 + maxInput * 4 + i * 5] <== outputs_value[i];
-        spend_notes_hasher.inp[3 + maxInput * 4 + i * 5] <== outputs_pk[i]  ;
-        spend_notes_hasher.inp[4 + maxInput * 4 + i * 5] <== outputs_program[i];
-        spend_notes_hasher.inp[5 + maxInput * 4 + i * 5] <== outputs_data[i];
+        spend_notes_hasher.inp[1 + maxInput * 5 + i * 6] <== outputs_active[i];
+        spend_notes_hasher.inp[2 + maxInput * 5 + i * 6] <== outputs_value[i];
+        spend_notes_hasher.inp[3 + maxInput * 5 + i * 6] <== outputs_nonce[i];
+        spend_notes_hasher.inp[4 + maxInput * 5 + i * 6] <== outputs_pk[i];
+        spend_notes_hasher.inp[5 + maxInput * 5 + i * 6] <== outputs_program[i];
+        spend_notes_hasher.inp[6 + maxInput * 5 + i * 6] <== outputs_data[i];
     }
     spend_notes_hash <== spend_notes_hasher.out;
 
