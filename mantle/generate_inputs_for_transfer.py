@@ -232,26 +232,28 @@ maxOutputs = int(sys.argv[Integer(2)])
 inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_value = [F(randrange(0,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
+inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
 inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
-inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i]]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i], F(0), F(0)]) for i in range(maxInputs)]
 inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_value[i] == 0 else 0 for i in range(maxInputs)]
 inputs_selectors = [format(i,'032b') for i in range(maxInputs//2)] + [format(randrange(0,2**32,1),'032b') for i in range(maxInputs - maxInputs//2)]
-cm_merkle_root = inputs_cm[:maxInputs//2]
+tx_cm_root = inputs_cm[:maxInputs//2]
 inputs_path = [[] for i in range(maxInputs//2)]
 for d in range(32):
-    cm_merkle_root = cm_merkle_root + [F(0)] * (len(cm_merkle_root) % 2)
+    tx_cm_root = tx_cm_root + [F(0)] * (len(tx_cm_root) % 2)
     for i in range(maxInputs//2):
-        inputs_path[i].append(cm_merkle_root[(i >> d) ^ 1])
-    cm_merkle_root = [Compression([cm_merkle_root[2*j], cm_merkle_root[2*j+1]]) for j in range(len(cm_merkle_root)//2)]
-cm_merkle_root = cm_merkle_root[0]
+        inputs_path[i].append(tx_cm_root[(i >> d) ^ 1])
+    tx_cm_root = [Compression([tx_cm_root[2*j], tx_cm_root[2*j+1]]) for j in range(len(tx_cm_root)//2)]
+tx_cm_root = tx_cm_root[0]
 inputs_path += [[F(randrange(0,p,1)) for d in range(32)] for i in range(maxInputs - maxInputs//2)]
 
 outputs_pk = [F(randrange(0,p,1)) for i in range(maxOutputs)]
 outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
 total_input_value = sum(inputs_value)
 outputs_value = [F((int(total_input_value) - 50) // maxOutputs) for i in range(maxOutputs)]
-outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i]]) for i in range(maxOutputs)]
+outputs_active = [F(1) for i in range(maxOutputs)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i], F(0), F(0)]) for i in range(maxOutputs)]
 
 
 # Assemble JSON
@@ -264,7 +266,9 @@ inp = {
   "outputs_pk":                 [str(x) for x in outputs_pk],
   "outputs_nonce":              [str(x) for x in outputs_nonce],
   "outputs_value":              [str(x) for x in outputs_value],
-  "cm_merkle_root":             str(cm_merkle_root),
+  "inputs_active":              [str(x) for x in inputs_active],
+  "outputs_active":             [str(x) for x in outputs_active],
+  "tx_cm_root":                 str(tx_cm_root),
   "msg":                        str(F(randrange(0,p,1))),
 }
 
