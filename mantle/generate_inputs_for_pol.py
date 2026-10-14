@@ -319,7 +319,7 @@ inp = {
   "t1":                         str(t1),
   "eligible_aged":              str(eligible_aged),
   "eligible_latest":            str(eligible_latest),
-  "leader_pk":                  [str(F(123456)), str(F(654321))],
+  "msg":                        str(F(randrange(0,p,1))),
   "sk":                         str(sk),
   "value":                      str(value),
   "nonce":                      str(nonce),
