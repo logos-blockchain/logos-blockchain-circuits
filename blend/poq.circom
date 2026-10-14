@@ -143,10 +143,10 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
     selection_randomness.inp[0] <== dstSel.out;
     // choose core_sk, pol.secret_key or pow_nonce:
     signal lh_key_selector;
-    lh_key_selector <== (would_win.secret_key - core_sk) * L1;
+    lh_key_selector <== (pol_secret_key - core_sk) * L1;
     selection_randomness.inp[1] <== core_sk + lh_key_selector + (pow_nonce - core_sk) * L2;
     selection_randomness.inp[2] <== index;
-    selection_randomness.inp[3] <== pol_epoch_nonce + (would_win.slot - pol_epoch_nonce) * L1; // because the last term is (pol_epoch_nonce - pol_epoch_nonce) * L2 = 0
+    selection_randomness.inp[3] <== pol_epoch_nonce + (pol_sl - pol_epoch_nonce) * L1; // because the last term is (pol_epoch_nonce - pol_epoch_nonce) * L2 = 0
 
 
     // Derive key_nullifier
@@ -158,5 +158,5 @@ template ProofOfQuota(nLevelsPK, bitsQuota) {
 }
 
 // Instantiate with chosen depths: 20 for core PK tree
-component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_ledger_aged, pow_blend_difficulty] }
+component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_eligible_aged, pow_blend_difficulty] }
     = ProofOfQuota(20, 20);

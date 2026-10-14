@@ -13,7 +13,7 @@ template zkProgramSpend(maxInput, maxOutput){
     signal input inputs_sk[maxInput];
     signal input inputs_nonce[maxInput];
     signal input inputs_value[maxInput];
-    signal input inputs_data[maxInputs];
+    signal input inputs_data[maxInput];
     signal input inputs_selectors[maxInput][32];
     signal input inputs_path[maxInput][32];
 
@@ -22,7 +22,7 @@ template zkProgramSpend(maxInput, maxOutput){
     signal input outputs_nonce[maxOutput];
     signal input outputs_value[maxOutput];
     signal input outputs_program[maxOutput];
-    signal input outputs_data[maxOutputs];
+    signal input outputs_data[maxOutput];
 
     // outputs
     signal output inputs[maxInput];
@@ -38,7 +38,7 @@ template zkProgramSpend(maxInput, maxOutput){
     signal input msg;
 
     // dummy constraint to avoid unused public input to be erased after compilation optimisation
-    // The proof is bound to `msg` (it’s the `mantle_tx_hash` reduced modulo $`p`$ in case of transactions).
+    // The proof is bound to `msg`, the `op_id` of the Channel Inscribe Operation reduced modulo $`p`$.
     signal dummy;
     dummy <== msg * msg;
 
@@ -68,7 +68,7 @@ template zkProgramSpend(maxInput, maxOutput){
         inputs_nf[i].commitment <== inputs_cm[i].out;
         inputs_nf[i].secret_key <== inputs_sk[i];
 
-        (1 - inputs_active[i]) * inputs_value[i] === 0
+        (1 - inputs_active[i]) * inputs_value[i] === 0;
 
         inputs[i] <== inputs_nf[i].out * inputs_active[i];
     }
@@ -88,28 +88,27 @@ template zkProgramSpend(maxInput, maxOutput){
             merkle_root[i].selector[j] <== inputs_selectors[i][j];
         }
         // then check equality if active
-        inputs_active[i] * (merkle_root[i].root - cm_merkle_root) === 0;
+        inputs_active[i] * (merkle_root[i].root - tx_cm_root) === 0;
     }
 
     // Each output flag is boolean, each active output is a note of the program or a user note, 
     // whose commitment is derived from its fields, and each inactive output has value 0.
     component outputs_cm[maxOutput];
-    component is_program_note[maxOutput];
+    signal other_program[maxOutput];
     for(var i = 0; i < maxOutput; i++){
         outputs_active[i] * (1 - outputs_active[i]) === 0;
 
-        is_program_note[i] = IsEqual();
-        is_program_note[i].in[0] <== program_id;
-        is_program_note[i].in[1] <== outputs_program[i];
+        // if active: outputs_program[i] == program_id or (outputs_program[i] == 0 and outputs_data[i] == 0)
+        other_program[i] <== outputs_active[i] * (outputs_program[i] - program_id);
+        other_program[i] * outputs_program[i] === 0;
+        other_program[i] * outputs_data[i] === 0;
 
-
-        
         outputs_cm[i] = derive_note_commitment();
         outputs_cm[i].public_key <== outputs_pk[i];
         outputs_cm[i].nonce <== outputs_nonce[i];
         outputs_cm[i].value <== outputs_value[i];
-        outputs_cm[i].program <== is_program_note[i].out * outputs_program[i];
-        outputs_cm[i].data <== is_program_note[i].out * outputs_data[i];
+        outputs_cm[i].program <== outputs_program[i];
+        outputs_cm[i].data <== outputs_data[i];
 
         (1 - outputs_active[i]) * outputs_value[i] === 0;
         outputs[i] <== outputs_active[i] * outputs_cm[i].out;
@@ -142,16 +141,17 @@ template zkProgramSpend(maxInput, maxOutput){
         range_check[i] = Num2Bits(64);
         range_check[i].in <== outputs_value[i];
     }
-        // then sum the inputs
+        // then sum the inputs and outputs
     component value_inputs = Sum64(maxInput);
     for(var i = 0; i < maxInput; i++){
         value_inputs.in[i] <== inputs_value[i];
     }
-        // assert you consume exactly the same amount as paid
-    component is_balanced = IsEqual();
-    is_balanced.in[0] <== value_inputs.out; 
-    is_balanced.in[1] <== paid_value;
-    is_balanced.out === 1;
+    component value_outputs = Sum64(maxOutput);
+    for(var i = 0; i < maxOutput; i++){
+        value_outputs.in[i] <== outputs_value[i];
+    }
+        // the inputs and the paid value balance the outputs exactly
+    value_inputs.out + paid_value === value_outputs.out;
 }
 
-component main {public [inputs_active, outputs_active, tx_cm_root, program_id, paid_value, msg]}= zkTransfer(4, 8);
+component main {public [inputs_active, outputs_active, tx_cm_root, program_id, paid_value, msg]}= zkProgramSpend(4, 8);

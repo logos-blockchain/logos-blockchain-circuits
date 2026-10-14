@@ -1,5 +1,5 @@
-#ifndef FFI_SIGNATURE_HPP
-#define FFI_SIGNATURE_HPP
+#ifndef FFI_PROGRAM_SPEND_HPP
+#define FFI_PROGRAM_SPEND_HPP
 
 #include "types.hpp"
 
@@ -19,7 +19,7 @@ extern "C" {
 ///
 /// On success, returns a `Status` with `StatusCode_Ok` and writes the witness to the specified output file.
 /// On failure, returns a `Status` with an appropriate error code.
-Status signature_generate_witness_from_files(const char* dat, const char* inputs, const char* output);
+Status program_spend_generate_witness_from_files(const char* dat, const char* inputs, const char* output);
 
 /// Generates a witness from in-memory buffers.
 ///
@@ -33,7 +33,7 @@ Status signature_generate_witness_from_files(const char* dat, const char* inputs
 /// On success, returns a `Status` with `StatusCode_Ok` and populates `output` with the generated witness bytes. The
 /// caller is responsible for freeing the resources allocated into `output` by this function using `free_bytes`.
 /// On failure, returns a `Status` with an appropriate error code, and `output` will not be modified.
-Status signature_generate_witness(const WitnessInput* input, Bytes* output);
+Status program_spend_generate_witness(const WitnessInput* input, Bytes* output);
 
 #ifdef __cplusplus
 }
