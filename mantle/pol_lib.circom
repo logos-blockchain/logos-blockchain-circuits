@@ -141,7 +141,7 @@ template proof_of_leadership(){
     signal input t1;
     signal input eligible_aged;             // eligible root when the stake distribution was frozen
     signal input eligible_latest;           // latest eligible root
-    signal input leader_pk[2];              // P_LEAD as 2 values of 16 bytes in little endian
+    signal input msg;                       // hash of the header of the proposed block
 
     // public output
     signal output entropy_contribution;
@@ -253,10 +253,9 @@ template proof_of_leadership(){
     entropy_contribution <== derive_entropy.out;
 
 
+    // The proof is bound to `msg`, the hash of the header of the proposed block.
     // Avoid the circom optimisation that removes unused public input
-    signal dummy_one;
-    signal dummy_two;
-    dummy_one <== leader_pk[0] * leader_pk[0];
-    dummy_two <== leader_pk[1] * leader_pk[1];
+    signal dummy;
+    dummy <== msg * msg;
 }
 

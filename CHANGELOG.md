@@ -21,7 +21,8 @@ channel, each with its commitment MMR and nullifier IMT.
 - **Note commitment** gains the `program` and `data` fields.
 - **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
   non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
-  are derived from the note commitment.
+  are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block
+  header, which replaces the two `leader_pk` inputs.
 - **PoQ** leader branch follows the PoL, without the unspent check.
 - The input generators run with plain Python 3: `just gen-inputs` replaces `just sage-run`.
 
