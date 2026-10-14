@@ -266,8 +266,8 @@ outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outpu
 
 # int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
 spend_notes_hash = poseidon2_hash([F(18459309890613820463764940807982002484216397908890192)]
-    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_pk[i], inputs_data[i]]]
-    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_pk[i], outputs_program[i], outputs_data[i]]])
+    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_nonce[i], inputs_pk[i], inputs_data[i]]]
+    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_nonce[i], outputs_pk[i], outputs_program[i], outputs_data[i]]])
 
 
 # Assemble JSON
