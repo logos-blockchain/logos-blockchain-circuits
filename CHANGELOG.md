@@ -14,7 +14,7 @@ channel, each with its commitment MMR and nullifier IMT.
   extended with the transaction buffer.
 - **Program Spend** (`program_spend`, `lbc-program-spend-sys`): consumes notes of a program and creates notes of the
   program or user notes, balancing exactly with the value paid to the program, and outputs `spend_notes_hash`, the hash
-  read by the program proof.
+  read by the program proof. Public flags mark the outputs that are notes of the program.
 
 ### Changed
 

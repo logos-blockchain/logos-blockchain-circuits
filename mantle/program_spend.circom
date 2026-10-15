@@ -32,6 +32,7 @@ template zkProgramSpend(maxInput, maxOutput){
     //public inputs
     signal input inputs_active[maxInput];
     signal input outputs_active[maxOutput];
+    signal input outputs_of_program[maxOutput];
     signal input tx_cm_root;
     signal input program_id;
     signal input paid_value;
@@ -91,17 +92,19 @@ template zkProgramSpend(maxInput, maxOutput){
         inputs_active[i] * (merkle_root[i].root - tx_cm_root) === 0;
     }
 
-    // Each output flag is boolean, each active output is a note of the program or a user note, 
-    // whose commitment is derived from its fields, and each inactive output has value 0.
+    // Each output flag is boolean, each active output is a note of the program if `outputs_of_program` says so and a user note otherwise,
+    // whose commitment is derived from its fields, and each inactive output has value 0 and is not a note of the program.
     component outputs_cm[maxOutput];
-    signal other_program[maxOutput];
     for(var i = 0; i < maxOutput; i++){
         outputs_active[i] * (1 - outputs_active[i]) === 0;
+        outputs_of_program[i] * (1 - outputs_of_program[i]) === 0;
+        outputs_of_program[i] * (1 - outputs_active[i]) === 0;
 
-        // if active: outputs_program[i] == program_id or (outputs_program[i] == 0 and outputs_data[i] == 0)
-        other_program[i] <== outputs_active[i] * (outputs_program[i] - program_id);
-        other_program[i] * outputs_program[i] === 0;
-        other_program[i] * outputs_data[i] === 0;
+        // if a note of the program: outputs_program[i] == program_id
+        outputs_of_program[i] * (outputs_program[i] - program_id) === 0;
+        // if an active user note: outputs_program[i] == 0 and outputs_data[i] == 0
+        (outputs_active[i] - outputs_of_program[i]) * outputs_program[i] === 0;
+        (outputs_active[i] - outputs_of_program[i]) * outputs_data[i] === 0;
 
         outputs_cm[i] = derive_note_commitment();
         outputs_cm[i].public_key <== outputs_pk[i];
@@ -156,4 +159,4 @@ template zkProgramSpend(maxInput, maxOutput){
     value_inputs.out + paid_value === value_outputs.out;
 }
 
-component main {public [inputs_active, outputs_active, tx_cm_root, program_id, paid_value, msg]}= zkProgramSpend(4, 8);
+component main {public [inputs_active, outputs_active, outputs_of_program, tx_cm_root, program_id, paid_value, msg]}= zkProgramSpend(4, 8);
