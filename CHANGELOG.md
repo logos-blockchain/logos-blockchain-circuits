@@ -19,6 +19,9 @@ channel, each with its commitment MMR and nullifier IMT.
 ### Changed
 
 - **Note commitment** gains the `program` and `data` fields.
+- **Merkle paths** take their selectors in the same order as their nodes, from the leaf level up: the selector of a
+  level is the bit of the leaf index at that level, starting from the least significant, `1` when the path node is on
+  the left. Every circuit, input generator and sample input follows.
 - **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
   non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
   are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block
