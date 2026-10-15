@@ -262,6 +262,7 @@ outputs_value = [F(total_output_value // maxOutputs) for i in range(maxOutputs -
 outputs_program = [program_id for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
 outputs_data = [F(randrange(0,p,1)) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
 outputs_active = [F(1) for i in range(maxOutputs)]
+outputs_of_program = [F(1) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
 outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i], outputs_program[i], outputs_data[i]]) for i in range(maxOutputs)]
 
 # int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
@@ -285,6 +286,7 @@ inp = {
   "outputs_data":               [str(x) for x in outputs_data],
   "inputs_active":              [str(x) for x in inputs_active],
   "outputs_active":             [str(x) for x in outputs_active],
+  "outputs_of_program":         [str(x) for x in outputs_of_program],
   "tx_cm_root":                 str(tx_cm_root),
   "program_id":                 str(program_id),
   "paid_value":                 str(paid_value),
