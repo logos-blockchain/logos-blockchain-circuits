@@ -324,7 +324,7 @@ inp = {
   "index":                      str(index),
   "core_sk":                    str(core_sk),
   "core_path":                  [str(x) for x in core_nodes],
-  "core_path_selectors":        [str(x) for x in core_selectors],
+  "core_path_selectors":        [str(x) for x in core_selectors[::-1]],  # leaf level first
   "pol_sl":                     str(slot_number),
   "pol_epoch_nonce":            str(epoch_nonce),
   "pol_t0":                     str(t0),
@@ -333,10 +333,10 @@ inp = {
   "pol_note_value":             str(value),
   "pol_note_nonce":             str(nonce),
   "pol_cm_aged_path":           [str(x) for x in cm_aged_nodes],
-  "pol_cm_aged_selectors":      [str(x) for x in cm_aged_selectors],
+  "pol_cm_aged_selectors":      [str(x) for x in cm_aged_selectors[::-1]],
   "pol_nf_root_aged":           str(nf_root_aged),
   "pol_set_aged_path":          [str(x) for x in set_aged_nodes],
-  "pol_set_selectors":          [str(x) for x in set_selectors],
+  "pol_set_selectors":          [str(x) for x in set_selectors[::-1]],
   "pow_blend_difficulty":       str(pow_difficulty),
   "pow_nonce":                  str(pow_nonce)
 }

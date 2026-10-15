@@ -263,7 +263,7 @@ inp = {
   "inputs_sk":                  [str(x) for x in inputs_sk],
   "inputs_nonce":               [str(x) for x in inputs_nonce],
   "inputs_value":               [str(x) for x in inputs_value],
-  "inputs_selectors":           [[str(x) for x in string] for string in inputs_selectors],
+  "inputs_selectors":           [[str(x) for x in string[::-1]] for string in inputs_selectors],  # leaf level first
   "inputs_path":                [[str(x) for x in inputs_path[i]] for i in range(maxInputs)],
   "outputs_pk":                 [str(x) for x in outputs_pk],
   "outputs_nonce":              [str(x) for x in outputs_nonce],

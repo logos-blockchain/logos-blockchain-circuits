@@ -323,16 +323,16 @@ inp = {
   "sk":                         str(sk),
   "value":                      str(value),
   "nonce":                      str(nonce),
-  "set_selectors":              [str(x) for x in set_selectors],
+  "set_selectors":              [str(x) for x in set_selectors[::-1]],  # leaf level first
   "cm_aged_path":               [str(x) for x in cm_aged_nodes],
-  "cm_aged_selectors":          [str(x) for x in cm_aged_selectors],
+  "cm_aged_selectors":          [str(x) for x in cm_aged_selectors[::-1]],
   "nf_root_aged":               str(nf_root_aged),
   "set_aged_path":              [str(x) for x in set_aged_nodes],
   "low_leaf_nf":                str(low_leaf_nf),
   "low_leaf_next_nf":           str(low_leaf_next_nf),
   "low_leaf_next_index":        str(low_leaf_next_index),
   "low_leaf_path":              [str(x) for x in low_leaf_nodes],
-  "low_leaf_selectors":         [str(x) for x in low_leaf_selectors],
+  "low_leaf_selectors":         [str(x) for x in low_leaf_selectors[::-1]],
   "cm_root_latest":             str(cm_root_latest),
   "set_latest_path":            [str(x) for x in set_latest_nodes]
 }
