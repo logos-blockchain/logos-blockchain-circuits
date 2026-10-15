@@ -62,7 +62,7 @@ For a full walkthrough of the CI build steps, from `.circom` source to release a
 
 #### The Problem
 
-Each circuit (PoQ, PoL, PoC, Signature) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.).
+Each circuit (PoQ, PoL, Transfer, Program Spend) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.).
 All archives share the same symbols, compiled from the same source files but with **different
 constant values per circuit** (e.g. `get_size_of_witness()` returns 18149 for PoQ and 20531 for PoL).
 When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition it
@@ -145,7 +145,7 @@ generate and verify proofs for all circuits.
 logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── lib/
 │   └── libgmp.a
-├── {circuit}/              (poc/, pol/, poq/, signature/)
+├── {circuit}/              (pol/, poq/, transfer/, program_spend/)
 │   ├── include/
 │   ├── lib{circuit}.a
 │   ├── proving_key.zkey

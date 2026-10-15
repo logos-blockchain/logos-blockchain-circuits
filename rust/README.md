@@ -6,14 +6,14 @@ Each circuit has a `-sys` crate that wraps the underlying C FFI with a safe Rust
 
 ## Crates
 
-| Crate               | Description                                     |
-|---------------------|-------------------------------------------------|
-| `lbc-poq-sys`       | Witness generator for PoQ (Proof of Quota)      |
-| `lbc-pol-sys`       | Witness generator for PoL (Proof of Leadership) |
-| `lbc-poc-sys`       | Witness generator for PoC (Proof of Claim)      |
-| `lbc-signature-sys` | Witness generator for Signature                 |
-| `lbc-types`         | Shared types                                    |
-| `lbc-build`         | Build helper                                    |
+| Crate                   | Description                                     |
+|-------------------------|-------------------------------------------------|
+| `lbc-poq-sys`           | Witness generator for PoQ (Proof of Quota)      |
+| `lbc-pol-sys`           | Witness generator for PoL (Proof of Leadership) |
+| `lbc-transfer-sys`      | Witness generator for Transfer                  |
+| `lbc-program-spend-sys` | Witness generator for Program Spend             |
+| `lbc-types`             | Shared types                                    |
+| `lbc-build`             | Build helper                                    |
 
 ## Providing the circuit libraries
 
@@ -28,7 +28,7 @@ The build script downloads the release bundle matching the crate version from Gi
 
 ```toml
 [dependencies]
-lbc-poq-sys = { version = "0.5", features = ["prebuilt"] }
+lbc-poq-sys = { version = "0.6", features = ["prebuilt"] }
 ```
 
 The cache location depends on the operating system:
@@ -46,8 +46,8 @@ Point the build script at any directory containing the compiled circuit librarie
 ```bash
 LBC_POQ_LIB_DIR=/path/to/poq
 LBC_POL_LIB_DIR=/path/to/pol
-LBC_POC_LIB_DIR=/path/to/poc
-LBC_SIGNATURE_LIB_DIR=/path/to/signature
+LBC_TRANSFER_LIB_DIR=/path/to/transfer
+LBC_PROGRAM_SPEND_LIB_DIR=/path/to/program_spend
 LBC_LIB_DIR=/path/to/lib                 # Directory containing the required libs
                                          # If using a release bundle, this is the included lib/ directory
 ```
@@ -90,7 +90,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_poc_sys` and `lbc_signature_sys`.
+The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_transfer_sys` and `lbc_program_spend_sys`.
 
 ## Running tests
 
