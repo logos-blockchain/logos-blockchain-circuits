@@ -156,7 +156,7 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 └── VERSION
 ```
 
-> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
+> On Windows, circuit static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`). GMP stays `lib/libgmp.a`.
 
 The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).
 

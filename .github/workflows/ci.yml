@@ -711,7 +711,7 @@ jobs:
       ARCH: x86_64
     steps:
       - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2.28.0 # FIXME: Ideally use the hash to avoid supply chain attacks. Currently unable to.
+        uses: msys2/setup-msys2@40677d36a502eb2cf0fb808cc9dec31bf6152638 # v2.28.0
         with:
           update: true
           install: >-
@@ -745,10 +745,12 @@ jobs:
           # nlohmann/json
           mkdir -p /include/nlohmann/
           wget -O /include/nlohmann/json.hpp https://github.com/nlohmann/json/releases/download/v3.12.0/json.hpp
+          echo "18706a5428c0e97efb675ec746659bf65ad8fa9fed7c6e1603232780b945070a  /include/nlohmann/json.hpp" | sha256sum -c -
 
           # mman-win32
           git clone https://github.com/alitrack/mman-win32.git
           pushd mman-win32
+          git checkout fedbdbf167241503c4a8250c1666be580890c4e2
           ./configure --prefix= # Path: /
           make
           make install
@@ -756,7 +758,7 @@ jobs:
 
       - name: Install Dependencies [Prover]
         shell: msys2 {0}
-        run: pacman --noconfirm -Sy --needed cmake nasm mingw-w64-ucrt-x86_64-libsodium
+        run: pacman --noconfirm -Sy --needed cmake nasm
 
       - name: Replace Prover Makefile # TODO: Make a fork generate the appropriate Windows Makefile
         shell: msys2 {0}
