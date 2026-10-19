@@ -42,13 +42,13 @@ pre-commit run --all-files
 #### Rust Toolchain
 
 When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
-The comment there lists every other place that must be updated in sync (nightly version, CI workflows, pre-commit hooks).
+   Also update `[fmt].toolchain` in the same file, the nightly used by `hooks/fmt.sh` in CI and pre-commit.
 
 #### Tool Versions
 
 `taplo`, `cargo-deny`, and `cargo-machete` are pinned in two places that must stay in sync:
 
-- `.pre-commit-config.yaml` (hook `rev`)
+- `.pre-commit-config.yaml` (hook `rev`), except `taplo`, which is pinned in `hooks/taplo.sh` (`VERSION`)
 - `.github/workflows/lint.yml` (`cargo install --version`)
 
 ---
