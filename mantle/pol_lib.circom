@@ -43,7 +43,7 @@ template derive_entropy(){
     out <== hash.out;
 }
 
-template would_win_leadership(){
+template would_win_leadership(depth_merkle_tree){
     signal input sl;
     signal input epoch_nonce;
     signal input t0;                        // lottery constants
@@ -52,18 +52,18 @@ template would_win_leadership(){
     signal input sk;
     signal input value;
     signal input nonce;
-    signal input set_selectors[32];          // position of the note set in the eligible tree
-    signal input cm_aged_path[32];          // path of the note commitment in the commitment MMR of its set
-    signal input cm_aged_selectors[32];
+    signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
+    signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
+    signal input cm_aged_selectors[depth_merkle_tree];
     signal input nf_root_aged;              // nullifier IMT root of the set when the stake distribution was frozen
-    signal input set_aged_path[32];         // path of the leaf of the set to eligible_aged
+    signal input set_aged_path[depth_merkle_tree];         // path of the leaf of the set to eligible_aged
 
     signal output out;
     signal output cm;
     signal output pk;
 
     // selectors are bits
-    for(var i = 0; i < 32; i++){
+    for(var i = 0; i < depth_merkle_tree; i++){
         set_selectors[i] * (1 - set_selectors[i]) === 0;
         cm_aged_selectors[i] * (1 - cm_aged_selectors[i]) === 0;
     }
@@ -86,8 +86,8 @@ template would_win_leadership(){
 
     // Check the cm is aged enough
         // First compute the cm root
-    component cm_root_aged = compute_merkle_root(32);
-    for(var i = 0; i < 32; i++){
+    component cm_root_aged = compute_merkle_root(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
         cm_root_aged.nodes[i] <== cm_aged_path[i];
         cm_root_aged.selector[i] <== cm_aged_selectors[i];
     }
@@ -99,8 +99,8 @@ template would_win_leadership(){
     eligible_leaf_aged.inp[1] <== cm_root_aged.root;
     eligible_leaf_aged.inp[2] <== nf_root_aged;
         // get the proof of membership of the set
-    component aged_ok = proof_of_membership(32);
-    for(var i = 0; i < 32; i++){
+    component aged_ok = proof_of_membership(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
         aged_ok.nodes[i] <== set_aged_path[i];
         aged_ok.selector[i] <== set_selectors[i];
     }
@@ -133,7 +133,7 @@ template would_win_leadership(){
 } 
 
 
-template proof_of_leadership(){
+template proof_of_leadership(depth_merkle_tree){
     // public inputs
     signal input sl;
     signal input epoch_nonce;
@@ -150,22 +150,22 @@ template proof_of_leadership(){
     signal input sk;
     signal input value;
     signal input nonce;
-    signal input set_selectors[32];          // position of the note set in the eligible tree
-    signal input cm_aged_path[32];          // path of the note commitment in the commitment MMR of its set
-    signal input cm_aged_selectors[32];
+    signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
+    signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
+    signal input cm_aged_selectors[depth_merkle_tree];
     signal input nf_root_aged;              // nullifier IMT root of the set when the stake distribution was frozen
-    signal input set_aged_path[32];         // path of the leaf of the set to eligible_aged
+    signal input set_aged_path[depth_merkle_tree];         // path of the leaf of the set to eligible_aged
     signal input low_leaf_nf;               // greatest nullifier of the set lower than the note nullifier
     signal input low_leaf_next_nf;          // next greater nullifier of the set, 0 if none
     signal input low_leaf_next_index;       // index of the IMT leaf holding low_leaf_next_nf, 0 if none
-    signal input low_leaf_path[32];
-    signal input low_leaf_selectors[32];
+    signal input low_leaf_path[depth_merkle_tree];
+    signal input low_leaf_selectors[depth_merkle_tree];
     signal input cm_root_latest;            // latest commitment MMR root of the set
-    signal input set_latest_path[32];       // path of the leaf of the set to eligible_latest
+    signal input set_latest_path[depth_merkle_tree];       // path of the leaf of the set to eligible_latest
 
 
     // Verify the note is winning the lottery
-    component lottery_checker = would_win_leadership();
+    component lottery_checker = would_win_leadership(depth_merkle_tree);
     lottery_checker.sl <== sl;
     lottery_checker.epoch_nonce <== epoch_nonce;
     lottery_checker.t0 <== t0;
@@ -175,7 +175,7 @@ template proof_of_leadership(){
     lottery_checker.value <== value;
     lottery_checker.nonce <== nonce;
     lottery_checker.nf_root_aged <== nf_root_aged;
-    for(var i = 0; i < 32; i++){
+    for(var i = 0; i < depth_merkle_tree; i++){
         lottery_checker.set_selectors[i] <== set_selectors[i];
         lottery_checker.cm_aged_path[i] <== cm_aged_path[i];
         lottery_checker.cm_aged_selectors[i] <== cm_aged_selectors[i];
@@ -191,7 +191,7 @@ template proof_of_leadership(){
 
 
     // Check the remaining selectors are bits
-    for(var i = 0; i < 32; i++){
+    for(var i = 0; i < depth_merkle_tree; i++){
         low_leaf_selectors[i] * (1 - low_leaf_selectors[i]) === 0;
     }
 
@@ -205,8 +205,8 @@ template proof_of_leadership(){
     low_leaf.inp[2] <== low_leaf_next_nf;
     low_leaf.inp[3] <== low_leaf_next_index;
         // compute the IMT root
-    component nf_root_latest = compute_merkle_root(32);
-    for(var i = 0; i < 32; i++){
+    component nf_root_latest = compute_merkle_root(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
         nf_root_latest.nodes[i] <== low_leaf_path[i];
         nf_root_latest.selector[i] <== low_leaf_selectors[i];
     }
@@ -218,8 +218,8 @@ template proof_of_leadership(){
     eligible_leaf_latest.inp[1] <== cm_root_latest;
     eligible_leaf_latest.inp[2] <== nf_root_latest.root;
         // get the proof of membership of the set
-    component latest_ok = proof_of_membership(32);
-    for(var i = 0; i < 32; i++){
+    component latest_ok = proof_of_membership(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
         latest_ok.nodes[i] <== set_latest_path[i];
         latest_ok.selector[i] <== set_selectors[i];
     }
