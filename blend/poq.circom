@@ -9,14 +9,12 @@ include "../mantle/pol_lib.circom";      // defines proof_of_leadership
 include "../ledger/notes.circom";
 
 /**
- * ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree)
+ * ProofOfQuota(nLevelsPK, bitsQuota)
  *
- * - nLevelsPK         : depth of the core-node public-key registry Merkle tree
- * - bitsQuota         : bit-width for the index comparator
- * - depth_merkle_tree : depth of the commitment MMR of a note set
- * - depth_set_tree    : depth of the eligible tree over the note sets
+ * - nLevelsPK   : depth of the core-node public-key registry Merkle tree
+ * - bitsQuota   : bit-width for the index comparator
  */
-template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree) {
+template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     // Public Inputs
     signal input core_quota;
     signal input leader_quota;
@@ -56,8 +54,8 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree) {
     signal input pol_cm_aged_path[depth_merkle_tree];
     signal input pol_cm_aged_selectors[depth_merkle_tree];
     signal input pol_nf_root_aged;
-    signal input pol_set_aged_path[depth_set_tree];
-    signal input pol_set_selectors[depth_set_tree];
+    signal input pol_set_aged_path[depth_merkle_tree];
+    signal input pol_set_selectors[depth_merkle_tree];
 
 
     // PoW branch input
@@ -106,7 +104,7 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree) {
 
     // enforce potential PoL (without verification that the note is unspent)
     // (All constraints inside pol ensure LeadershipVerify)
-    component would_win = would_win_leadership(depth_merkle_tree, depth_set_tree);
+    component would_win = would_win_leadership(depth_merkle_tree);
     would_win.sl <== pol_sl;
     would_win.epoch_nonce <== pol_epoch_nonce;
     would_win.t0 <== pol_t0;
@@ -116,13 +114,11 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree) {
     would_win.value <== pol_note_value;
     would_win.nonce <== pol_note_nonce;
     would_win.nf_root_aged <== pol_nf_root_aged;
-    for (var i = 0; i < depth_set_tree; i++) {
-        would_win.set_selectors[i] <== pol_set_selectors[i];
-        would_win.set_aged_path[i] <== pol_set_aged_path[i];
-    }
     for (var i = 0; i < depth_merkle_tree; i++) {
+        would_win.set_selectors[i] <== pol_set_selectors[i];
         would_win.cm_aged_path[i] <== pol_cm_aged_path[i];
         would_win.cm_aged_selectors[i] <== pol_cm_aged_selectors[i];
+        would_win.set_aged_path[i] <== pol_set_aged_path[i];
     }
 
 
@@ -163,4 +159,4 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree, depth_set_tree) {
 
 // Instantiate with chosen depths: 20 for core PK tree
 component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_eligible_aged, pow_blend_difficulty] }
-    = ProofOfQuota(20, 20, 40, 32);
+    = ProofOfQuota(20, 20, 40);

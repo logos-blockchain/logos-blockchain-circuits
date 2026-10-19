@@ -254,8 +254,8 @@ while(ticket > threshold):
     ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,sk])
 
 # position of the note set in the eligible tree, shared by the aged and the latest paths
-set_selectors = randrange(0,2**32,1)
-set_selectors = format(set_selectors,'032b')
+set_selectors = randrange(0,2**40,1)
+set_selectors = format(set_selectors,'040b')
 
 # aged: the note commitment in the commitment MMR of its set, and the set under eligible_aged
 cm_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
@@ -269,10 +269,10 @@ for i in range(40):
         cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
 
 nf_root_aged = F(randrange(0,p,1))
-set_aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
+set_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
 eligible_aged = poseidon2_hash([F(281666711431130609191864295137803020528161213509),cm_root_aged,nf_root_aged])
-for i in range(32):
-    if int(set_selectors[31-i]) == 0:
+for i in range(40):
+    if int(set_selectors[39-i]) == 0:
         eligible_aged = Compression([eligible_aged,set_aged_nodes[i]])
     else:
         eligible_aged = Compression([set_aged_nodes[i],eligible_aged])
@@ -300,10 +300,10 @@ for i in range(40):
         nf_root_latest = Compression([low_leaf_nodes[i],nf_root_latest])
 
 cm_root_latest = F(randrange(0,p,1))
-set_latest_nodes = [F(randrange(0,p,1)) for i in range(32)]
+set_latest_nodes = [F(randrange(0,p,1)) for i in range(40)]
 eligible_latest = poseidon2_hash([F(281666711431130609191864295137803020528161213509),cm_root_latest,nf_root_latest])
-for i in range(32):
-    if int(set_selectors[31-i]) == 0:
+for i in range(40):
+    if int(set_selectors[39-i]) == 0:
         eligible_latest = Compression([eligible_latest,set_latest_nodes[i]])
     else:
         eligible_latest = Compression([set_latest_nodes[i],eligible_latest])
