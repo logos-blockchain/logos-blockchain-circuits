@@ -7,13 +7,13 @@ include "../misc/arithmetic.circom";
 include "../misc/comparator.circom";
 include "../hash_bn/merkle.circom";
 
-template zkTransfer(maxInput, maxOutput){
+template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
     // notes inputs
     signal input inputs_sk[maxInput];
     signal input inputs_nonce[maxInput];
     signal input inputs_value[maxInput];
-    signal input inputs_selectors[maxInput][32];
-    signal input inputs_path[maxInput][32];
+    signal input inputs_selectors[maxInput][depth_merkle_tree];
+    signal input inputs_path[maxInput][depth_merkle_tree];
 
     // notes outputs
     signal input outputs_pk[maxOutput];
@@ -71,13 +71,13 @@ template zkTransfer(maxInput, maxOutput){
     component merkle_root[maxInput];
     for(var i = 0; i < maxInput; i++){
         //First check selectors are indeed bits
-        for(var j = 0; j < 32; j++){
+        for(var j = 0; j < depth_merkle_tree; j++){
             inputs_selectors[i][j] * (1 - inputs_selectors[i][j]) === 0;
         }
         // then compute the merkle root
-        merkle_root[i] = compute_merkle_root(32);
+        merkle_root[i] = compute_merkle_root(depth_merkle_tree);
         merkle_root[i].leaf <== inputs_cm[i].out;
-        for(var j = 0; j < 32; j++){
+        for(var j = 0; j < depth_merkle_tree; j++){
             merkle_root[i].nodes[j] <== inputs_path[i][j];
             merkle_root[i].selector[j] <== inputs_selectors[i][j];
         }
@@ -125,4 +125,4 @@ template zkTransfer(maxInput, maxOutput){
     excess_value <== value_inputs.out - value_outputs.out;
 }
 
-component main {public [inputs_active, outputs_active, tx_cm_root, msg]}= zkTransfer(4, 8);
+component main {public [inputs_active, outputs_active, tx_cm_root, msg]}= zkTransfer(4, 8, 40);
