@@ -1459,11 +1459,20 @@ jobs:
     env:
       VERSION: ${{ needs.setup.outputs.version }}
     steps:
-      - name: Checkout main
+      - name: Find Release Branch
+        id: release
+        env:
+          TAG: ${{ needs.setup.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=$(gh api "repos/${{ github.repository }}/commits/$TAG/branches-where-head" -q 'map(.name) | if index("main") then "main" else .[0] // "" end')
+          [ -n "$BRANCH" ] || { echo "::error::$TAG is not the head of any branch"; exit 1; }
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Release Commit
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
         with:
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ needs.setup.outputs.tag }}
 
       - name: Update versions.nix
         env:
@@ -1474,22 +1483,26 @@ jobs:
           CIRCUIT_HASH_DARWIN_AARCH64: ${{ needs.build-macos.outputs.hash }}
         run: python3 scripts/update-nix-hashes.py
 
-      - name: Commit and Push
+      - name: Commit Nix Hashes
+        id: commit
         env:
-          GIT_USER_NAME: ${{ github.actor }}
-          GIT_USER_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "$GIT_USER_NAME"
-          git config user.email "$GIT_USER_EMAIL"
-          git add circuits-nix-hashes.json
-          git diff --cached --quiet && exit 0
-          git commit -m "chore(ci): auto-update Nix hashes for ${{ env.VERSION }} [skip ci]"
-          git push origin main
+          git diff --quiet -- circuits-nix-hashes.json && exit 0
+          OID=$(gh api graphql \
+            -f query='mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }' \
+            -f "input[branch][repositoryNameWithOwner]=${{ github.repository }}" \
+            -f "input[branch][branchName]=${{ steps.release.outputs.branch }}" \
+            -f "input[expectedHeadOid]=$(git rev-parse HEAD)" \
+            -f "input[message][headline]=chore(ci): auto-update Nix hashes for ${{ env.VERSION }}" \
+            -f "input[fileChanges][additions][][path]=circuits-nix-hashes.json" \
+            -f "input[fileChanges][additions][][contents]=$(base64 -w0 circuits-nix-hashes.json)" \
+            -q .data.createCommitOnBranch.commit.oid)
+          echo "oid=$OID" >> "$GITHUB_OUTPUT"
 
-      # [skip ci] above prevents this force-push from re-triggering the workflow.
-      - name: Move the release tag to include Nix hashes
+      - name: Move Release Tag to Nix Hashes Commit
+        if: steps.commit.outputs.oid != ''
         env:
           TAG: ${{ needs.setup.outputs.tag }}
-        run: |
-          git tag -f "$TAG"
-          git push origin "refs/tags/$TAG" --force
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PATCH "repos/${{ github.repository }}/git/refs/tags/$TAG" -f sha=${{ steps.commit.outputs.oid }} -F force=true
