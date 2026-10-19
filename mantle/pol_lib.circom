@@ -43,65 +43,77 @@ template derive_entropy(){
     out <== hash.out;
 }
 
-template would_win_leadership(){
-    signal input slot;
+template would_win_leadership(depth_merkle_tree){
+    signal input sl;
     signal input epoch_nonce;
-    signal input t0;
+    signal input t0;                        // lottery constants
     signal input t1;
-
-    //Part of the note id proof of membership to prove aged
-    signal input aged_nodes[32];
-    signal input aged_selectors[32];         // must be bits
-    signal input aged_root;
-
-    //Used to derive the note identifier
-    signal input transaction_hash;
-    signal input output_number;
-    signal input secret_key;
-
-    // The winning note value
+    signal input eligible_aged;             // eligible root when the stake distribution was frozen
+    signal input sk;
     signal input value;
+    signal input nonce;
+    signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
+    signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
+    signal input cm_aged_selectors[depth_merkle_tree];
+    signal input nf_root_aged;              // nullifier IMT root of the set when the stake distribution was frozen
+    signal input set_aged_path[depth_merkle_tree];         // path of the leaf of the set to eligible_aged
 
     signal output out;
-    signal output note_identifier;
+    signal output cm;
+    signal output pk;
 
+    // selectors are bits
+    for(var i = 0; i < depth_merkle_tree; i++){
+        set_selectors[i] * (1 - set_selectors[i]) === 0;
+        cm_aged_selectors[i] * (1 - cm_aged_selectors[i]) === 0;
+    }
 
     // Derive the public key from the secret key
-    component pk = derive_public_key();
-    pk.secret_key <== secret_key;
+    component note_pk = derive_public_key();
+    note_pk.secret_key <== sk;
+    pk <== note_pk.out;
 
 
-    // Derive the note id
-    component note_id = Poseidon2_hash(5);
-    component dst_note_id = NOTE_ID_V1();
-    note_id.inp[0] <== dst_note_id.out;
-    note_id.inp[1] <== transaction_hash;
-    note_id.inp[2] <== output_number;
-    note_id.inp[3] <== value;
-    note_id.inp[4] <== pk.out;
+    // Derive the note commitment
+    component note_cm = derive_note_commitment();
+    note_cm.public_key <== pk;
+    note_cm.nonce <== nonce;
+    note_cm.value <== value;
+    note_cm.program <== 0;
+    note_cm.data <== 0;
+    cm <== note_cm.out;
 
 
-    // Check the note ID is aged enough
-            //First check selectors are indeed bits
-    for(var i = 0; i < 32; i++){
-        aged_selectors[i] * (1 - aged_selectors[i]) === 0;
+    // Check the cm is aged enough
+        // First compute the cm root
+    component cm_root_aged = compute_merkle_root(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
+        cm_root_aged.nodes[i] <== cm_aged_path[i];
+        cm_root_aged.selector[i] <== cm_aged_selectors[i];
     }
-            //Then check the proof of membership
-    component aged_membership = proof_of_membership(32);
-    for(var i = 0; i < 32; i++){
-        aged_membership.nodes[i] <== aged_nodes[i];
-        aged_membership.selector[i] <== aged_selectors[i];
+    cm_root_aged.leaf <== cm;
+        // get the note set leaf
+    component eligible_leaf_aged = Poseidon2_hash(3);
+    component dst = ELIGIBLE_SET_LEAF_V1();
+    eligible_leaf_aged.inp[0] <== dst.out;
+    eligible_leaf_aged.inp[1] <== cm_root_aged.root;
+    eligible_leaf_aged.inp[2] <== nf_root_aged;
+        // get the proof of membership of the set
+    component aged_ok = proof_of_membership(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
+        aged_ok.nodes[i] <== set_aged_path[i];
+        aged_ok.selector[i] <== set_selectors[i];
     }
-    aged_membership.root <== aged_root;
-    aged_membership.leaf <== note_id.out;
+    aged_ok.leaf <== eligible_leaf_aged.out;
+    aged_ok.root <== eligible_aged;
 
 
     // Compute the lottery ticket
     component ticket = ticket_calculator();
     ticket.epoch_nonce <== epoch_nonce;
-    ticket.slot <== slot;
-    ticket.note_id <== note_id.out;
-    ticket.secret_key <== secret_key;
+    ticket.slot <== sl;
+    ticket.note_id <== cm;
+    ticket.secret_key <== sk;
 
 
     // Compute the lottery threshold
@@ -117,91 +129,133 @@ template would_win_leadership(){
     winning.b <== threshold;
 
     // Check that every constraint holds
-    out <== aged_membership.out * winning.out;
-
-    note_identifier <== note_id.out;
+    out <== aged_ok.out * winning.out;
 } 
 
 
-template proof_of_leadership(){
+template proof_of_leadership(depth_merkle_tree){
+    // public inputs
     signal input sl;
-    signal input epoch_nonce;  // the epoch nonce eta
-    signal input t0;
+    signal input epoch_nonce;
+    signal input t0;                        // lottery constants
     signal input t1;
+    signal input eligible_aged;             // eligible root when the stake distribution was frozen
+    signal input eligible_latest;           // latest eligible root
+    signal input msg;                       // hash of the header of the proposed block
 
-    //Part of the note id proof of membership to prove aged
-    signal input noteid_aged_path[32];
-    signal input noteid_aged_selectors[32];         // must be bits
-    signal input ledger_aged;
+    // public output
+    signal output entropy_contribution;
 
-    //Used to derive the note identifier
-    signal input secret_key;
-    signal input note_tx_hash;
-    signal input note_output_number;
-    
-    //Part of the note id proof of membership to prove it's unspent
-    signal input noteid_latest_path[32];
-    signal input noteid_latest_selectors[32];         // must be bits
-    signal input ledger_latest;
-
-    // The winning note.
-    signal input v;  // value of the note
+    // private witness
+    signal input sk;
+    signal input value;
+    signal input nonce;
+    signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
+    signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
+    signal input cm_aged_selectors[depth_merkle_tree];
+    signal input nf_root_aged;              // nullifier IMT root of the set when the stake distribution was frozen
+    signal input set_aged_path[depth_merkle_tree];         // path of the leaf of the set to eligible_aged
+    signal input low_leaf_nf;               // greatest nullifier of the set lower than the note nullifier
+    signal input low_leaf_next_nf;          // next greater nullifier of the set, 0 if none
+    signal input low_leaf_next_index;       // index of the IMT leaf holding low_leaf_next_nf, 0 if none
+    signal input low_leaf_path[depth_merkle_tree];
+    signal input low_leaf_selectors[depth_merkle_tree];
+    signal input cm_root_latest;            // latest commitment MMR root of the set
+    signal input set_latest_path[depth_merkle_tree];       // path of the leaf of the set to eligible_latest
 
 
     // Verify the note is winning the lottery
-    component lottery_checker = would_win_leadership();
-    lottery_checker.slot <== sl;
+    component lottery_checker = would_win_leadership(depth_merkle_tree);
+    lottery_checker.sl <== sl;
     lottery_checker.epoch_nonce <== epoch_nonce;
     lottery_checker.t0 <== t0;
     lottery_checker.t1 <== t1;
-    for(var i = 0; i < 32; i++){
-        lottery_checker.aged_nodes[i] <== noteid_aged_path[i];
-        lottery_checker.aged_selectors[i] <== noteid_aged_selectors[i];
+    lottery_checker.eligible_aged <== eligible_aged;
+    lottery_checker.sk <== sk;
+    lottery_checker.value <== value;
+    lottery_checker.nonce <== nonce;
+    lottery_checker.nf_root_aged <== nf_root_aged;
+    for(var i = 0; i < depth_merkle_tree; i++){
+        lottery_checker.set_selectors[i] <== set_selectors[i];
+        lottery_checker.cm_aged_path[i] <== cm_aged_path[i];
+        lottery_checker.cm_aged_selectors[i] <== cm_aged_selectors[i];
+        lottery_checker.set_aged_path[i] <== set_aged_path[i];
     }
-    lottery_checker.aged_root <== ledger_aged;
-    lottery_checker.transaction_hash <== note_tx_hash;
-    lottery_checker.output_number <== note_output_number;
-    lottery_checker.secret_key <== secret_key;
-    lottery_checker.value <== v;
+    lottery_checker.out === 1;
 
 
-    // One time signing key used to sign the block proposal and the block
-    signal input P_lead_part_one;
-    signal input P_lead_part_two;
+    // Derive the nullifier
+    component nf = derive_note_nullifier();
+    nf.commitment <== lottery_checker.cm;
+    nf.secret_key <== sk;
 
 
-    //Avoid the circom optimisation that removes unused public input
-    signal dummy_one;
-    signal dummy_two;
-    dummy_one <== P_lead_part_one * P_lead_part_one;
-    dummy_two <== P_lead_part_two * P_lead_part_two;
-
-    signal output entropy_contribution; // This is rho_lead
-
-
-    // Check that the note is unspent
-            //First check selectors are indeed bits
-    for(var i = 0; i < 32; i++){
-        noteid_latest_selectors[i] * (1 - noteid_latest_selectors[i]) === 0;
+    // Check the remaining selectors are bits
+    for(var i = 0; i < depth_merkle_tree; i++){
+        low_leaf_selectors[i] * (1 - low_leaf_selectors[i]) === 0;
     }
-            //Then check the note id is in the latest ledger state
-    component unspent_membership = proof_of_membership(32);
-    for(var i = 0; i < 32; i++){
-        unspent_membership.nodes[i] <== noteid_latest_path[i];
-        unspent_membership.selector[i] <== noteid_latest_selectors[i];
+
+
+    // Check the low_nf is in the latest IMT
+        // First compute the nullifier leaf
+    component low_leaf = Poseidon2_hash(4);
+    component dst = NULLIFIER_IMT_LEAF_V1();
+    low_leaf.inp[0] <== dst.out;
+    low_leaf.inp[1] <== low_leaf_nf;
+    low_leaf.inp[2] <== low_leaf_next_nf;
+    low_leaf.inp[3] <== low_leaf_next_index;
+        // compute the IMT root
+    component nf_root_latest = compute_merkle_root(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
+        nf_root_latest.nodes[i] <== low_leaf_path[i];
+        nf_root_latest.selector[i] <== low_leaf_selectors[i];
     }
-    unspent_membership.root <== ledger_latest;
-    unspent_membership.leaf <== lottery_checker.note_identifier;
+    nf_root_latest.leaf <== low_leaf.out;
+        // get the note set leaf
+    component eligible_leaf_latest = Poseidon2_hash(3);
+    component dst_2 = ELIGIBLE_SET_LEAF_V1();
+    eligible_leaf_latest.inp[0] <== dst_2.out;
+    eligible_leaf_latest.inp[1] <== cm_root_latest;
+    eligible_leaf_latest.inp[2] <== nf_root_latest.root;
+        // get the proof of membership of the set
+    component latest_ok = proof_of_membership(depth_merkle_tree);
+    for(var i = 0; i < depth_merkle_tree; i++){
+        latest_ok.nodes[i] <== set_latest_path[i];
+        latest_ok.selector[i] <== set_selectors[i];
+    }
+    latest_ok.leaf <== eligible_leaf_latest.out;
+    latest_ok.root <== eligible_latest;
+    latest_ok.out === 1;
 
-    lottery_checker.out * unspent_membership.out === 1;
+
+    // Check the nf isn't in the IMT
+        // Check the low_nf is lower than the note nf
+    component bigger = SafeFullLessThan();
+    bigger.a <== low_leaf_nf;
+    bigger.b <== nf.out;
+    bigger.out === 1;
+        // Check the low_next_nf is higher than the note nf or 0
+    component smaller = SafeFullLessThan();
+    smaller.a <== nf.out;
+    smaller.b <== low_leaf_next_nf;
+    component is_next_nf_zero = IsZero();
+    is_next_nf_zero.in <== low_leaf_next_nf;
+    is_next_nf_zero.out + smaller.out - is_next_nf_zero.out * smaller.out === 1;
 
 
-    // Compute the entropy contribution
-    component entropy = derive_entropy();
-    entropy.slot <== sl;
-    entropy.note_id <== lottery_checker.note_identifier;
-    entropy.secret_key <== secret_key;
+    // Derive the entropy contribution
+    component derive_entropy = Poseidon2_hash(4);
+    component dst_3 = NONCE_CONTRIB_V1();
+    derive_entropy.inp[0] <== dst_3.out;
+    derive_entropy.inp[1] <== sl;
+    derive_entropy.inp[2] <== lottery_checker.cm;
+    derive_entropy.inp[3] <== sk;
+    entropy_contribution <== derive_entropy.out;
 
-    entropy_contribution <== entropy.out;
+
+    // The proof is bound to `msg`, the hash of the header of the proposed block.
+    // Avoid the circom optimisation that removes unused public input
+    signal dummy;
+    dummy <== msg * msg;
 }
 

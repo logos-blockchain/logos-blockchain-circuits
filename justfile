@@ -20,15 +20,12 @@ check-circom:
 prettify:
     nix shell nixpkgs#clang-tools -c clang-format -i src/**.cpp src/**.hpp
 
-# Run a Sage script in a Docker container.
+# Run an input generator script.
 # Output is written relative to the script's directory.
-# Example: just sage-run blend/generate_inputs_for_poq.py 1 10 5 0
+# Example: just gen-inputs blend/generate_inputs_for_poq.py 10 10 10 1
 #   -> blend/input.json
-sage-run script +args='':
-    docker run --rm \
-        -v "{{justfile_directory()}}:/work" \
-        -w "/work/$(dirname '{{script}}')" \
-        sagemath/sagemath sage "$(basename '{{script}}')" {{args}}
+gen-inputs script +args='':
+    cd "$(dirname '{{script}}')" && python3 "$(basename '{{script}}')" {{args}}
 
 # Build the PoQ circuit and its C++ witness generator, equivalent to the CI build.
 poq: check-circom
@@ -66,41 +63,41 @@ test-pol: pol
     g++ -std=c++11 -O3 -I mantle/pol_cpp mantle/pol_cpp/test_pol.cpp -L mantle/pol_cpp -lwitness_pol -lgmp -o mantle/pol_cpp/test_pol
     cd mantle/pol_cpp && ./test_pol
 
-# Build the PoC circuit and its C++ witness generator, equivalent to the CI build.
-poc: check-circom
-    circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
+# Build the transfer circuit and its C++ witness generator, equivalent to the CI build.
+transfer: check-circom
+    circom mantle/transfer.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/transfer_cpp/main.cpp
     # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
-    sh {{calcwit_fix}} mantle/poc_cpp
-    cp -r {{src}}/poc mantle/poc_cpp/poc
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/poc_cpp/
-    cp {{ci_makefile}} mantle/poc_cpp/Makefile
-    cp mantle/test_poc.cpp mantle/poc_cpp/test_poc.cpp
-    make -C mantle/poc_cpp PROJECT=poc linux-lib
+    sh {{calcwit_fix}} mantle/transfer_cpp
+    cp -r {{src}}/transfer mantle/transfer_cpp/transfer
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/transfer_cpp/
+    cp {{ci_makefile}} mantle/transfer_cpp/Makefile
+    cp mantle/test_transfer.cpp mantle/transfer_cpp/test_transfer.cpp
+    make -C mantle/transfer_cpp PROJECT=transfer linux-lib
 
-# Run a simple smoke test of the PoC witness generator.
-test-poc: poc
-    g++ -std=c++11 -O3 -I mantle/poc_cpp mantle/poc_cpp/test_poc.cpp -L mantle/poc_cpp -lwitness_poc -lgmp -o mantle/poc_cpp/test_poc
-    cd mantle/poc_cpp && ./test_poc
+# Run a simple smoke test of the transfer witness generator.
+test-transfer: transfer
+    g++ -std=c++11 -O3 -I mantle/transfer_cpp mantle/transfer_cpp/test_transfer.cpp -L mantle/transfer_cpp -lwitness_transfer -lgmp -o mantle/transfer_cpp/test_transfer
+    cd mantle/transfer_cpp && ./test_transfer
 
-# Build the signature circuit and its C++ witness generator, equivalent to the CI build.
-signature: check-circom
-    circom mantle/signature.circom --c --r1cs --no_asm --O2 --output mantle
+# Build the program spend circuit and its C++ witness generator, equivalent to the CI build.
+program_spend: check-circom
+    circom mantle/program_spend.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/signature_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/program_spend_cpp/main.cpp
     # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
-    sh {{calcwit_fix}} mantle/signature_cpp
-    cp -r {{src}}/signature mantle/signature_cpp/signature
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/signature_cpp/
-    cp {{ci_makefile}} mantle/signature_cpp/Makefile
-    cp mantle/test_signature.cpp mantle/signature_cpp/test_signature.cpp
-    make -C mantle/signature_cpp PROJECT=signature linux-lib
+    sh {{calcwit_fix}} mantle/program_spend_cpp
+    cp -r {{src}}/program_spend mantle/program_spend_cpp/program_spend
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/program_spend_cpp/
+    cp {{ci_makefile}} mantle/program_spend_cpp/Makefile
+    cp mantle/test_program_spend.cpp mantle/program_spend_cpp/test_program_spend.cpp
+    make -C mantle/program_spend_cpp PROJECT=program_spend linux-lib
 
-# Run a simple smoke test of the signature witness generator.
-test-signature: signature
-    g++ -std=c++11 -O3 -I mantle/signature_cpp mantle/signature_cpp/test_signature.cpp -L mantle/signature_cpp -lwitness_signature -lgmp -o mantle/signature_cpp/test_signature
-    cd mantle/signature_cpp && ./test_signature
+# Run a simple smoke test of the program spend witness generator.
+test-program_spend: program_spend
+    g++ -std=c++11 -O3 -I mantle/program_spend_cpp mantle/program_spend_cpp/test_program_spend.cpp -L mantle/program_spend_cpp -lwitness_program_spend -lgmp -o mantle/program_spend_cpp/test_program_spend
+    cd mantle/program_spend_cpp && ./test_program_spend
 
 clean:
-    rm -rf blend/poq_cpp mantle/pol_cpp mantle/poc_cpp mantle/signature_cpp
+    rm -rf blend/poq_cpp mantle/pol_cpp mantle/transfer_cpp mantle/program_spend_cpp

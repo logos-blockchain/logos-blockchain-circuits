@@ -1,11 +1,21 @@
-#!/usr/bin/sage
-# -*- mode: python ; -*-
+#!/usr/bin/env python3
 
-
-from sage.all import *
+import sys
+from random import randrange
 
 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-F = FiniteField(p)
+Integer = int
+
+class F:
+    def __init__(self, v): self.v = int(v) % p
+    def __int__(self): return self.v
+    def __add__(self, o): return F(self.v + int(o))
+    __radd__ = __add__
+    def __mul__(self, o): return F(self.v * int(o))
+    __rmul__ = __mul__
+    def __pow__(self, e): return F(pow(self.v, e, p))
+    def __eq__(self, o): return self.v == int(o) % p
+    def __repr__(self): return str(self.v)
 
 def poseidon2_hash(data):
     return PoseidonSponge(data,2,1)[0]
@@ -204,30 +214,83 @@ def PoseidonSponge(data, capacity, output_len):
 
     return output
 
+def is_power_of_two(n):
+    if n <= 0:
+        return False
+    return (n & (n - 1)) == 0
 
 
 
-secret_voucher = F(randrange(0,p,1))
-reward_voucher = Compression([F(1668646695034522932676805048878418),secret_voucher])
 
-merkle_nodes = [F(randrange(0,p,1)) for i in range(32)]
-selectors = randrange(0,2**32,1)
-selectors = format(selectors,'032b')
-voucher_root = reward_voucher
-for i in range(32):
-    if int(selectors[31-i]) == 0:
-        voucher_root = Compression([voucher_root,merkle_nodes[i]])
-    else:
-        voucher_root = Compression([merkle_nodes[i],voucher_root])
+if len(sys.argv) != Integer(3):
+    print("Usage: <script> <maxInputs> <maxOutputs>")
+    exit()
 
-data_msg = F(randrange(0,p,1))
+maxInputs = int(sys.argv[Integer(1)])
+maxOutputs = int(sys.argv[Integer(2)])
 
+program_id = F(randrange(1,p,1))
+
+inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_value = [F(randrange(50,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
+inputs_data = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
+
+inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i], program_id, inputs_data[i]]) for i in range(maxInputs)]
+inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
+inputs_selectors = [format(i,'040b') for i in range(maxInputs//2)] + [format(randrange(0,2**40,1),'040b') for i in range(maxInputs - maxInputs//2)]
+tx_cm_root = inputs_cm[:maxInputs//2]
+inputs_path = [[] for i in range(maxInputs//2)]
+empty_root = F(0)   # root of an empty subtree of the current height, every leaf holding 0
+for d in range(40):
+    tx_cm_root = tx_cm_root + [empty_root] * (len(tx_cm_root) % 2)
+    for i in range(maxInputs//2):
+        inputs_path[i].append(tx_cm_root[(i >> d) ^ 1])
+    tx_cm_root = [Compression([tx_cm_root[2*j], tx_cm_root[2*j+1]]) for j in range(len(tx_cm_root)//2)]
+    empty_root = Compression([empty_root, empty_root])
+tx_cm_root = tx_cm_root[0]
+inputs_path += [[F(randrange(0,p,1)) for d in range(40)] for i in range(maxInputs - maxInputs//2)]
+
+outputs_pk = [F(randrange(0,p,1)) for i in range(maxOutputs)]
+outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
+paid_value = F(randrange(0,5000,1))
+total_output_value = int(sum(inputs_value) + paid_value)
+outputs_value = [F(total_output_value // maxOutputs) for i in range(maxOutputs - 1)] + [F(total_output_value - (maxOutputs - 1) * (total_output_value // maxOutputs))]
+# the first half of the outputs are notes of the program, the second half user notes it pays
+outputs_program = [program_id for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
+outputs_data = [F(randrange(0,p,1)) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
+outputs_active = [F(1) for i in range(maxOutputs)]
+outputs_of_program = [F(1) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i], outputs_program[i], outputs_data[i]]) for i in range(maxOutputs)]
+
+# int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
+spend_notes_hash = poseidon2_hash([F(18459309890613820463764940807982002484216397908890192)]
+    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_nonce[i], inputs_pk[i], inputs_data[i]]]
+    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_nonce[i], outputs_pk[i], outputs_program[i], outputs_data[i]]])
+
+
+# Assemble JSON
 inp = {
-  "secret_voucher":     str(secret_voucher),
-  "voucher_merkle_path":[str(x) for x in merkle_nodes],
-  "voucher_merkle_path_selectors":          [str(x) for x in selectors],
-  "mantle_tx_hash":      str(data_msg),
-  "voucher_root":       str(voucher_root)
+  "inputs_sk":                  [str(x) for x in inputs_sk],
+  "inputs_nonce":               [str(x) for x in inputs_nonce],
+  "inputs_value":               [str(x) for x in inputs_value],
+  "inputs_data":                [str(x) for x in inputs_data],
+  "inputs_selectors":           [[str(x) for x in string[::-1]] for string in inputs_selectors],  # leaf level first
+  "inputs_path":                [[str(x) for x in inputs_path[i]] for i in range(maxInputs)],
+  "outputs_pk":                 [str(x) for x in outputs_pk],
+  "outputs_nonce":              [str(x) for x in outputs_nonce],
+  "outputs_value":              [str(x) for x in outputs_value],
+  "outputs_program":            [str(x) for x in outputs_program],
+  "outputs_data":               [str(x) for x in outputs_data],
+  "inputs_active":              [str(x) for x in inputs_active],
+  "outputs_active":             [str(x) for x in outputs_active],
+  "outputs_of_program":         [str(x) for x in outputs_of_program],
+  "tx_cm_root":                 str(tx_cm_root),
+  "program_id":                 str(program_id),
+  "paid_value":                 str(paid_value),
+  "msg":                        str(F(randrange(0,p,1))),
 }
 
 import json
@@ -235,4 +298,4 @@ import json
 with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
-print("Wrote input of proof of claim")
+print("Wrote input of zkProgramSpend")

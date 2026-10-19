@@ -6,18 +6,18 @@ use lbc_types::{
     native::{Error, Witness},
 };
 
-use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
+use crate::ffi::{program_spend_generate_witness, program_spend_generate_witness_from_files};
 
-lbc_common::circuit_artifacts!("signature");
+lbc_common::circuit_artifacts!("program_spend");
 
-pub struct SignatureDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for SignatureDat {
+pub struct ProgramSpendDat;
+impl<'dat> lbc_types::CircuitDat<'dat> for ProgramSpendDat {
     const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
 }
 
-pub type SignatureWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, SignatureDat>;
+pub type ProgramSpendWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, ProgramSpendDat>;
 
-pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error> {
+pub fn generate_witness(input: &ProgramSpendWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
     let ffi_input = ffi_input_guard.as_ref();
 
@@ -26,7 +26,7 @@ pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error>
     // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
     // initialized null Bytes.
     let status = unsafe {
-        signature_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
+        program_spend_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
     };
 
     status.try_into().map(|()| Witness::from(ffi_output_bytes))
@@ -40,7 +40,11 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     // SAFETY: c_dat, c_inputs, and c_output are valid null-terminated C strings for
     // the duration of the call.
     unsafe {
-        signature_generate_witness_from_files(c_dat.as_ptr(), c_inputs.as_ptr(), c_output.as_ptr())
+        program_spend_generate_witness_from_files(
+            c_dat.as_ptr(),
+            c_inputs.as_ptr(),
+            c_output.as_ptr(),
+        )
     }
     .try_into()
 }
@@ -49,29 +53,38 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{SignatureWitnessInput, generate_witness, generate_witness_from_files};
+    use super::{ProgramSpendWitnessInput, generate_witness, generate_witness_from_files};
 
     static LIB_DIR: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("signature"));
+        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("program_spend"));
     static INPUTS: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = SignatureWitnessInput::new("{".to_owned()).unwrap();
+        let input = ProgramSpendWitnessInput::new("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = SignatureWitnessInput::new("{}".to_owned()).unwrap();
+        let input = ProgramSpendWitnessInput::new("{}".to_owned()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_constraint_violation_returns_err() {
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["tx_cm_root"] = serde_json::json!("1");
+        let input = ProgramSpendWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
-        let witness_output_path = std::env::temp_dir().join("signature_test_witness.wtns");
+        let witness_output_path = std::env::temp_dir().join("program_spend_test_witness.wtns");
 
         generate_witness_from_files(&dat, &INPUTS, &witness_output_path)
             .expect("generate_witness_from_files failed.");
@@ -79,7 +92,7 @@ mod tests {
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
 
-        let input = SignatureWitnessInput::new(inputs_json)
+        let input = ProgramSpendWitnessInput::new(inputs_json)
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 
