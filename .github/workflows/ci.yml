@@ -1006,6 +1006,90 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+  build-windows-cross:
+    name: Build Windows Libraries (MinGW cross)
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - generate-proving-keys
+    # ATTIC_TOKEN_PUBLIC only exists in the public-cache environment; main
+    # runs opt into it so the pinned toolchain gets published to the cache.
+    environment: ${{ github.ref == 'refs/heads/main' && 'public-cache' || '' }}
+    outputs:
+      hash: ${{ steps.hash.outputs.value }}
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: windows
+      ARCH: x86_64-gnu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Initialise Submodules
+        run: git submodule update --init --recursive
+
+      # The MinGW toolchain is pinned by flake.lock (the logos-nix input), not
+      # taken from the runner image: archives built with one mingw-w64 do not
+      # link with another.
+      - name: Setup Nix and Logos cache
+        uses: logos-co/setup-nix-cache-action@v1
+        with:
+          attic-token-ci: ${{ secrets.ATTIC_TOKEN_CI }}
+          attic-token-public: ${{ secrets.ATTIC_TOKEN_PUBLIC }}
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          cache: false
+
+      - name: Install Circom
+        run: |
+          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          cd circom
+          RUSTFLAGS="-A dead_code" cargo install --path circom
+          circom --version
+
+      - name: Compile witness generators
+        env:
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: |
+          nix develop .#windows-cross -c sh .github/resources/witness-generator/build-windows-cross.sh \
+            "$BUNDLE_NAME" \
+            mantle/pol.circom blend/poq.circom mantle/signature.circom mantle/poc.circom
+
+      - name: Verify archives are PE and keep their entry points
+        env:
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: nix develop .#windows-cross -c sh .github/resources/witness-generator/verify-windows-cross.sh "$BUNDLE_NAME"
+
+      - name: Download Proving Keys
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          path: proving-keys
+
+      - name: Create Unified Release Bundle
+        env:
+          BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: |
+          echo "${VERSION}" > "${BUNDLE_NAME}/VERSION"
+          for c in pol poq signature poc; do
+            cp "proving-keys/${c}-proving-key/${c}.zkey" "${BUNDLE_NAME}/$c/proving_key.zkey"
+            cp "proving-keys/${c}-proving-key/${c}_verification_key.json" "${BUNDLE_NAME}/$c/verification_key.json"
+          done
+          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
+
+      - name: Compute SRI Hash
+        id: hash
+        run: |
+          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Unified Release Bundle
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+
   build-macos:
     name: Build MacOS Libraries (Native)
     runs-on: macos-latest
