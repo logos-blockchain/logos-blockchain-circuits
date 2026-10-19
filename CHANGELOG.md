@@ -23,8 +23,8 @@ channel, each with its commitment MMR and nullifier IMT.
   level is the bit of the leaf index at that level, starting from the least significant, `1` when the path node is on
   the left. Every circuit, input generator and sample input follows.
 - **Note sets** have a commitment MMR and a nullifier IMT of depth 40, so that sustained use takes decades to fill a
-  set, while the eligible tree over the note sets keeps depth 32. The Transfer, Program Spend, PoL and PoQ take the
-  depth of each tree as a template parameter.
+  set, and the eligible tree over the note sets has depth 40, so that channel creations, each adding a note set, take
+  decades to fill it. The Transfer, Program Spend, PoL and PoQ take the depth of the trees as a template parameter.
 - **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
   non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
   are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block

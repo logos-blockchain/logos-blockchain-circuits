@@ -286,12 +286,12 @@ for i in range(40):
         cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
 
 nf_root_aged = F(randrange(0,p,1))
-set_aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
-set_selectors = randrange(0,2**32,1)
-set_selectors = format(set_selectors,'032b')
+set_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
+set_selectors = randrange(0,2**40,1)
+set_selectors = format(set_selectors,'040b')
 eligible_aged = poseidon2_hash([F(281666711431130609191864295137803020528161213509),cm_root_aged,nf_root_aged])
-for i in range(32):
-    if int(set_selectors[31-i]) == 0:
+for i in range(40):
+    if int(set_selectors[39-i]) == 0:
         eligible_aged = Compression([eligible_aged,set_aged_nodes[i]])
     else:
         eligible_aged = Compression([set_aged_nodes[i],eligible_aged])
