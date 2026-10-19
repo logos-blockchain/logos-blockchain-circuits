@@ -3,7 +3,7 @@ repos:
     rev: eeee35a89e69d5772bdee97db1a6a898467b686e # 1.0
     hooks:
       - id: fmt
-        entry: cargo +nightly-2026-02-28 fmt --manifest-path rust/Cargo.toml --all
+        entry: ./hooks/fmt.sh
         pass_filenames: false
       - id: clippy
         name: cargo clippy
@@ -27,11 +27,6 @@ repos:
           - --show-stats
           - -D
           - warnings
-  - repo: https://github.com/ComPWA/taplo-pre-commit
-    rev: ade0f95ddcf661c697d4670d2cfcbe95d0048a0a # v0.9.3 # Can't update until: https://github.com/tamasfe/taplo/issues/805
-    hooks:
-      - id: taplo-format
-      - id: taplo-lint
   - repo: https://github.com/bnjbvr/cargo-machete
     rev: ac30a525c0a8d163a92d727b3ff079ee3f6ecb08 # v0.9.2
     hooks:
@@ -44,6 +39,20 @@ repos:
         args: ["-f"]
   - repo: local
     hooks:
+      # Taplo runs through a local script instead of `ComPWA/taplo-pre-commit` because that hook installs an outdated
+      # version from PyPI, stuck at 0.9.3 (https://github.com/tamasfe/taplo/issues/805), while the CI uses 0.10.0.
+      - id: taplo-format
+        name: taplo fmt
+        language: script
+        entry: ./hooks/taplo.sh fmt
+        types: [toml]
+        require_serial: true
+      - id: taplo-lint
+        name: taplo lint
+        language: script
+        entry: ./hooks/taplo.sh lint
+        types: [toml]
+        require_serial: true
       - id: cargo-hack-check
         language: script
         name: cargo hack check
