@@ -1,0 +1,51 @@
+name: Release Tag Off Main
+
+# Release tags cut from a PR branch don't end up in main's history after a squash merge.
+# Warn on the PR before merging, and open an issue once it's merged.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  check:
+    name: Check for Release Tags
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed' || github.event.pull_request.merged
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Find Tagged Commits
+        id: tags
+        run: |
+          COMMITS=$(gh api "repos/$GH_REPO/pulls/$PR/commits" --paginate -q '.[].sha')
+          TAGS=$(gh api "repos/$GH_REPO/tags" --paginate -q '.[] | "\(.commit.sha) \(.name)"' \
+            | grep -F -f <(echo "$COMMITS") | cut -d' ' -f2 | paste -sd' ' -) || true
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Warn on PR
+        if: steps.tags.outputs.tags != '' && github.event.action != 'closed'
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          MARKER="<!-- tag-off-main -->"
+          gh api "repos/$GH_REPO/issues/$PR/comments" --paginate -q '.[].body' | grep -qF "$MARKER" && exit 0
+          gh pr comment "$PR" --body "$MARKER
+          ⚠️ Release tag(s) \`$TAGS\` point at commits in this PR. After a squash merge they won't be in \`main\`'s history."
+
+      - name: Open Issue
+        if: steps.tags.outputs.tags != '' && github.event.action == 'closed'
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          gh issue create --title "Release tag(s) $TAGS not on main" --body "PR #$PR was squash-merged, so release tag(s) \`$TAGS\` point at commits that aren't in \`main\`'s history.
+
+          The tagged code is still correct and reachable through the tag. Decide whether to retag onto \`main\` or leave it."
