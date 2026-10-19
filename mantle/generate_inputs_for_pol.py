@@ -232,8 +232,8 @@ if total_stake >= p:
     print("total stake must be less than p")
     exit()
     
-t0_constant = F(0x1a3fb997fd58374772808c13d1c2ddacb5ab3ea77413f86fd6e0d3d978e5438)
-t1_constant = F(0x71e790b41991052e30c93934b5612412e7958837bac8b1c524c24d84cc7d0)
+t0_constant = F(0x1a3fb997fd5838f2a1585ee090a95c88129ab25cc4d2e2d28f1a95f81d85465)
+t1_constant = F(0x71e790b4199113a9a00298d823c5716ddac764a110a45fe3b770bbb3e8a57)
 
 t0 = F(int(t0_constant) // total_stake)
 t1 = F(p- (int(t1_constant) // total_stake**2))
@@ -258,12 +258,12 @@ set_selectors = randrange(0,2**32,1)
 set_selectors = format(set_selectors,'032b')
 
 # aged: the note commitment in the commitment MMR of its set, and the set under eligible_aged
-cm_aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
-cm_aged_selectors = randrange(0,2**32,1)
-cm_aged_selectors = format(cm_aged_selectors,'032b')
+cm_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
+cm_aged_selectors = randrange(0,2**40,1)
+cm_aged_selectors = format(cm_aged_selectors,'040b')
 cm_root_aged = cm
-for i in range(32):
-    if int(cm_aged_selectors[31-i]) == 0:
+for i in range(40):
+    if int(cm_aged_selectors[39-i]) == 0:
         cm_root_aged = Compression([cm_root_aged,cm_aged_nodes[i]])
     else:
         cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
@@ -286,15 +286,15 @@ if randrange(0,2,1) == 0:
     low_leaf_next_index = F(0)
 else:
     low_leaf_next_nf = F(randrange(int(nf)+1,p,1))
-    low_leaf_next_index = F(randrange(1,2**32,1))
+    low_leaf_next_index = F(randrange(1,2**40,1))
 low_leaf = poseidon2_hash([F(72106678126369435953119723346337253106302222882126),low_leaf_nf,low_leaf_next_nf,low_leaf_next_index])
 
-low_leaf_nodes = [F(randrange(0,p,1)) for i in range(32)]
-low_leaf_selectors = randrange(0,2**32,1)
-low_leaf_selectors = format(low_leaf_selectors,'032b')
+low_leaf_nodes = [F(randrange(0,p,1)) for i in range(40)]
+low_leaf_selectors = randrange(0,2**40,1)
+low_leaf_selectors = format(low_leaf_selectors,'040b')
 nf_root_latest = low_leaf
-for i in range(32):
-    if int(low_leaf_selectors[31-i]) == 0:
+for i in range(40):
+    if int(low_leaf_selectors[39-i]) == 0:
         nf_root_latest = Compression([nf_root_latest,low_leaf_nodes[i]])
     else:
         nf_root_latest = Compression([low_leaf_nodes[i],nf_root_latest])
