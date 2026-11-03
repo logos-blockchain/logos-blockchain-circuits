@@ -117,25 +117,60 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         outputs[i] <== outputs_active[i] * outputs_cm[i].out;
     }
 
+    // When the step consumes a note of the program, the nonce of each active output is derived from the nullifier of the first input
+    // and the index of the output, like the nonce of a note the ledger creates from its `op_id` and its output number.
+    component outputs_nonce_derived[maxOutput];
+    component nonce_dst = NOTE_NONCE_V1();
+    signal nonce_derived[maxOutput];
+    for(var i = 0; i < maxOutput; i++){
+        outputs_nonce_derived[i] = Poseidon2_hash(5);
+        outputs_nonce_derived[i].inp[0] <== nonce_dst.out;
+        outputs_nonce_derived[i].inp[1] <== inputs[0];
+        outputs_nonce_derived[i].inp[2] <== i;
+        outputs_nonce_derived[i].inp[3] <== outputs_value[i];
+        outputs_nonce_derived[i].inp[4] <== outputs_pk[i];
+
+        nonce_derived[i] <== inputs_active[0] * outputs_active[i];
+        nonce_derived[i] * (outputs_nonce[i] - outputs_nonce_derived[i].out) === 0;
+    }
+
     // `spend_notes_hash` commits to the flag and the note of every input and output, nonce included,
-    // which the program proof opens to check its rule. Their fields are hashed one after the other, input by input, then output by output.
+    // which the program proof opens to check its rule. Their fields are hashed one after the other, input by input, then output by output,
+    // each multiplied by the flag of its input or output, so that an inactive one reads as 0 and a spend has a single hash.
+    // The value of an inactive input or output is already 0.
+    signal active_inputs_nonce[maxInput];
+    signal active_inputs_pk[maxInput];
+    signal active_inputs_data[maxInput];
+    signal active_outputs_nonce[maxOutput];
+    signal active_outputs_pk[maxOutput];
+    signal active_outputs_program[maxOutput];
+    signal active_outputs_data[maxOutput];
     component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 5 + maxOutput * 6);
     component dst = PROGRAM_SPEND_NOTES_V1();
     spend_notes_hasher.inp[0] <== dst.out;
     for(var i = 0; i < maxInput; i++){
+        active_inputs_nonce[i] <== inputs_active[i] * inputs_nonce[i];
+        active_inputs_pk[i] <== inputs_active[i] * inputs_pk[i].out;
+        active_inputs_data[i] <== inputs_active[i] * inputs_data[i];
+
         spend_notes_hasher.inp[1 + i * 5] <== inputs_active[i];
         spend_notes_hasher.inp[2 + i * 5] <== inputs_value[i];
-        spend_notes_hasher.inp[3 + i * 5] <== inputs_nonce[i];
-        spend_notes_hasher.inp[4 + i * 5] <== inputs_pk[i].out;
-        spend_notes_hasher.inp[5 + i * 5] <== inputs_data[i];
+        spend_notes_hasher.inp[3 + i * 5] <== active_inputs_nonce[i];
+        spend_notes_hasher.inp[4 + i * 5] <== active_inputs_pk[i];
+        spend_notes_hasher.inp[5 + i * 5] <== active_inputs_data[i];
     }
     for(var i = 0; i < maxOutput; i++){
+        active_outputs_nonce[i] <== outputs_active[i] * outputs_nonce[i];
+        active_outputs_pk[i] <== outputs_active[i] * outputs_pk[i];
+        active_outputs_program[i] <== outputs_active[i] * outputs_program[i];
+        active_outputs_data[i] <== outputs_active[i] * outputs_data[i];
+
         spend_notes_hasher.inp[1 + maxInput * 5 + i * 6] <== outputs_active[i];
         spend_notes_hasher.inp[2 + maxInput * 5 + i * 6] <== outputs_value[i];
-        spend_notes_hasher.inp[3 + maxInput * 5 + i * 6] <== outputs_nonce[i];
-        spend_notes_hasher.inp[4 + maxInput * 5 + i * 6] <== outputs_pk[i];
-        spend_notes_hasher.inp[5 + maxInput * 5 + i * 6] <== outputs_program[i];
-        spend_notes_hasher.inp[6 + maxInput * 5 + i * 6] <== outputs_data[i];
+        spend_notes_hasher.inp[3 + maxInput * 5 + i * 6] <== active_outputs_nonce[i];
+        spend_notes_hasher.inp[4 + maxInput * 5 + i * 6] <== active_outputs_pk[i];
+        spend_notes_hasher.inp[5 + maxInput * 5 + i * 6] <== active_outputs_program[i];
+        spend_notes_hasher.inp[6 + maxInput * 5 + i * 6] <== active_outputs_data[i];
     }
     spend_notes_hash <== spend_notes_hasher.out;
 
