@@ -63,6 +63,12 @@ template NOTE_NF_V1(){
     out <== 232989242911804701822798;
 }
 
+// int.from_bytes(b"NOTE_NONCE_V1", byteorder="little") = 3908910849081313593738852061006
+template NOTE_NONCE_V1(){
+    signal output out;
+    out <== 3908910849081313593738852061006;
+}
+
 // int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
 template PROGRAM_SPEND_NOTES_V1(){
     signal output out;

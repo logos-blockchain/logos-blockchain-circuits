@@ -254,10 +254,12 @@ tx_cm_root = tx_cm_root[0]
 inputs_path += [[F(randrange(0,p,1)) for d in range(40)] for i in range(maxInputs - maxInputs//2)]
 
 outputs_pk = [F(randrange(0,p,1)) for i in range(maxOutputs)]
-outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
 paid_value = F(randrange(0,5000,1))
 total_output_value = int(sum(inputs_value) + paid_value)
 outputs_value = [F(total_output_value // maxOutputs) for i in range(maxOutputs - 1)] + [F(total_output_value - (maxOutputs - 1) * (total_output_value // maxOutputs))]
+# the step consumes a note of the program, so the nonce of each output derives from the nullifier of its first input
+# int.from_bytes(b"NOTE_NONCE_V1", byteorder="little") = 3908910849081313593738852061006
+outputs_nonce = [poseidon2_hash([F(3908910849081313593738852061006),inputs_nf[0],F(i),outputs_value[i],outputs_pk[i]]) for i in range(maxOutputs)]
 # the first half of the outputs are notes of the program, the second half user notes it pays
 outputs_program = [program_id for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
 outputs_data = [F(randrange(0,p,1)) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
@@ -267,8 +269,8 @@ outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outpu
 
 # int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
 spend_notes_hash = poseidon2_hash([F(18459309890613820463764940807982002484216397908890192)]
-    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_nonce[i], inputs_pk[i], inputs_data[i]]]
-    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_nonce[i], outputs_pk[i], outputs_program[i], outputs_data[i]]])
+    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_active[i] * inputs_nonce[i], inputs_active[i] * inputs_pk[i], inputs_active[i] * inputs_data[i]]]
+    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_active[i] * outputs_nonce[i], outputs_active[i] * outputs_pk[i], outputs_active[i] * outputs_program[i], outputs_active[i] * outputs_data[i]]])
 
 
 # Assemble JSON
