@@ -10,7 +10,15 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["prebuilt"]
+default = [
+  "embed-circuit",
+  "embed-proving-key",
+  "embed-verification-key",
+  "prebuilt",
+]
+embed-circuit = []
+embed-proving-key = []
+embed-verification-key = []
 prebuilt = ["lbc-build/prebuilt"]
 
 [lints]

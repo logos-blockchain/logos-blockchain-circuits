@@ -3,19 +3,20 @@ use std::path::Path;
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
-    native::{Error, Witness},
+    native::{CircuitWitnessInput, Error, Witness},
 };
 
 use crate::ffi::{signature_generate_witness, signature_generate_witness_from_files};
 
 lbc_common::circuit_artifacts!("signature");
 
-pub struct SignatureDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for SignatureDat {
-    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
-}
+pub struct SignatureCircuit;
+pub type SignatureWitnessInput<'dat> = CircuitWitnessInput<'dat, SignatureCircuit>;
 
-pub type SignatureWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, SignatureDat>;
+#[cfg(feature = "embed-circuit")]
+impl<'dat> lbc_types::native::Circuit<'dat> for SignatureCircuit {
+    const DAT: &'dat [u8] = artifacts::CIRCUIT;
+}
 
 pub fn generate_witness(input: &SignatureWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
@@ -45,7 +46,7 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     .try_into()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embed-circuit"))]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
@@ -58,13 +59,13 @@ mod tests {
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = SignatureWitnessInput::new("{".to_owned()).unwrap();
+        let input = SignatureWitnessInput::embedded("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = SignatureWitnessInput::new("{}".to_owned()).unwrap();
+        let input = SignatureWitnessInput::embedded("{}".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -79,7 +80,7 @@ mod tests {
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
 
-        let input = SignatureWitnessInput::new(inputs_json)
+        let input = SignatureWitnessInput::embedded(inputs_json)
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 

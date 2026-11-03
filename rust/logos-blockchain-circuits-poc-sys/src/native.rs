@@ -3,19 +3,20 @@ use std::path::Path;
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
-    native::{Error, Witness},
+    native::{CircuitWitnessInput, Error, Witness},
 };
 
 use crate::ffi::{poc_generate_witness, poc_generate_witness_from_files};
 
 lbc_common::circuit_artifacts!("poc");
 
-pub struct PocDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for PocDat {
-    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
-}
+pub struct PocCircuit;
+pub type PocWitnessInput<'dat> = CircuitWitnessInput<'dat, PocCircuit>;
 
-pub type PocWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PocDat>;
+#[cfg(feature = "embed-circuit")]
+impl<'dat> lbc_types::native::Circuit<'dat> for PocCircuit {
+    const DAT: &'dat [u8] = artifacts::CIRCUIT;
+}
 
 pub fn generate_witness(input: &PocWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
@@ -42,7 +43,7 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
         .try_into()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embed-circuit"))]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
@@ -55,13 +56,13 @@ mod tests {
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = PocWitnessInput::new("{".to_owned()).unwrap();
+        let input = PocWitnessInput::embedded("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = PocWitnessInput::new("{}".to_owned()).unwrap();
+        let input = PocWitnessInput::embedded("{}".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -70,7 +71,7 @@ mod tests {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
         let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
         inputs["voucher_root"] = serde_json::json!("1");
-        let input = PocWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        let input = PocWitnessInput::embedded(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -85,7 +86,7 @@ mod tests {
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
 
-        let input = PocWitnessInput::new(inputs_json)
+        let input = PocWitnessInput::embedded(inputs_json)
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 
