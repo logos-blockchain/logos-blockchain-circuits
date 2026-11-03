@@ -40,6 +40,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
   distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
+- **Program Spend** derives the nonce of each active output from the nullifier of the first input and the index of the
+  output when the step consumes a note of the program, and `spend_notes_hash` reads the fields of an inactive input or
+  output as `0`.
 
 ## [0.6.0] - 2026-10-14
 
