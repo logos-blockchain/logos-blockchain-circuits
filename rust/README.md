@@ -68,7 +68,7 @@ use lbc_types::native::{Error, Witness};
 
 fn main() -> Result<Witness, Error> {
     let inputs_json = std::fs::read_to_string("poq-input.json").expect("failed to read input");
-    let input = PoqWitnessInput::new(inputs_json)?;
+    let input = PoqWitnessInput::embedded(inputs_json)?;
     generate_witness(&input)
 }
 ```

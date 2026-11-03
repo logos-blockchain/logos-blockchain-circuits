@@ -1,41 +1,35 @@
 use std::path::Path;
 
 use lbc_common::string::path_as_null_terminated_string;
-use lbc_types::native::Error;
+use lbc_types::{
+    ffi,
+    native::{CircuitWitnessInput, Error, Witness},
+};
 
-use crate::ffi::poq_generate_witness_from_files;
+use crate::ffi::{poq_generate_witness, poq_generate_witness_from_files};
 
 lbc_common::circuit_artifacts!("poq");
 
+pub struct PoqCircuit;
+pub type PoqWitnessInput<'dat> = CircuitWitnessInput<'dat, PoqCircuit>;
+
 #[cfg(feature = "embed-circuit")]
-pub mod embedded {
-    use lbc_types::{
-        ffi,
-        native::{Circuit, CircuitWitnessInput, Error, Witness},
-    };
+impl<'dat> lbc_types::native::Circuit<'dat> for PoqCircuit {
+    const DAT: &'dat [u8] = artifacts::CIRCUIT;
+}
 
-    use crate::ffi::poq_generate_witness;
+pub fn generate_witness(input: &PoqWitnessInput) -> Result<Witness, Error> {
+    let ffi_input_guard = input.as_ffi();
+    let ffi_input = ffi_input_guard.as_ref();
 
-    pub struct PoqCircuit;
-    impl<'dat> Circuit<'dat> for PoqCircuit {
-        const DAT: &'dat [u8] = super::artifacts::CIRCUIT;
-    }
-    pub type PoqWitnessInput<'dat> = CircuitWitnessInput<'dat, PoqCircuit>;
+    let mut ffi_output_bytes = ffi::Bytes::null();
 
-    pub fn generate_witness(input: &PoqWitnessInput) -> Result<Witness, Error> {
-        let ffi_input_guard = input.as_ffi();
-        let ffi_input = ffi_input_guard.as_ref();
+    // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
+    // initialized null Bytes.
+    let status =
+        unsafe { poq_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes) };
 
-        let mut ffi_output_bytes = ffi::Bytes::null();
-
-        // SAFETY: ffi_input is a valid pointer and ffi_output_bytes is a locally
-        // initialized null Bytes.
-        let status = unsafe {
-            poq_generate_witness(std::ptr::from_ref(ffi_input), &raw mut ffi_output_bytes)
-        };
-
-        status.try_into().map(|()| Witness::from(ffi_output_bytes))
-    }
+    status.try_into().map(|()| Witness::from(ffi_output_bytes))
 }
 
 pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> Result<(), Error> {
@@ -53,10 +47,7 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{
-        embedded::{PoqWitnessInput, generate_witness},
-        generate_witness_from_files,
-    };
+    use super::{PoqWitnessInput, generate_witness, generate_witness_from_files};
 
     static LIB_DIR: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("poq"));
@@ -65,13 +56,13 @@ mod tests {
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = PoqWitnessInput::new("{".to_owned()).unwrap();
+        let input = PoqWitnessInput::embedded("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = PoqWitnessInput::new("{}".to_owned()).unwrap();
+        let input = PoqWitnessInput::embedded("{}".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -80,7 +71,7 @@ mod tests {
         let json = std::fs::read_to_string(&*INPUTS).unwrap();
         let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
         inputs["core_path_selectors"][0] = serde_json::json!("2");
-        let input = PoqWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        let input = PoqWitnessInput::embedded(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -95,7 +86,7 @@ mod tests {
         let inputs_json = std::fs::read_to_string(&*INPUTS)
             .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
 
-        let input = PoqWitnessInput::new(inputs_json)
+        let input = PoqWitnessInput::embedded(inputs_json)
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 
