@@ -749,6 +749,9 @@ jobs:
           # mman-win32
           git clone https://github.com/alitrack/mman-win32.git
           pushd mman-win32
+          # Newer commits add a madvise that conflicts with the one in windows.mman_patch.hpp.
+          # Temporary: the Windows build revamp pins the newest commit and drops our madvise.
+          git checkout 3ead2f7829513582fe3c9f8e8e22d112ee380ccd
           ./configure --prefix= # Path: /
           make
           make install
