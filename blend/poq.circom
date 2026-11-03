@@ -53,7 +53,11 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input pol_note_nonce;
     signal input pol_cm_aged_path[depth_merkle_tree];
     signal input pol_cm_aged_selectors[depth_merkle_tree];
-    signal input pol_nf_root_aged;
+    signal input pol_low_leaf_nf;           // greatest nullifier of the set at the freeze lower than the note nullifier
+    signal input pol_low_leaf_next_nf;      // next greater nullifier of the set at the freeze, 0 if none
+    signal input pol_low_leaf_next_index;   // index of the IMT leaf holding pol_low_leaf_next_nf, 0 if none
+    signal input pol_low_leaf_path[depth_merkle_tree];
+    signal input pol_low_leaf_selectors[depth_merkle_tree];
     signal input pol_set_aged_path[depth_merkle_tree];
     signal input pol_set_selectors[depth_merkle_tree];
 
@@ -102,7 +106,25 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     is_registered.leaf <== zk_id.out;
 
 
-    // enforce potential PoL (without verification that the note is unspent)
+    // Compute the nullifier IMT root of the set when the stake distribution was frozen
+    for (var i = 0; i < depth_merkle_tree; i++) {
+        pol_low_leaf_selectors[i] * (1 - pol_low_leaf_selectors[i]) === 0;
+    }
+    component low_leaf = Poseidon2_hash(4);
+    component dst_low_leaf = NULLIFIER_IMT_LEAF_V1();
+    low_leaf.inp[0] <== dst_low_leaf.out;
+    low_leaf.inp[1] <== pol_low_leaf_nf;
+    low_leaf.inp[2] <== pol_low_leaf_next_nf;
+    low_leaf.inp[3] <== pol_low_leaf_next_index;
+    component nf_root_aged = compute_merkle_root(depth_merkle_tree);
+    for (var i = 0; i < depth_merkle_tree; i++) {
+        nf_root_aged.nodes[i] <== pol_low_leaf_path[i];
+        nf_root_aged.selector[i] <== pol_low_leaf_selectors[i];
+    }
+    nf_root_aged.leaf <== low_leaf.out;
+
+
+    // enforce potential PoL (the note is proven unspent at the freeze, not in the latest IMT)
     // (All constraints inside pol ensure LeadershipVerify)
     component would_win = would_win_leadership(depth_merkle_tree);
     would_win.sl <== pol_sl;
@@ -113,13 +135,33 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     would_win.sk <== pol_secret_key;
     would_win.value <== pol_note_value;
     would_win.nonce <== pol_note_nonce;
-    would_win.nf_root_aged <== pol_nf_root_aged;
+    would_win.nf_root_aged <== nf_root_aged.root;
     for (var i = 0; i < depth_merkle_tree; i++) {
         would_win.set_selectors[i] <== pol_set_selectors[i];
         would_win.cm_aged_path[i] <== pol_cm_aged_path[i];
         would_win.cm_aged_selectors[i] <== pol_cm_aged_selectors[i];
         would_win.set_aged_path[i] <== pol_set_aged_path[i];
     }
+
+
+    // Check the note nullifier isn't in the IMT of the set at the freeze
+    component note_nf = derive_note_nullifier();
+    note_nf.commitment <== would_win.cm;
+    note_nf.secret_key <== pol_secret_key;
+    component bigger = SafeFullLessThan();
+    bigger.a <== pol_low_leaf_nf;
+    bigger.b <== note_nf.out;
+    component smaller = SafeFullLessThan();
+    smaller.a <== note_nf.out;
+    smaller.b <== pol_low_leaf_next_nf;
+    component is_next_nf_zero = IsZero();
+    is_next_nf_zero.in <== pol_low_leaf_next_nf;
+    signal below_next;
+    below_next <== is_next_nf_zero.out + smaller.out - is_next_nf_zero.out * smaller.out;
+    signal unspent_at_freeze;
+    unspent_at_freeze <== bigger.out * below_next;
+    signal is_leader;
+    is_leader <== would_win.out * unspent_at_freeze;
 
 
     // Get the blend PoW result
@@ -133,7 +175,7 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
 
     // Enforce the selected role is correct
     signal lh_correctness_selector;
-    lh_correctness_selector <== (would_win.out - is_registered.out) * L1;
+    lh_correctness_selector <== (is_leader - is_registered.out) * L1;
     is_registered.out + lh_correctness_selector + (is_winning_pow.out - is_registered.out) * L2 === 1;
 
 

@@ -29,6 +29,8 @@ All notable changes to this project will be documented in this file.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
 - **Releases**: CI rejects `v<x.y.z>` and `v<x.y.z>-rc.<n>` tags that are not on `main`.
+- **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
+  distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
 
 ## [0.6.0] - 2026-10-14
 
