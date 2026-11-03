@@ -25,9 +25,11 @@ however you like — but it's the easiest way to catch issues before pushing.
 
 ```bash
 pre-commit install
+./hooks/fmt.sh --install
 ```
 
 After this, they will be run automatically on every commit.
+The second command installs the nightly toolchain that the `fmt` hook uses.
 
 #### Running Manually
 
