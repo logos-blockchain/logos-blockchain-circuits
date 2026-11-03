@@ -1,4 +1,4 @@
-.PHONY: linux macos windows linux-lib macos-lib windows-lib build clean
+.PHONY: linux macos windows linux-lib macos-lib windows-lib windows-cross-lib build clean
 
 # ---- Arguments ----
 ifndef PROJECT
@@ -6,7 +6,8 @@ $(error PROJECT is not set. Usage: make PROJECT=<name>. E.g.: make PROJECT=pol l
 endif
 
 # ---- Common ----
-CXX             := g++
+CXX             ?= g++
+AR              ?= ar
 PRIORITY_FLAGS  ?=
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
 COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
@@ -59,12 +60,26 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
+# ---- Windows (MinGW cross, built on Linux) ----
+# Same sources as windows-lib, compiled with the toolchain a cross-compiling
+# consumer links with. OS=windows-cross keeps the lib<name>.a naming GNU ld
+# resolves from -l<name>, and the archive is isolated by renaming rather than
+# by `ld -r` (see isolate-symbols.sh for why that pass cannot be used on PE).
+windows-cross-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -Duint="unsigned int"
+windows-cross-lib: $(LIB_OBJS)
+	sh $(ISOLATE) $(PROJECT) $(NM) $(OBJDUMP) $(OBJCOPY) $(LIB_OBJS)
+	rm -f $(LIB)
+	$(AR) rcs $(LIB) $(LIB_OBJS)
+
 # Localizes witness-generator implementation symbols to prevent conflicts when multiple circuit libraries are linked
 # into the same binary.
 # See CONTRIBUTING.md § "Symbol Isolation".
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
 OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+NM          ?= nm
+OBJDUMP     ?= objdump
+ISOLATE     ?= ../../.github/resources/witness-generator/isolate-symbols.sh
 SYM_PREFIX  := $(if $(filter macos,$(OS)),_,)
 
 # ---- Rules ----
