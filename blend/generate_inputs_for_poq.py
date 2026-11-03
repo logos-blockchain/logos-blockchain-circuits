@@ -285,7 +285,28 @@ for i in range(40):
     else:
         cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
 
-nf_root_aged = F(randrange(0,p,1))
+# the low leaf of the nullifier in the nullifier IMT of the set at the freeze
+nf = poseidon2_hash([F(232989242911804701822798),cm,sk])
+low_leaf_nf = F(randrange(0,int(nf),1))
+if randrange(0,2,1) == 0:
+    # nf is greater than every nullifier of the set at the freeze
+    low_leaf_next_nf = F(0)
+    low_leaf_next_index = F(0)
+else:
+    low_leaf_next_nf = F(randrange(int(nf)+1,p,1))
+    low_leaf_next_index = F(randrange(1,2**40,1))
+low_leaf = poseidon2_hash([F(72106678126369435953119723346337253106302222882126),low_leaf_nf,low_leaf_next_nf,low_leaf_next_index])
+
+low_leaf_nodes = [F(randrange(0,p,1)) for i in range(40)]
+low_leaf_selectors = randrange(0,2**40,1)
+low_leaf_selectors = format(low_leaf_selectors,'040b')
+nf_root_aged = low_leaf
+for i in range(40):
+    if int(low_leaf_selectors[39-i]) == 0:
+        nf_root_aged = Compression([nf_root_aged,low_leaf_nodes[i]])
+    else:
+        nf_root_aged = Compression([low_leaf_nodes[i],nf_root_aged])
+
 set_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
 set_selectors = randrange(0,2**40,1)
 set_selectors = format(set_selectors,'040b')
@@ -334,7 +355,11 @@ inp = {
   "pol_note_nonce":             str(nonce),
   "pol_cm_aged_path":           [str(x) for x in cm_aged_nodes],
   "pol_cm_aged_selectors":      [str(x) for x in cm_aged_selectors[::-1]],
-  "pol_nf_root_aged":           str(nf_root_aged),
+  "pol_low_leaf_nf":            str(low_leaf_nf),
+  "pol_low_leaf_next_nf":       str(low_leaf_next_nf),
+  "pol_low_leaf_next_index":    str(low_leaf_next_index),
+  "pol_low_leaf_path":          [str(x) for x in low_leaf_nodes],
+  "pol_low_leaf_selectors":     [str(x) for x in low_leaf_selectors[::-1]],
   "pol_set_aged_path":          [str(x) for x in set_aged_nodes],
   "pol_set_selectors":          [str(x) for x in set_selectors[::-1]],
   "pow_blend_difficulty":       str(pow_difficulty),

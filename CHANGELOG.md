@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
+  distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
+
 ## [0.6.0] - 2026-10-14
 
 Circuits of the private note ledger of Mantle: every note is private and lives in a note set, the ledger, the SDP or a
