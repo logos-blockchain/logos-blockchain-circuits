@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
+  distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
 
 ### Fixed
 
