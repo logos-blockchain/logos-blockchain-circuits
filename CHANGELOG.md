@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **PoL** derives the commitment of the note of the leader reward: the private `reward_public_key` and `reward_nonce`,
+  the public input `reward_value` and the public output `reward_commitment`, with `program` and `data` at `0`. The
+  public signals become `[entropy_contribution, reward_commitment, sl, epoch_nonce, t0, t1, eligible_aged,
+  eligible_latest, msg, reward_value]`. The PoQ does not change.
 
 ### Fixed
 
