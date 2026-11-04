@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **PoL** derives the commitment of the note of the leader reward: the private `reward_public_key` and `reward_nonce`,
+  the public input `reward_value` and the public output `reward_commitment`, with `program` and `data` at `0`. The
+  public signals become `[entropy_contribution, reward_commitment, sl, epoch_nonce, t0, t1, eligible_aged,
+  eligible_latest, msg, reward_value]`. The PoQ does not change.
+
 ## [0.6.1] - 2026-11-03
 
 ### Changed

@@ -309,6 +309,11 @@ for i in range(40):
         eligible_latest = Compression([set_latest_nodes[i],eligible_latest])
 
 
+# the note of the leader reward, committed to by the public reward_commitment output
+reward_value = F(randrange(0,2**64,1))
+reward_nonce = F(randrange(0,p,1))
+reward_public_key = Compression([F(4605003),F(randrange(0,p,1))])
+reward_commitment = poseidon2_hash([F(232989244870034910891854),reward_value,reward_nonce,reward_public_key,F(0),F(0)])
 
 
 # 5) Assemble JSON
@@ -320,6 +325,7 @@ inp = {
   "eligible_aged":              str(eligible_aged),
   "eligible_latest":            str(eligible_latest),
   "msg":                        str(F(randrange(0,p,1))),
+  "reward_value":               str(reward_value),
   "sk":                         str(sk),
   "value":                      str(value),
   "nonce":                      str(nonce),
@@ -334,7 +340,9 @@ inp = {
   "low_leaf_path":              [str(x) for x in low_leaf_nodes],
   "low_leaf_selectors":         [str(x) for x in low_leaf_selectors[::-1]],
   "cm_root_latest":             str(cm_root_latest),
-  "set_latest_path":            [str(x) for x in set_latest_nodes]
+  "set_latest_path":            [str(x) for x in set_latest_nodes],
+  "reward_public_key":          str(reward_public_key),
+  "reward_nonce":               str(reward_nonce)
 }
 
 import json
@@ -343,3 +351,4 @@ with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
 print("Wrote input of pol")
+print("reward_commitment:", reward_commitment)
