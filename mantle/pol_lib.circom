@@ -142,9 +142,11 @@ template proof_of_leadership(depth_merkle_tree){
     signal input eligible_aged;             // eligible root when the stake distribution was frozen
     signal input eligible_latest;           // latest eligible root
     signal input msg;                       // hash of the header of the proposed block
+    signal input reward_value;              // value of the note of the leader reward
 
-    // public output
+    // public outputs
     signal output entropy_contribution;
+    signal output reward_commitment;        // commitment of the note of the leader reward
 
     // private witness
     signal input sk;
@@ -162,6 +164,8 @@ template proof_of_leadership(depth_merkle_tree){
     signal input low_leaf_selectors[depth_merkle_tree];
     signal input cm_root_latest;            // latest commitment MMR root of the set
     signal input set_latest_path[depth_merkle_tree];       // path of the leaf of the set to eligible_latest
+    signal input reward_public_key;         // public key of the note of the leader reward, free of the winning note
+    signal input reward_nonce;              // nonce of the note of the leader reward, free choice of the leader
 
 
     // Verify the note is winning the lottery
@@ -251,6 +255,16 @@ template proof_of_leadership(depth_merkle_tree){
     derive_entropy.inp[2] <== lottery_checker.cm;
     derive_entropy.inp[3] <== sk;
     entropy_contribution <== derive_entropy.out;
+
+
+    // Derive the commitment of the note of the leader reward
+    component reward_cm = derive_note_commitment();
+    reward_cm.public_key <== reward_public_key;
+    reward_cm.nonce <== reward_nonce;
+    reward_cm.value <== reward_value;
+    reward_cm.program <== 0;
+    reward_cm.data <== 0;
+    reward_commitment <== reward_cm.out;
 
 
     // The proof is bound to `msg`, the hash of the header of the proposed block.
