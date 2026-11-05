@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [0.6.2] - 2026-11-05
+
+### Changed
+
+- **PoL** derives the commitment of the note of the leader reward: the private `reward_public_key` and `reward_nonce`,
+  the public input `reward_value` and the public output `reward_commitment`, with `program` and `data` at `0`. The
+  public signals become `[entropy_contribution, reward_commitment, sl, epoch_nonce, t0, t1, eligible_aged,
+  eligible_latest, msg, reward_value]`. The PoQ does not change.
+
+## [0.6.1] - 2026-11-03
+
+### Changed
+
+- **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
+  distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
+- **Program Spend** derives the nonce of each active output from the nullifier of the first input and the index of the
+  output when the step consumes a note of the program, and `spend_notes_hash` reads the fields of an inactive input or
+  output as `0`.
+
+## [0.6.0] - 2026-10-14
+
+Circuits of the private note ledger of Mantle: every note is private and lives in a note set, the ledger, the SDP or a
+channel, each with its commitment MMR and nullifier IMT.
+
+### Added
+
+- **Transfer** (`transfer`, `lbc-transfer-sys`): consumes up to 4 user notes and creates up to 8, outputting the
+  excess value. Public flags mark the used inputs and outputs, and inputs are proven against the commitment MMR root
+  extended with the transaction buffer.
+- **Program Spend** (`program_spend`, `lbc-program-spend-sys`): consumes notes of a program and creates notes of the
+  program or user notes, balancing exactly with the value paid to the program, and outputs `spend_notes_hash`, the hash
+  read by the program proof. Public flags mark the outputs that are notes of the program.
+
+### Changed
+
+- **Note commitment** gains the `program` and `data` fields.
+- **Merkle paths** take their selectors in the same order as their nodes, from the leaf level up: the selector of a
+  level is the bit of the leaf index at that level, starting from the least significant, `1` when the path node is on
+  the left. Every circuit, input generator and sample input follows.
+- **Note sets** have a commitment MMR and a nullifier IMT of depth 40, so that sustained use takes decades to fill a
+  set, and the eligible tree over the note sets has depth 40, so that channel creations, each adding a note set, take
+  decades to fill it. The Transfer, Program Spend, PoL and PoQ take the depth of the trees as a template parameter.
+- **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
+  non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
+  are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block
+  header, which replaces the two `leader_pk` inputs.
+- **PoQ** leader branch follows the PoL, without the unspent check.
+- The input generators run with plain Python 3: `just gen-inputs` replaces `just sage-run`. The PoL and PoQ
+  generators derive `t0` and `t1` from the exact lottery constants of the Proof of Leadership specification.
+
+### Removed
+
+- **PoC** (`lbc-poc-sys`) and **Signature** (`lbc-signature-sys`).
+
 ## [0.5.0] — 2026-05-25
 
 ### Added

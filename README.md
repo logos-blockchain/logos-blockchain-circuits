@@ -5,12 +5,12 @@ ZK-SNARK circuits for the [Logos Blockchain](https://github.com/logos-blockchain
 
 ## Circuits
 
-| Circuit                       | What it proves                                                    |
-|-------------------------------|-------------------------------------------------------------------|
-| **PoQ** — Proof of Quota      | A node has quota to participate in a blend session                |
-| **PoL** — Proof of Leadership | A note holder would win the leadership lottery for a given slot   |
-| **PoC** — Proof of Claim      | A voucher is validly owned and its nullifier is correctly derived |
-| **Signature**                 | Knowledge of secret keys and their corresponding public keys      |
+| Circuit                       | What it proves                                                                                  |
+|-------------------------------|-------------------------------------------------------------------------------------------------|
+| **PoQ** — Proof of Quota      | A node has quota to participate in a blend session                                              |
+| **PoL** — Proof of Leadership | A note holder would win the leadership lottery for a given slot with an unspent note            |
+| **Transfer**                  | Notes owned by the prover are consumed, user notes are created, and the excess value is output  |
+| **Program Spend**             | Notes of a program are consumed and notes of the program or user notes created, balancing exactly with the value paid to the program |
 
 ## Architecture
 
