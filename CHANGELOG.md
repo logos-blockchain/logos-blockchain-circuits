@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-05
+
 ### Changed
 
 - **PoL** derives the commitment of the note of the leader reward: the private `reward_public_key` and `reward_nonce`,
