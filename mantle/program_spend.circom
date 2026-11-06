@@ -10,7 +10,6 @@ include "../hash_bn/poseidon2_hash.circom";
 
 template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     // notes inputs
-    signal input inputs_spending_sk[maxInput];
     signal input inputs_stake_pk[maxInput];
     signal input inputs_nonce[maxInput];
     signal input inputs_value[maxInput];
@@ -45,22 +44,17 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     signal dummy;
     dummy <== msg * msg;
 
-    // Each nullifier key is derived from the corresponding spending secret key, and each public key from the nullifier key, as in the ZkTransfer.
-    component inputs_nf_sk[maxInput];
-    component inputs_pk[maxInput];
-    for(var i = 0; i < maxInput; i++){
-        inputs_nf_sk[i] = derive_nullifier_key();
-        inputs_nf_sk[i].spending_secret_key <== inputs_spending_sk[i];
-        inputs_pk[i] = derive_public_key();
-        inputs_pk[i].secret_key <== inputs_nf_sk[i].out;
-    }
+    // Every note of the program is held by `PK0`, the public key of the spending secret key 0, whose nullifier key `NF_SK0` everyone knows.
+    // The circuit takes no spending secret key: `PK0` and `NF_SK0` are constants.
+    component pk0 = PK0();
+    component nf_sk0 = NF_SK0();
 
-    // Each input flag is boolean, and each input commitment is derived with `program` set to `program_id`, so the inputs are notes of the program.
+    // Each input flag is boolean, and each input commitment is derived with the public key `PK0` and `program` set to `program_id`, so the inputs are notes of the program.
     component inputs_cm[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_active[i] * (1 - inputs_active[i]) === 0;
         inputs_cm[i] = derive_note_commitment();
-        inputs_cm[i].public_key <== inputs_pk[i].out;
+        inputs_cm[i].public_key <== pk0.out;
         inputs_cm[i].stake_public_key <== inputs_stake_pk[i];
         inputs_cm[i].nonce <== inputs_nonce[i];
         inputs_cm[i].value <== inputs_value[i];
@@ -68,12 +62,12 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         inputs_cm[i].data <== inputs_data[i];
     }
 
-    // Each active input nullifier is derived from the nullifier key and the input commitment, and each inactive input has value 0, as in the ZkTransfer.
+    // Each active input nullifier is derived from `NF_SK0` and the input commitment, and each inactive input has value 0, as in the ZkTransfer.
     component inputs_nf[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_nf[i] = derive_note_nullifier();
         inputs_nf[i].commitment <== inputs_cm[i].out;
-        inputs_nf[i].nullifier_key <== inputs_nf_sk[i].out;
+        inputs_nf[i].nullifier_key <== nf_sk0.out;
 
         (1 - inputs_active[i]) * inputs_value[i] === 0;
 
@@ -98,7 +92,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         inputs_active[i] * (merkle_root[i].root - tx_cm_root) === 0;
     }
 
-    // Each output flag is boolean, each active output is a note of the program if `outputs_of_program` says so and a user note otherwise,
+    // Each output flag is boolean, each active output is a note of the program held by `PK0` if `outputs_of_program` says so and a user note otherwise,
     // whose commitment is derived from its fields, and each inactive output has value 0 and is not a note of the program.
     component outputs_cm[maxOutput];
     for(var i = 0; i < maxOutput; i++){
@@ -106,8 +100,9 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         outputs_of_program[i] * (1 - outputs_of_program[i]) === 0;
         outputs_of_program[i] * (1 - outputs_active[i]) === 0;
 
-        // if a note of the program: outputs_program[i] == program_id
+        // if a note of the program: outputs_program[i] == program_id and outputs_pk[i] == PK0
         outputs_of_program[i] * (outputs_program[i] - program_id) === 0;
+        outputs_of_program[i] * (outputs_pk[i] - pk0.out) === 0;
         // if an active user note: outputs_program[i] == 0 and outputs_data[i] == 0
         (outputs_active[i] - outputs_of_program[i]) * outputs_program[i] === 0;
         (outputs_active[i] - outputs_of_program[i]) * outputs_data[i] === 0;
@@ -159,7 +154,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     program_step_id_hasher.inp[0] <== dst.out;
     for(var i = 0; i < maxInput; i++){
         active_inputs_nonce[i] <== inputs_active[i] * inputs_nonce[i];
-        active_inputs_pk[i] <== inputs_active[i] * inputs_pk[i].out;
+        active_inputs_pk[i] <== inputs_active[i] * pk0.out;
         active_inputs_stake_pk[i] <== inputs_active[i] * inputs_stake_pk[i];
         active_inputs_data[i] <== inputs_active[i] * inputs_data[i];
 

@@ -38,6 +38,22 @@ template NF_KDF_V1(){
 }
 
 
+// nullifier key of the spending secret key 0, which holds every note of a program
+// NF_SK0 = Compression(NF_KDF_V1, 0) = 19745231567900497560154548245026581537856204580560566680980497366069099903172
+template NF_SK0(){
+    signal output out;
+    out <== 19745231567900497560154548245026581537856204580560566680980497366069099903172;
+}
+
+
+// public key of the spending secret key 0, which holds every note of a program
+// PK0 = Compression(KDF, NF_SK0) = 972202553888197888567329063379813321440011391652189983173398887118271398762
+template PK0(){
+    signal output out;
+    out <== 972202553888197888567329063379813321440011391652189983173398887118271398762;
+}
+
+
 // int.from_bytes(b"NOTE_ID_V1", byteorder="little") = 232989242343357190262606
 template NOTE_ID_V1(){
     signal output out;

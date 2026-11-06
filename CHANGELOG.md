@@ -13,9 +13,13 @@ All notable changes to this project will be documented in this file.
 - **Transfer** proves the spending secret key of each input, `inputs_sk` becoming `inputs_spending_sk`, and takes the
   staking keys of its inputs and outputs as the private witnesses `inputs_stake_pk` and `outputs_stake_pk`. The public
   signals do not change.
-- **Program Spend** follows the Transfer for its keys, `inputs_sk` becoming `inputs_spending_sk` and the staking keys
-  being the private witnesses `inputs_stake_pk` and `outputs_stake_pk`, and `spend_notes_hash` hashes the staking key of
-  every input and output after its public key, read as `0` when inactive. The public signals do not change.
+- **Program Spend** takes the staking keys of its inputs and outputs as the private witnesses `inputs_stake_pk` and
+  `outputs_stake_pk`, and `spend_notes_hash` hashes the staking key of every input and output after its public key,
+  read as `0` when inactive. The public signals do not change.
+- **Program Spend** notes of the program are held by `PK0 = zkhash(KDF, NF_SK0)`, with `NF_SK0 = zkhash(NF_KDF_V1, 0)`,
+  both constants of the circuit (`misc/constants.circom`). The witness `inputs_sk` is removed: each input derives its
+  commitment with `PK0` and its nullifier with `NF_SK0`, each output flagged in `outputs_of_program` must have
+  `outputs_pk` equal to `PK0`, and `program_step_id` hashes `PK0` as the public key of every active input.
 - **Program Spend** output `spend_notes_hash` is renamed `program_step_id`, and its domain separation tag
   `PROGRAM_SPEND_NOTES_V1` becomes `PROGRAM_STEP_ID_V1`, which changes its value and the verification key. Its position
   among the public signals does not change.
