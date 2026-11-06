@@ -29,7 +29,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     // outputs
     signal output inputs[maxInput];
     signal output outputs[maxOutput];
-    signal output spend_notes_hash;
+    signal output program_step_id;
 
     //public inputs
     signal input inputs_active[maxInput];
@@ -141,7 +141,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         nonce_derived[i] * (outputs_nonce[i] - outputs_nonce_derived[i].out) === 0;
     }
 
-    // `spend_notes_hash` commits to the flag and the note of every input and output, nonce and staking key included,
+    // `program_step_id` commits to the flag and the note of every input and output, nonce and staking key included,
     // which the program proof opens to check its rule. Their fields are hashed one after the other, input by input, then output by output,
     // each multiplied by the flag of its input or output, so that an inactive one reads as 0 and a spend has a single hash.
     // The value of an inactive input or output is already 0.
@@ -154,21 +154,21 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     signal active_outputs_stake_pk[maxOutput];
     signal active_outputs_program[maxOutput];
     signal active_outputs_data[maxOutput];
-    component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 6 + maxOutput * 7);
-    component dst = PROGRAM_SPEND_NOTES_V1();
-    spend_notes_hasher.inp[0] <== dst.out;
+    component program_step_id_hasher = Poseidon2_hash(1 + maxInput * 6 + maxOutput * 7);
+    component dst = PROGRAM_STEP_ID_V1();
+    program_step_id_hasher.inp[0] <== dst.out;
     for(var i = 0; i < maxInput; i++){
         active_inputs_nonce[i] <== inputs_active[i] * inputs_nonce[i];
         active_inputs_pk[i] <== inputs_active[i] * inputs_pk[i].out;
         active_inputs_stake_pk[i] <== inputs_active[i] * inputs_stake_pk[i];
         active_inputs_data[i] <== inputs_active[i] * inputs_data[i];
 
-        spend_notes_hasher.inp[1 + i * 6] <== inputs_active[i];
-        spend_notes_hasher.inp[2 + i * 6] <== inputs_value[i];
-        spend_notes_hasher.inp[3 + i * 6] <== active_inputs_nonce[i];
-        spend_notes_hasher.inp[4 + i * 6] <== active_inputs_pk[i];
-        spend_notes_hasher.inp[5 + i * 6] <== active_inputs_stake_pk[i];
-        spend_notes_hasher.inp[6 + i * 6] <== active_inputs_data[i];
+        program_step_id_hasher.inp[1 + i * 6] <== inputs_active[i];
+        program_step_id_hasher.inp[2 + i * 6] <== inputs_value[i];
+        program_step_id_hasher.inp[3 + i * 6] <== active_inputs_nonce[i];
+        program_step_id_hasher.inp[4 + i * 6] <== active_inputs_pk[i];
+        program_step_id_hasher.inp[5 + i * 6] <== active_inputs_stake_pk[i];
+        program_step_id_hasher.inp[6 + i * 6] <== active_inputs_data[i];
     }
     for(var i = 0; i < maxOutput; i++){
         active_outputs_nonce[i] <== outputs_active[i] * outputs_nonce[i];
@@ -177,15 +177,15 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         active_outputs_program[i] <== outputs_active[i] * outputs_program[i];
         active_outputs_data[i] <== outputs_active[i] * outputs_data[i];
 
-        spend_notes_hasher.inp[1 + maxInput * 6 + i * 7] <== outputs_active[i];
-        spend_notes_hasher.inp[2 + maxInput * 6 + i * 7] <== outputs_value[i];
-        spend_notes_hasher.inp[3 + maxInput * 6 + i * 7] <== active_outputs_nonce[i];
-        spend_notes_hasher.inp[4 + maxInput * 6 + i * 7] <== active_outputs_pk[i];
-        spend_notes_hasher.inp[5 + maxInput * 6 + i * 7] <== active_outputs_stake_pk[i];
-        spend_notes_hasher.inp[6 + maxInput * 6 + i * 7] <== active_outputs_program[i];
-        spend_notes_hasher.inp[7 + maxInput * 6 + i * 7] <== active_outputs_data[i];
+        program_step_id_hasher.inp[1 + maxInput * 6 + i * 7] <== outputs_active[i];
+        program_step_id_hasher.inp[2 + maxInput * 6 + i * 7] <== outputs_value[i];
+        program_step_id_hasher.inp[3 + maxInput * 6 + i * 7] <== active_outputs_nonce[i];
+        program_step_id_hasher.inp[4 + maxInput * 6 + i * 7] <== active_outputs_pk[i];
+        program_step_id_hasher.inp[5 + maxInput * 6 + i * 7] <== active_outputs_stake_pk[i];
+        program_step_id_hasher.inp[6 + maxInput * 6 + i * 7] <== active_outputs_program[i];
+        program_step_id_hasher.inp[7 + maxInput * 6 + i * 7] <== active_outputs_data[i];
     }
-    spend_notes_hash <== spend_notes_hasher.out;
+    program_step_id <== program_step_id_hasher.out;
 
     // The outputs are well-formed, and the inputs and the paid value balance the outputs exactly.
         // First each output value is less than 64 bits
