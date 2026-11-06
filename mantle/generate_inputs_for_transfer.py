@@ -229,14 +229,18 @@ if len(sys.argv) != Integer(3):
 maxInputs = int(sys.argv[Integer(1)])
 maxOutputs = int(sys.argv[Integer(2)])
 
-inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_spending_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+# the staking key of an input is a free witness, here the key of a staking secret key other than the nullifier key
+inputs_stake_pk = [Compression([F(4605003), F(randrange(0,p,1))]) for i in range(maxInputs)]
 inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_value = [F(randrange(50,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
-inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
-inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i], F(0), F(0)]) for i in range(maxInputs)]
-inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
+# int.from_bytes(b"NF_KDF", byteorder="little") = 77259136255566
+inputs_nf_sk = [Compression([F(77259136255566), inputs_spending_sk[i]]) for i in range(maxInputs)]
+inputs_pk = [Compression([F(4605003), inputs_nf_sk[i]]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i],inputs_stake_pk[i], F(0), F(0)]) for i in range(maxInputs)]
+inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_nf_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
 inputs_selectors = [format(i,'040b') for i in range(maxInputs//2)] + [format(randrange(0,2**40,1),'040b') for i in range(maxInputs - maxInputs//2)]
 tx_cm_root = inputs_cm[:maxInputs//2]
 inputs_path = [[] for i in range(maxInputs//2)]
@@ -251,21 +255,25 @@ tx_cm_root = tx_cm_root[0]
 inputs_path += [[F(randrange(0,p,1)) for d in range(40)] for i in range(maxInputs - maxInputs//2)]
 
 outputs_pk = [F(randrange(0,p,1)) for i in range(maxOutputs)]
+# a wallet gives an output the public key of its recipient as staking key
+outputs_stake_pk = [outputs_pk[i] for i in range(maxOutputs)]
 outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
 total_input_value = sum(inputs_value)
 outputs_value = [F((int(total_input_value) - 50) // maxOutputs) for i in range(maxOutputs)]
 outputs_active = [F(1) for i in range(maxOutputs)]
-outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i], F(0), F(0)]) for i in range(maxOutputs)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i],outputs_stake_pk[i], F(0), F(0)]) for i in range(maxOutputs)]
 
 
 # Assemble JSON
 inp = {
-  "inputs_sk":                  [str(x) for x in inputs_sk],
+  "inputs_spending_sk":         [str(x) for x in inputs_spending_sk],
+  "inputs_stake_pk":            [str(x) for x in inputs_stake_pk],
   "inputs_nonce":               [str(x) for x in inputs_nonce],
   "inputs_value":               [str(x) for x in inputs_value],
   "inputs_selectors":           [[str(x) for x in string[::-1]] for string in inputs_selectors],  # leaf level first
   "inputs_path":                [[str(x) for x in inputs_path[i]] for i in range(maxInputs)],
   "outputs_pk":                 [str(x) for x in outputs_pk],
+  "outputs_stake_pk":           [str(x) for x in outputs_stake_pk],
   "outputs_nonce":              [str(x) for x in outputs_nonce],
   "outputs_value":              [str(x) for x in outputs_value],
   "inputs_active":              [str(x) for x in inputs_active],
