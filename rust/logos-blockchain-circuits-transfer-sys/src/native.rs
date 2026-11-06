@@ -78,6 +78,17 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_other_staking_key_returns_err() {
+        // The staking key is a field of the input note: another one gives another
+        // commitment, outside `tx_cm_root`.
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["inputs_stake_pk"][0] = serde_json::json!("1");
+        let input = TransferWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("transfer_test_witness.wtns");

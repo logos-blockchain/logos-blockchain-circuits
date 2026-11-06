@@ -10,7 +10,8 @@ include "../hash_bn/poseidon2_hash.circom";
 
 template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     // notes inputs
-    signal input inputs_sk[maxInput];
+    signal input inputs_spending_sk[maxInput];
+    signal input inputs_stake_pk[maxInput];
     signal input inputs_nonce[maxInput];
     signal input inputs_value[maxInput];
     signal input inputs_data[maxInput];
@@ -19,6 +20,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
 
     // notes outputs
     signal input outputs_pk[maxOutput];
+    signal input outputs_stake_pk[maxOutput];
     signal input outputs_nonce[maxOutput];
     signal input outputs_value[maxOutput];
     signal input outputs_program[maxOutput];
@@ -43,11 +45,14 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     signal dummy;
     dummy <== msg * msg;
 
-    // Each public key is derived from the corresponding secret key, as in the ZkTransfer.
+    // Each nullifier key is derived from the corresponding spending secret key, and each public key from the nullifier key, as in the ZkTransfer.
+    component inputs_nf_sk[maxInput];
     component inputs_pk[maxInput];
     for(var i = 0; i < maxInput; i++){
+        inputs_nf_sk[i] = derive_nullifier_key();
+        inputs_nf_sk[i].spending_secret_key <== inputs_spending_sk[i];
         inputs_pk[i] = derive_public_key();
-        inputs_pk[i].secret_key <== inputs_sk[i];
+        inputs_pk[i].secret_key <== inputs_nf_sk[i].out;
     }
 
     // Each input flag is boolean, and each input commitment is derived with `program` set to `program_id`, so the inputs are notes of the program.
@@ -56,18 +61,19 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         inputs_active[i] * (1 - inputs_active[i]) === 0;
         inputs_cm[i] = derive_note_commitment();
         inputs_cm[i].public_key <== inputs_pk[i].out;
+        inputs_cm[i].stake_public_key <== inputs_stake_pk[i];
         inputs_cm[i].nonce <== inputs_nonce[i];
         inputs_cm[i].value <== inputs_value[i];
         inputs_cm[i].program <== program_id;
         inputs_cm[i].data <== inputs_data[i];
     }
 
-    // Each active input nullifier is derived from the secret key and the input commitment, and each inactive input has value 0, as in the ZkTransfer.
+    // Each active input nullifier is derived from the nullifier key and the input commitment, and each inactive input has value 0, as in the ZkTransfer.
     component inputs_nf[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_nf[i] = derive_note_nullifier();
         inputs_nf[i].commitment <== inputs_cm[i].out;
-        inputs_nf[i].secret_key <== inputs_sk[i];
+        inputs_nf[i].nullifier_key <== inputs_nf_sk[i].out;
 
         (1 - inputs_active[i]) * inputs_value[i] === 0;
 
@@ -108,6 +114,7 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
 
         outputs_cm[i] = derive_note_commitment();
         outputs_cm[i].public_key <== outputs_pk[i];
+        outputs_cm[i].stake_public_key <== outputs_stake_pk[i];
         outputs_cm[i].nonce <== outputs_nonce[i];
         outputs_cm[i].value <== outputs_value[i];
         outputs_cm[i].program <== outputs_program[i];
@@ -134,43 +141,49 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         nonce_derived[i] * (outputs_nonce[i] - outputs_nonce_derived[i].out) === 0;
     }
 
-    // `spend_notes_hash` commits to the flag and the note of every input and output, nonce included,
+    // `spend_notes_hash` commits to the flag and the note of every input and output, nonce and staking key included,
     // which the program proof opens to check its rule. Their fields are hashed one after the other, input by input, then output by output,
     // each multiplied by the flag of its input or output, so that an inactive one reads as 0 and a spend has a single hash.
     // The value of an inactive input or output is already 0.
     signal active_inputs_nonce[maxInput];
     signal active_inputs_pk[maxInput];
+    signal active_inputs_stake_pk[maxInput];
     signal active_inputs_data[maxInput];
     signal active_outputs_nonce[maxOutput];
     signal active_outputs_pk[maxOutput];
+    signal active_outputs_stake_pk[maxOutput];
     signal active_outputs_program[maxOutput];
     signal active_outputs_data[maxOutput];
-    component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 5 + maxOutput * 6);
+    component spend_notes_hasher = Poseidon2_hash(1 + maxInput * 6 + maxOutput * 7);
     component dst = PROGRAM_SPEND_NOTES_V1();
     spend_notes_hasher.inp[0] <== dst.out;
     for(var i = 0; i < maxInput; i++){
         active_inputs_nonce[i] <== inputs_active[i] * inputs_nonce[i];
         active_inputs_pk[i] <== inputs_active[i] * inputs_pk[i].out;
+        active_inputs_stake_pk[i] <== inputs_active[i] * inputs_stake_pk[i];
         active_inputs_data[i] <== inputs_active[i] * inputs_data[i];
 
-        spend_notes_hasher.inp[1 + i * 5] <== inputs_active[i];
-        spend_notes_hasher.inp[2 + i * 5] <== inputs_value[i];
-        spend_notes_hasher.inp[3 + i * 5] <== active_inputs_nonce[i];
-        spend_notes_hasher.inp[4 + i * 5] <== active_inputs_pk[i];
-        spend_notes_hasher.inp[5 + i * 5] <== active_inputs_data[i];
+        spend_notes_hasher.inp[1 + i * 6] <== inputs_active[i];
+        spend_notes_hasher.inp[2 + i * 6] <== inputs_value[i];
+        spend_notes_hasher.inp[3 + i * 6] <== active_inputs_nonce[i];
+        spend_notes_hasher.inp[4 + i * 6] <== active_inputs_pk[i];
+        spend_notes_hasher.inp[5 + i * 6] <== active_inputs_stake_pk[i];
+        spend_notes_hasher.inp[6 + i * 6] <== active_inputs_data[i];
     }
     for(var i = 0; i < maxOutput; i++){
         active_outputs_nonce[i] <== outputs_active[i] * outputs_nonce[i];
         active_outputs_pk[i] <== outputs_active[i] * outputs_pk[i];
+        active_outputs_stake_pk[i] <== outputs_active[i] * outputs_stake_pk[i];
         active_outputs_program[i] <== outputs_active[i] * outputs_program[i];
         active_outputs_data[i] <== outputs_active[i] * outputs_data[i];
 
-        spend_notes_hasher.inp[1 + maxInput * 5 + i * 6] <== outputs_active[i];
-        spend_notes_hasher.inp[2 + maxInput * 5 + i * 6] <== outputs_value[i];
-        spend_notes_hasher.inp[3 + maxInput * 5 + i * 6] <== active_outputs_nonce[i];
-        spend_notes_hasher.inp[4 + maxInput * 5 + i * 6] <== active_outputs_pk[i];
-        spend_notes_hasher.inp[5 + maxInput * 5 + i * 6] <== active_outputs_program[i];
-        spend_notes_hasher.inp[6 + maxInput * 5 + i * 6] <== active_outputs_data[i];
+        spend_notes_hasher.inp[1 + maxInput * 6 + i * 7] <== outputs_active[i];
+        spend_notes_hasher.inp[2 + maxInput * 6 + i * 7] <== outputs_value[i];
+        spend_notes_hasher.inp[3 + maxInput * 6 + i * 7] <== active_outputs_nonce[i];
+        spend_notes_hasher.inp[4 + maxInput * 6 + i * 7] <== active_outputs_pk[i];
+        spend_notes_hasher.inp[5 + maxInput * 6 + i * 7] <== active_outputs_stake_pk[i];
+        spend_notes_hasher.inp[6 + maxInput * 6 + i * 7] <== active_outputs_program[i];
+        spend_notes_hasher.inp[7 + maxInput * 6 + i * 7] <== active_outputs_data[i];
     }
     spend_notes_hash <== spend_notes_hasher.out;
 

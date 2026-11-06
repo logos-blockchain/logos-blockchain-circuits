@@ -49,9 +49,12 @@ template would_win_leadership(depth_merkle_tree){
     signal input t0;                        // lottery constants
     signal input t1;
     signal input eligible_aged;             // eligible root when the stake distribution was frozen
-    signal input sk;
+    signal input nf_sk;                     // nullifier key of the note
+    signal input staking_sk;                // staking secret key of the note
     signal input value;
     signal input nonce;
+    signal input program;                   // program of the note, 0 for a user note
+    signal input data;                      // data of the note, 0 for a user note
     signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
     signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
     signal input cm_aged_selectors[depth_merkle_tree];
@@ -68,19 +71,23 @@ template would_win_leadership(depth_merkle_tree){
         cm_aged_selectors[i] * (1 - cm_aged_selectors[i]) === 0;
     }
 
-    // Derive the public key from the secret key
+    // Derive the public key from the nullifier key, and the staking key from the staking secret key.
+    // No secret key is known whose public key is 0, so a note whose staking key is 0 never leads.
     component note_pk = derive_public_key();
-    note_pk.secret_key <== sk;
+    note_pk.secret_key <== nf_sk;
     pk <== note_pk.out;
+    component note_stake_pk = derive_public_key();
+    note_stake_pk.secret_key <== staking_sk;
 
 
-    // Derive the note commitment
+    // Derive the note commitment from its fields, so a program note leads like a user note
     component note_cm = derive_note_commitment();
     note_cm.public_key <== pk;
+    note_cm.stake_public_key <== note_stake_pk.out;
     note_cm.nonce <== nonce;
     note_cm.value <== value;
-    note_cm.program <== 0;
-    note_cm.data <== 0;
+    note_cm.program <== program;
+    note_cm.data <== data;
     cm <== note_cm.out;
 
 
@@ -108,12 +115,12 @@ template would_win_leadership(depth_merkle_tree){
     aged_ok.root <== eligible_aged;
 
 
-    // Compute the lottery ticket
+    // Compute the lottery ticket from the staking secret key, private even when the nullifier key is public
     component ticket = ticket_calculator();
     ticket.epoch_nonce <== epoch_nonce;
     ticket.slot <== sl;
     ticket.note_id <== cm;
-    ticket.secret_key <== sk;
+    ticket.secret_key <== staking_sk;
 
 
     // Compute the lottery threshold
@@ -149,9 +156,12 @@ template proof_of_leadership(depth_merkle_tree){
     signal output reward_commitment;        // commitment of the note of the leader reward
 
     // private witness
-    signal input sk;
+    signal input nf_sk;                     // nullifier key of the note
+    signal input staking_sk;                // staking secret key of the note
     signal input value;
     signal input nonce;
+    signal input program;                   // program of the note, 0 for a user note
+    signal input data;                      // data of the note, 0 for a user note
     signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
     signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
     signal input cm_aged_selectors[depth_merkle_tree];
@@ -175,9 +185,12 @@ template proof_of_leadership(depth_merkle_tree){
     lottery_checker.t0 <== t0;
     lottery_checker.t1 <== t1;
     lottery_checker.eligible_aged <== eligible_aged;
-    lottery_checker.sk <== sk;
+    lottery_checker.nf_sk <== nf_sk;
+    lottery_checker.staking_sk <== staking_sk;
     lottery_checker.value <== value;
     lottery_checker.nonce <== nonce;
+    lottery_checker.program <== program;
+    lottery_checker.data <== data;
     lottery_checker.nf_root_aged <== nf_root_aged;
     for(var i = 0; i < depth_merkle_tree; i++){
         lottery_checker.set_selectors[i] <== set_selectors[i];
@@ -188,10 +201,10 @@ template proof_of_leadership(depth_merkle_tree){
     lottery_checker.out === 1;
 
 
-    // Derive the nullifier
+    // Derive the nullifier from the nullifier key, which derives the public key of the note
     component nf = derive_note_nullifier();
     nf.commitment <== lottery_checker.cm;
-    nf.secret_key <== sk;
+    nf.nullifier_key <== nf_sk;
 
 
     // Check the remaining selectors are bits
@@ -247,19 +260,20 @@ template proof_of_leadership(depth_merkle_tree){
     is_next_nf_zero.out + smaller.out - is_next_nf_zero.out * smaller.out === 1;
 
 
-    // Derive the entropy contribution
+    // Derive the entropy contribution from the staking secret key
     component derive_entropy = Poseidon2_hash(4);
     component dst_3 = NONCE_CONTRIB_V1();
     derive_entropy.inp[0] <== dst_3.out;
     derive_entropy.inp[1] <== sl;
     derive_entropy.inp[2] <== lottery_checker.cm;
-    derive_entropy.inp[3] <== sk;
+    derive_entropy.inp[3] <== staking_sk;
     entropy_contribution <== derive_entropy.out;
 
 
-    // Derive the commitment of the note of the leader reward
+    // Derive the commitment of the note of the leader reward, a user note with the reward public key as both its keys
     component reward_cm = derive_note_commitment();
     reward_cm.public_key <== reward_public_key;
+    reward_cm.stake_public_key <== reward_public_key;
     reward_cm.nonce <== reward_nonce;
     reward_cm.value <== reward_value;
     reward_cm.program <== 0;

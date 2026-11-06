@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF, spending_sk)` sits between the spending secret key and the
+  public key `zkhash(KDF, nf_sk)`, and derives the nullifier `zkhash(NOTE_NF_V1, commitment, nf_sk)`. The note
+  commitment hashes the staking key after the public key: `zkhash(NOTE_CM_V1, value, nonce, public_key,
+  stake_public_key, program, data)`.
+- **Transfer** proves the spending secret key of each input, `inputs_sk` becoming `inputs_spending_sk`, and takes the
+  staking keys of its inputs and outputs as the private witnesses `inputs_stake_pk` and `outputs_stake_pk`. The public
+  signals do not change.
+- **Program Spend** follows the Transfer for its keys, `inputs_sk` becoming `inputs_spending_sk` and the staking keys
+  being the private witnesses `inputs_stake_pk` and `outputs_stake_pk`, and `spend_notes_hash` hashes the staking key of
+  every input and output after its public key, read as `0` when inactive. The public signals do not change.
+- **PoL** takes the nullifier key `nf_sk` and the staking secret key `staking_sk` of its note in place of `sk`, and the
+  `program` and `data` of the note as private witnesses, so a program note leads like a user note. It derives the
+  public key and the nullifier from `nf_sk`, the staking key from `staking_sk`, and the ticket and the entropy
+  contribution from `staking_sk`, never taking the spending secret key. The leader reward note has `reward_public_key`
+  as both its public key and its staking key. The public signals do not change.
+- **PoQ** leader branch follows the PoL: `pol_secret_key` is replaced by `pol_nullifier_key` and
+  `pol_staking_secret_key`, the note takes the private `pol_note_program` and `pol_note_data`, and the key nullifier of
+  a leader derives from `pol_staking_secret_key`. The core branch keeps its constraints, `core_sk` being the nullifier
+  key of the Non-ephemeral Quota Key. The public signals do not change, and the sample input takes the leader branch.
+
 ## [0.6.2] - 2026-11-05
 
 ### Changed

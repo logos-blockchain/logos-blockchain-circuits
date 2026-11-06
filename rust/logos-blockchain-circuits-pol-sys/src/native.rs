@@ -75,6 +75,17 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_nullifier_key_as_staking_secret_key_returns_err() {
+        // The sample note has a staking key of its own: its nullifier key alone,
+        // which derives its public key, does not derive its staking key.
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        inputs["staking_sk"] = inputs["nf_sk"].clone();
+        let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("pol_test_witness.wtns");

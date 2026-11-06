@@ -9,7 +9,8 @@ include "../hash_bn/merkle.circom";
 
 template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
     // notes inputs
-    signal input inputs_sk[maxInput];
+    signal input inputs_spending_sk[maxInput];
+    signal input inputs_stake_pk[maxInput];
     signal input inputs_nonce[maxInput];
     signal input inputs_value[maxInput];
     signal input inputs_selectors[maxInput][depth_merkle_tree];
@@ -17,6 +18,7 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
 
     // notes outputs
     signal input outputs_pk[maxOutput];
+    signal input outputs_stake_pk[maxOutput];
     signal input outputs_nonce[maxOutput];
     signal input outputs_value[maxOutput];
 
@@ -36,31 +38,36 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
     signal dummy;
     dummy <== msg * msg;
 
-    // Each public key is derived from the corresponding secret key.
+    // Each nullifier key is derived from the corresponding spending secret key, and each public key from the nullifier key.
+    component inputs_nf_sk[maxInput];
     component inputs_pk[maxInput];
     for(var i = 0; i < maxInput; i++){
+        inputs_nf_sk[i] = derive_nullifier_key();
+        inputs_nf_sk[i].spending_secret_key <== inputs_spending_sk[i];
         inputs_pk[i] = derive_public_key();
-        inputs_pk[i].secret_key <== inputs_sk[i];
+        inputs_pk[i].secret_key <== inputs_nf_sk[i].out;
     }
 
-    // Each input flag is boolean, and each input commitment is derived from the public key, the nonce and the value, with `program` and `data` set to `0`, so a ZkTransfer only consumes user notes.
+    // Each input flag is boolean, and each input commitment is derived from the value, the nonce, the public key and the staking key,
+    // with `program` and `data` set to `0`, so a ZkTransfer only consumes user notes. The staking key is not proven: spending a note takes its spending secret key alone.
     component inputs_cm[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_active[i] * (1 - inputs_active[i]) === 0;
         inputs_cm[i] = derive_note_commitment();
         inputs_cm[i].public_key <== inputs_pk[i].out;
+        inputs_cm[i].stake_public_key <== inputs_stake_pk[i];
         inputs_cm[i].nonce <== inputs_nonce[i];
         inputs_cm[i].value <== inputs_value[i];
         inputs_cm[i].program <== 0;
         inputs_cm[i].data <== 0;
     }
 
-    // Each active input nullifier is derived from the secret key and the input commitment, and each inactive input has value 0.
+    // Each active input nullifier is derived from the nullifier key and the input commitment, and each inactive input has value 0.
     component inputs_nf[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_nf[i] = derive_note_nullifier();
         inputs_nf[i].commitment <== inputs_cm[i].out;
-        inputs_nf[i].secret_key <== inputs_sk[i];
+        inputs_nf[i].nullifier_key <== inputs_nf_sk[i].out;
 
         (1 - inputs_active[i]) * inputs_value[i] === 0;
 
@@ -85,13 +92,14 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
         inputs_active[i] * (merkle_root[i].root - tx_cm_root) === 0;
     }
 
-    // Each output flag is boolean, each active output commitment is derived from the public key, the nonce and the value,
+    // Each output flag is boolean, each active output commitment is derived from the value, the nonce, the public key and the staking key,
     // with `program` and `data` set to `0`, so a ZkTransfer only creates user notes, and each inactive output has value 0.
     component outputs_cm[maxOutput];
     for(var i = 0; i < maxOutput; i++){
         outputs_active[i] * (1 - outputs_active[i]) === 0;
         outputs_cm[i] = derive_note_commitment();
         outputs_cm[i].public_key <== outputs_pk[i];
+        outputs_cm[i].stake_public_key <== outputs_stake_pk[i];
         outputs_cm[i].nonce <== outputs_nonce[i];
         outputs_cm[i].value <== outputs_value[i];
         outputs_cm[i].program <== 0;
