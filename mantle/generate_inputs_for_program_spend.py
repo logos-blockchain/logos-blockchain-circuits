@@ -274,8 +274,8 @@ outputs_of_program = [F(1) for i in range(maxOutputs//2)] + [F(0) for i in range
 outputs_stake_pk = [operator_stake_pk for i in range(maxOutputs//2)] + [outputs_pk[i] for i in range(maxOutputs//2, maxOutputs)]
 outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i],outputs_stake_pk[i], outputs_program[i], outputs_data[i]]) for i in range(maxOutputs)]
 
-# int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
-spend_notes_hash = poseidon2_hash([F(18459309890613820463764940807982002484216397908890192)]
+# int.from_bytes(b"PROGRAM_STEP_ID_V1", byteorder="little") = 4297892925435406160038936939178153126875728
+program_step_id = poseidon2_hash([F(4297892925435406160038936939178153126875728)]
     + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_active[i] * inputs_nonce[i], inputs_active[i] * inputs_pk[i], inputs_active[i] * inputs_stake_pk[i], inputs_active[i] * inputs_data[i]]]
     + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_active[i] * outputs_nonce[i], outputs_active[i] * outputs_pk[i], outputs_active[i] * outputs_stake_pk[i], outputs_active[i] * outputs_program[i], outputs_active[i] * outputs_data[i]]])
 
@@ -310,4 +310,4 @@ with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
 print("Wrote input of zkProgramSpend")
-print("spend_notes_hash:", spend_notes_hash)
+print("program_step_id:", program_step_id)
