@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
-- **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF, spending_sk)` sits between the spending secret key and the
+- **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF_V1, spending_sk)` sits between the spending secret key and the
   public key `zkhash(KDF, nf_sk)`, and derives the nullifier `zkhash(NOTE_NF_V1, commitment, nf_sk)`. The note
   commitment hashes the staking key after the public key: `zkhash(NOTE_CM_V1, value, nonce, public_key,
   stake_public_key, program, data)`.

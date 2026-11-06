@@ -31,10 +31,10 @@ template KDF(){
 }
 
 
-// int.from_bytes(b"NF_KDF", byteorder="little") = 77259136255566
-template NF_KDF(){
+// int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
+template NF_KDF_V1(){
     signal output out;
-    out <== 77259136255566;
+    out <== 910114230080953599566;
 }
 
 
