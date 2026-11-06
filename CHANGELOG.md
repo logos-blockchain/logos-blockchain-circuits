@@ -16,6 +16,9 @@ All notable changes to this project will be documented in this file.
 - **Program Spend** follows the Transfer for its keys, `inputs_sk` becoming `inputs_spending_sk` and the staking keys
   being the private witnesses `inputs_stake_pk` and `outputs_stake_pk`, and `spend_notes_hash` hashes the staking key of
   every input and output after its public key, read as `0` when inactive. The public signals do not change.
+- **Program Spend** output `spend_notes_hash` is renamed `program_step_id`, and its domain separation tag
+  `PROGRAM_SPEND_NOTES_V1` becomes `PROGRAM_STEP_ID_V1`, which changes its value and the verification key. Its position
+  among the public signals does not change.
 - **PoL** takes the nullifier key `nf_sk` and the staking secret key `staking_sk` of its note in place of `sk`, and the
   `program` and `data` of the note as private witnesses, so a program note leads like a user note. It derives the
   public key and the nullifier from `nf_sk`, the staking key from `staking_sk`, and the ticket and the entropy
