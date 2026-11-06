@@ -231,15 +231,20 @@ maxOutputs = int(sys.argv[Integer(2)])
 
 program_id = F(randrange(1,p,1))
 
-inputs_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+inputs_spending_sk = [F(randrange(0,p,1)) for i in range(maxInputs)]
+# the staking key of a note of the program is chosen by the program, here the key of an operator staking it
+operator_stake_pk = Compression([F(4605003), F(randrange(0,p,1))])
+inputs_stake_pk = [operator_stake_pk for i in range(maxInputs)]
 inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_value = [F(randrange(50,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 inputs_data = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
-inputs_pk = [Compression([F(4605003), inputs_sk[i]]) for i in range(maxInputs)]
-inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i], program_id, inputs_data[i]]) for i in range(maxInputs)]
-inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
+# int.from_bytes(b"NF_KDF", byteorder="little") = 77259136255566
+inputs_nf_sk = [Compression([F(77259136255566), inputs_spending_sk[i]]) for i in range(maxInputs)]
+inputs_pk = [Compression([F(4605003), inputs_nf_sk[i]]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i],inputs_stake_pk[i], program_id, inputs_data[i]]) for i in range(maxInputs)]
+inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_nf_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
 inputs_selectors = [format(i,'040b') for i in range(maxInputs//2)] + [format(randrange(0,2**40,1),'040b') for i in range(maxInputs - maxInputs//2)]
 tx_cm_root = inputs_cm[:maxInputs//2]
 inputs_path = [[] for i in range(maxInputs//2)]
@@ -265,23 +270,27 @@ outputs_program = [program_id for i in range(maxOutputs//2)] + [F(0) for i in ra
 outputs_data = [F(randrange(0,p,1)) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
 outputs_active = [F(1) for i in range(maxOutputs)]
 outputs_of_program = [F(1) for i in range(maxOutputs//2)] + [F(0) for i in range(maxOutputs - maxOutputs//2)]
-outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i], outputs_program[i], outputs_data[i]]) for i in range(maxOutputs)]
+# the notes of the program keep the staking key of the operator, the user notes it pays the public key of their payee
+outputs_stake_pk = [operator_stake_pk for i in range(maxOutputs//2)] + [outputs_pk[i] for i in range(maxOutputs//2, maxOutputs)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i],outputs_stake_pk[i], outputs_program[i], outputs_data[i]]) for i in range(maxOutputs)]
 
 # int.from_bytes(b"PROGRAM_SPEND_NOTES_V1", byteorder="little") = 18459309890613820463764940807982002484216397908890192
 spend_notes_hash = poseidon2_hash([F(18459309890613820463764940807982002484216397908890192)]
-    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_active[i] * inputs_nonce[i], inputs_active[i] * inputs_pk[i], inputs_active[i] * inputs_data[i]]]
-    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_active[i] * outputs_nonce[i], outputs_active[i] * outputs_pk[i], outputs_active[i] * outputs_program[i], outputs_active[i] * outputs_data[i]]])
+    + [x for i in range(maxInputs) for x in [inputs_active[i], inputs_value[i], inputs_active[i] * inputs_nonce[i], inputs_active[i] * inputs_pk[i], inputs_active[i] * inputs_stake_pk[i], inputs_active[i] * inputs_data[i]]]
+    + [x for i in range(maxOutputs) for x in [outputs_active[i], outputs_value[i], outputs_active[i] * outputs_nonce[i], outputs_active[i] * outputs_pk[i], outputs_active[i] * outputs_stake_pk[i], outputs_active[i] * outputs_program[i], outputs_active[i] * outputs_data[i]]])
 
 
 # Assemble JSON
 inp = {
-  "inputs_sk":                  [str(x) for x in inputs_sk],
+  "inputs_spending_sk":         [str(x) for x in inputs_spending_sk],
+  "inputs_stake_pk":            [str(x) for x in inputs_stake_pk],
   "inputs_nonce":               [str(x) for x in inputs_nonce],
   "inputs_value":               [str(x) for x in inputs_value],
   "inputs_data":                [str(x) for x in inputs_data],
   "inputs_selectors":           [[str(x) for x in string[::-1]] for string in inputs_selectors],  # leaf level first
   "inputs_path":                [[str(x) for x in inputs_path[i]] for i in range(maxInputs)],
   "outputs_pk":                 [str(x) for x in outputs_pk],
+  "outputs_stake_pk":           [str(x) for x in outputs_stake_pk],
   "outputs_nonce":              [str(x) for x in outputs_nonce],
   "outputs_value":              [str(x) for x in outputs_value],
   "outputs_program":            [str(x) for x in outputs_program],
@@ -301,3 +310,4 @@ with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
 print("Wrote input of zkProgramSpend")
+print("spend_notes_hash:", spend_notes_hash)
