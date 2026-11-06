@@ -233,8 +233,10 @@ if not role_selector in [0,1,2]:
     sys.exit(1)
 
 # 1) Core‐node registry Merkle‐proof
-# pick a random core_sk and derive its public key
-core_sk   = F(randrange(0,p,1))
+# pick a random Non-ephemeral Quota Key, derive its nullifier key core_sk, which the proof takes, and the zk_id
+# int.from_bytes(b"NF_KDF", byteorder="little") = 77259136255566
+nqk       = F(randrange(0,p,1))
+core_sk   = Compression([ F(77259136255566), nqk ])
 pk_core   = Compression([ F(4605003), core_sk ])
 core_selectors = randrange(0,2**20,1)
 core_selectors = format(int(core_selectors),'020b')
@@ -262,17 +264,22 @@ t1 = F(p- (int(t1_constant) // total_stake**2))
 value =  F(total_stake / 100)
 threshold = (t0 + t1 * value) * value
 
-sk = F(randrange(0,p,1))
+nf_sk = F(randrange(0,p,1))
+staking_sk = F(randrange(0,p,1))
 nonce = F(randrange(0,p,1))
+# a note of a program qualifies like a user note
+program = F(randrange(1,p,1))
+data = F(randrange(0,p,1))
 
-pk = Compression([F(4605003),sk])
+pk = Compression([F(4605003),nf_sk])
+stake_pk = Compression([F(4605003),staking_sk])
 
-cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,F(0),F(0)])
-ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,sk])
+cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 while(ticket > threshold):
     nonce += 1
-    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,F(0),F(0)])
-    ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,sk])
+    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+    ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 
 # the note commitment in the commitment MMR of its set, and the set under the aged eligible root
 cm_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
@@ -286,7 +293,7 @@ for i in range(40):
         cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
 
 # the low leaf of the nullifier in the nullifier IMT of the set at the freeze
-nf = poseidon2_hash([F(232989242911804701822798),cm,sk])
+nf = poseidon2_hash([F(232989242911804701822798),cm,nf_sk])
 low_leaf_nf = F(randrange(0,int(nf),1))
 if randrange(0,2,1) == 0:
     # nf is greater than every nullifier of the set at the freeze
@@ -350,9 +357,12 @@ inp = {
   "pol_epoch_nonce":            str(epoch_nonce),
   "pol_t0":                     str(t0),
   "pol_t1":                     str(t1),
-  "pol_secret_key":             str(sk),
+  "pol_nullifier_key":          str(nf_sk),
+  "pol_staking_secret_key":     str(staking_sk),
   "pol_note_value":             str(value),
   "pol_note_nonce":             str(nonce),
+  "pol_note_program":           str(program),
+  "pol_note_data":              str(data),
   "pol_cm_aged_path":           [str(x) for x in cm_aged_nodes],
   "pol_cm_aged_selectors":      [str(x) for x in cm_aged_selectors[::-1]],
   "pol_low_leaf_nf":            str(low_leaf_nf),

@@ -42,15 +42,18 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input index;         // nullifier index
 
     // Core-nodes inputs
-    signal input core_sk;                       // core node secret key
+    signal input core_sk;                       // nullifier key of the Non-ephemeral Quota Key, from which the zk_id derives
     signal input core_path[nLevelsPK];          // Merkle path for core PK
     signal input core_path_selectors[nLevelsPK];     // path selectors (bits)
 
     // PoL branch inputs (all the PoL private data)
     signal input pol_sl;
-    signal input pol_secret_key;
+    signal input pol_nullifier_key;
+    signal input pol_staking_secret_key;
     signal input pol_note_value;
     signal input pol_note_nonce;
+    signal input pol_note_program;          // 0 for a user note
+    signal input pol_note_data;             // 0 for a user note
     signal input pol_cm_aged_path[depth_merkle_tree];
     signal input pol_cm_aged_selectors[depth_merkle_tree];
     signal input pol_low_leaf_nf;           // greatest nullifier of the set at the freeze lower than the note nullifier
@@ -132,9 +135,12 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     would_win.t0 <== pol_t0;
     would_win.t1 <== pol_t1;
     would_win.eligible_aged <== pol_eligible_aged;
-    would_win.sk <== pol_secret_key;
+    would_win.nf_sk <== pol_nullifier_key;
+    would_win.staking_sk <== pol_staking_secret_key;
     would_win.value <== pol_note_value;
     would_win.nonce <== pol_note_nonce;
+    would_win.program <== pol_note_program;
+    would_win.data <== pol_note_data;
     would_win.nf_root_aged <== nf_root_aged.root;
     for (var i = 0; i < depth_merkle_tree; i++) {
         would_win.set_selectors[i] <== pol_set_selectors[i];
@@ -147,7 +153,7 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     // Check the note nullifier isn't in the IMT of the set at the freeze
     component note_nf = derive_note_nullifier();
     note_nf.commitment <== would_win.cm;
-    note_nf.secret_key <== pol_secret_key;
+    note_nf.nullifier_key <== pol_nullifier_key;
     component bigger = SafeFullLessThan();
     bigger.a <== pol_low_leaf_nf;
     bigger.b <== note_nf.out;
@@ -183,9 +189,9 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     component selection_randomness = Poseidon2_hash(4);
     component dstSel = SELECTION_RANDOMNESS_V1();
     selection_randomness.inp[0] <== dstSel.out;
-    // choose core_sk, pol.secret_key or pow_nonce:
+    // choose core_sk, pol_staking_secret_key or pow_nonce:
     signal lh_key_selector;
-    lh_key_selector <== (pol_secret_key - core_sk) * L1;
+    lh_key_selector <== (pol_staking_secret_key - core_sk) * L1;
     selection_randomness.inp[1] <== core_sk + lh_key_selector + (pow_nonce - core_sk) * L2;
     selection_randomness.inp[2] <== index;
     selection_randomness.inp[3] <== pol_epoch_nonce + (pol_sl - pol_epoch_nonce) * L1; // because the last term is (pol_epoch_nonce - pol_epoch_nonce) * L2 = 0
