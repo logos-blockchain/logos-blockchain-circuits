@@ -236,8 +236,8 @@ inputs_nonce = [F(randrange(0,p,1)) for i in range(maxInputs)]
 inputs_value = [F(randrange(50,5000,1)) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxInputs - maxInputs//2)]
 
-# int.from_bytes(b"NF_KDF", byteorder="little") = 77259136255566
-inputs_nf_sk = [Compression([F(77259136255566), inputs_spending_sk[i]]) for i in range(maxInputs)]
+# int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
+inputs_nf_sk = [Compression([F(910114230080953599566), inputs_spending_sk[i]]) for i in range(maxInputs)]
 inputs_pk = [Compression([F(4605003), inputs_nf_sk[i]]) for i in range(maxInputs)]
 inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i],inputs_stake_pk[i], F(0), F(0)]) for i in range(maxInputs)]
 inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_nf_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]

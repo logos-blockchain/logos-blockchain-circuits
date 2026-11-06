@@ -10,7 +10,7 @@ template derive_nullifier_key(){
     signal output out;
 
     component hash = Compression();
-    component dst = NF_KDF();
+    component dst = NF_KDF_V1();
     hash.inp[0] <== dst.out;
     hash.inp[1] <== spending_secret_key;
     out <== hash.out;
