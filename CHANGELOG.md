@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-06
+
 ### Changed
 
 - **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF_V1, spending_sk)` sits between the spending secret key and the
