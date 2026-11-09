@@ -1384,7 +1384,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --prerelease --verify-tag \
+          prerelease=$([[ "$TAG" == *-rc.* ]] && echo --prerelease || true)
+          gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --verify-tag $prerelease \
             --title "Circom Circuits $TAG" --generate-notes
 
   update-nix-hashes:
