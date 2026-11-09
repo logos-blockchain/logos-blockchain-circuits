@@ -1,5 +1,5 @@
 [package]
-name = "logos-blockchain-circuits-poc-sys"
+name = "logos-blockchain-circuits-program-spend-sys"
 categories.workspace = true
 description.workspace = true
 edition.workspace = true
