@@ -1358,7 +1358,6 @@ jobs:
   publish-release:
     name: Create Release
     runs-on: ubuntu-latest
-    # Only create releases for tags, not for PRs
     if: github.ref_type == 'tag'
     needs:
       - setup
@@ -1369,74 +1368,24 @@ jobs:
       - build-macos
       - clippy
       - test
+    permissions:
+      contents: write
     env:
       TAG: ${{ needs.setup.outputs.tag }}
-      VERSION: ${{ needs.setup.outputs.version }}
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        uses: actions/create-release@4c11c9fe1dcd9636620a16455165783b20fc7ea0
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.TAG }}
-          release_name: Circom Circuits ${{ env.VERSION }}
-          body: |
-            This is a release of Circom Circuits ${{ env.VERSION }}.
-            ## Changelog
-            - feature(X): new feature
-            - fix(Y): bug description
-            - feature: performance improvement on Z
-            ## Checklist
-            Before publishing please ensure:
-            - [ ] Description is complete
-            - [ ] Changelog is correct
-            - [ ] Assets for all platforms exist
-            - [ ] Pre-release is checked if necessary
-            - [ ] Remove this checklist before publishing the release.
-          draft: true
-          prerelease: true
-
-  upload-artifacts:
-    name: Upload Unified Bundles to Release
-    runs-on: ubuntu-latest
-    # Only upload to release for tags, not for PRs
-    if: github.ref_type == 'tag'
-    needs:
-      - setup
-      - publish-release
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - os: linux
-            arch: x86_64
-          - os: linux
-            arch: aarch64
-          - os: macos
-            arch: aarch64
-          - os: windows
-            arch: x86_64
-    env:
-      UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
-      ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
-    steps:
-      - name: Download Unified Bundle
+      - name: Download Unified Bundles
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          pattern: logos-blockchain-circuits-*
+          path: dist
+          merge-multiple: true
 
-      - name: Upload Unified Bundle to Release
-        uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
+      - name: Create Draft Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ${{ env.ARTIFACT_NAME }}
-          asset_name: ${{ env.ARTIFACT_NAME }}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --prerelease --verify-tag \
+            --title "Circom Circuits $TAG" --generate-notes
 
   update-nix-hashes:
     name: Update Nix Hashes
@@ -1448,7 +1397,7 @@ jobs:
       - build-linux-aarch64
       - build-windows
       - build-macos
-      - upload-artifacts
+      - publish-release
     permissions:
       contents: write
     env:
