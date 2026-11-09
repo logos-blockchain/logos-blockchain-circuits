@@ -47,7 +47,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
         with:
-          sparse-checkout: rust/Cargo.toml
+          sparse-checkout: |
+            rust/Cargo.toml
+            CHANGELOG.md
           sparse-checkout-cone-mode: false
 
       - name: Verify Cargo version
@@ -64,6 +66,15 @@ jobs:
             exit 1
           fi
           echo "Version check passed: $CARGO_VERSION"
+
+      # Release candidates use the notes in the [Unreleased] section; final releases use their version's section.
+      - name: Verify Changelog Section
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ steps.define-version.outputs.tag }}
+        run: |
+          SECTION=$([[ "$TAG" == *-rc.* ]] && echo Unreleased || echo "${TAG#v}")
+          grep -qF "## [$SECTION]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no [$SECTION] section"; exit 1; }
 
   generate-proving-keys:
     name: Generate ${{ matrix.circuit.display }} Proving Key
@@ -1373,6 +1384,12 @@ jobs:
     env:
       TAG: ${{ needs.setup.outputs.tag }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
       - name: Download Unified Bundles
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
@@ -1380,13 +1397,19 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # The setup job checks that the section exists.
+      - name: Extract Release Notes
+        run: |
+          SECTION=$([[ "$TAG" == *-rc.* ]] && echo Unreleased || echo "${TAG#v}")
+          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md > notes.md
+
       - name: Create Draft Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           prerelease=$([[ "$TAG" == *-rc.* ]] && echo --prerelease || true)
           gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --verify-tag $prerelease \
-            --title "Circom Circuits $TAG" --generate-notes
+            --title "Circom Circuits $TAG" --notes-file notes.md --generate-notes
 
   update-nix-hashes:
     name: Update Nix Hashes
