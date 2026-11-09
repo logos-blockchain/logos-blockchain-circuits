@@ -33,12 +33,11 @@ jobs:
           if [[ "$TAG" =~ ^v0\.0\.0-pr ]]; then
             echo "Using test version for PR: $TAG"
             VERSION="$TAG"
-          elif [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "TAG must follow the format of 'vX.Y.Z'. Value: '$TAG'."
+          elif [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "TAG must follow the format of 'vX.Y.Z' or 'vX.Y.Z-rc.N'. Value: '$TAG'."
             exit 2
           else
-            # Parse Version: Take only the vX.Y.Z part.
-            VERSION=$(echo $TAG | cut -d'-' -f1)
+            VERSION="$TAG"
           fi
 
           # Export the tag and version.
