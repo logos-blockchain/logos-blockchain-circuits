@@ -5,11 +5,6 @@ on:
     tags:
       - "v*.*.*"
   pull_request:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release. Must follow the format of 'vX.Y.Z'."
-        required: true
 
 env:
   CIRCOM_TAG: v2.2.2
@@ -25,9 +20,9 @@ jobs:
       - name: Define version
         id: define-version
         env:
-          # Use the tag name if it is available, otherwise use the input version.
+          # Use the tag name if it is available.
           # For PR testing, use a test version based on PR number and commit SHA.
-          TAG: ${{ (github.ref_type == 'tag' && github.ref_name) || inputs.tag || format('v0.0.0-pr{0}-{1}', github.event.pull_request.number || '0', github.sha) }}
+          TAG: ${{ (github.ref_type == 'tag' && github.ref_name) || format('v0.0.0-pr{0}-{1}', github.event.pull_request.number || '0', github.sha) }}
         run: |
           if [ -z "$TAG" ]; then
             echo "Could not determine tag."
@@ -1365,7 +1360,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     # Only create releases for tags, not for PRs
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     needs:
       - setup
       - generate-proving-keys
@@ -1409,7 +1404,7 @@ jobs:
     name: Upload Unified Bundles to Release
     runs-on: ubuntu-latest
     # Only upload to release for tags, not for PRs
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     needs:
       - setup
       - publish-release
@@ -1447,7 +1442,7 @@ jobs:
   update-nix-hashes:
     name: Update Nix Hashes
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     needs:
       - setup
       - build-linux
