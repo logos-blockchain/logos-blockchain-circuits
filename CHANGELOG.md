@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Program Spend** requires the active inputs to come first: an input is active only if the previous one is, so
+  `inputs_active[0]` holds exactly when the step consumes a note of the program, and the nonces of the outputs of such a
+  step are always derived from the nullifier of its first input. A step with `inputs_active = [0, 1, 0, 0]` could pick
+  the nonces of its outputs, and create a note of the program with the commitment of an existing one. A step consuming
+  no note of the program still picks the nonces of its outputs. The public signals do not change.
+
 ## [0.7.0] - 2026-11-06
 
 ### Changed
