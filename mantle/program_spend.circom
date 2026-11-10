@@ -49,10 +49,13 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     component pk0 = PK0();
     component nf_sk0 = NF_SK0();
 
-    // Each input flag is boolean, and each input commitment is derived with the public key `PK0` and `program` set to `program_id`, so the inputs are notes of the program.
+    // Each input flag is boolean, the active inputs come first, and each input commitment is derived with the public key `PK0` and `program` set to `program_id`, so the inputs are notes of the program.
     component inputs_cm[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_active[i] * (1 - inputs_active[i]) === 0;
+        if(i > 0){
+            inputs_active[i] * (1 - inputs_active[i - 1]) === 0;
+        }
         inputs_cm[i] = derive_note_commitment();
         inputs_cm[i].public_key <== pk0.out;
         inputs_cm[i].stake_public_key <== inputs_stake_pk[i];
@@ -121,6 +124,8 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
 
     // When the step consumes a note of the program, the nonce of each active output is derived from the nullifier of the first input
     // and the index of the output, like the nonce of a note the ledger creates from its `op_id` and its output number.
+    // The active inputs come first, so `inputs_active[0]` holds exactly when the step consumes a note of the program.
+    // A step consuming none picks the nonces of its outputs: the `op_id` covers the output commitments, so it cannot derive them.
     component outputs_nonce_derived[maxOutput];
     component nonce_dst = NOTE_NONCE_V1();
     signal nonce_derived[maxOutput];

@@ -29,6 +29,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+
+### Fixed
+
+- **Witness generation**: no longer leaks memory.
+- **Program Spend** requires the active inputs to come first: an input is active only if the previous one is, so
+  `inputs_active[0]` holds exactly when the step consumes a note of the program, and the nonces of the outputs of such a
+  step are always derived from the nullifier of its first input. A step with `inputs_active = [0, 1, 0, 0]` could pick
+  the nonces of its outputs, and create a note of the program with the commitment of an existing one. A step consuming
+  no note of the program still picks the nonces of its outputs. The public signals do not change.
+
+## [0.7.0] - 2026-11-06
+
+### Changed
+
 - **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF_V1, spending_sk)` sits between the spending secret key and the
   public key `zkhash(KDF, nf_sk)`, and derives the nullifier `zkhash(NOTE_NF_V1, commitment, nf_sk)`. The note
   commitment hashes the staking key after the public key: `zkhash(NOTE_CM_V1, value, nonce, public_key,
@@ -55,10 +69,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `pol_staking_secret_key`, the note takes the private `pol_note_program` and `pol_note_data`, and the key nullifier of
   a leader derives from `pol_staking_secret_key`. The core branch keeps its constraints, `core_sk` being the nullifier
   key of the Non-ephemeral Quota Key. The public signals do not change, and the sample input takes the leader branch.
-
-### Fixed
-
-- **Witness generation**: no longer leaks memory.
 
 ## [0.6.2] - 2026-11-05
 
