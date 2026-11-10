@@ -41,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Transfer** and **Program Spend** require the nullifiers of their active inputs to be pairwise distinct
   (`DistinctWhenActive` in `misc/comparator.circom`), so one note cannot fill two inputs and be counted twice in the
   balance. The public signals do not change.
+- **Program Spend** range-checks the public `paid_value` to 64 bits and the sum of its input values to 74 bits, as the
+  Transfer bounds its sums, so the balance `sum(inputs_value) + paid_value == sum(outputs_value)` cannot wrap around
+  the field modulus: a `paid_value` of `p - k` balanced outputs worth `k` less than the inputs. The public signals do
+  not change.
 
 ## [0.7.0] - 2026-11-06
 
