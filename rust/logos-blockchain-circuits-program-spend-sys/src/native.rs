@@ -57,7 +57,8 @@ mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
     use super::{
-        ProgramSpendWitnessInput, SAMPLE_INPUTS, generate_witness, generate_witness_from_files,
+        Error, ProgramSpendWitnessInput, SAMPLE_INPUTS, Witness, generate_witness,
+        generate_witness_from_files,
     };
 
     static LIB_DIR: LazyLock<PathBuf> =
@@ -81,6 +82,51 @@ mod tests {
         inputs["tx_cm_root"] = serde_json::json!("1");
         let input = ProgramSpendWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
+    }
+
+    fn sample_inputs() -> serde_json::Value {
+        serde_json::from_str(SAMPLE_INPUTS).unwrap()
+    }
+
+    fn value(field: &serde_json::Value) -> u64 {
+        field.as_str().unwrap().parse().unwrap()
+    }
+
+    fn generate(inputs: &serde_json::Value) -> Result<Witness, Error> {
+        let input = ProgramSpendWitnessInput::new(serde_json::to_string(inputs).unwrap()).unwrap();
+        generate_witness(&input)
+    }
+
+    #[test]
+    fn test_generate_witness_input_after_inactive_input_returns_err() {
+        // The sample consumes the notes of inputs 0 and 1. Input 1 alone stays
+        // active, its value balanced by `paid_value`, so the nonces of the outputs
+        // would be free if the active inputs did not have to come first.
+        let mut inputs = sample_inputs();
+        let paid_value = value(&inputs["paid_value"]) + value(&inputs["inputs_value"][0]);
+        inputs["inputs_active"][0] = serde_json::json!("0");
+        inputs["inputs_value"][0] = serde_json::json!("0");
+        inputs["paid_value"] = serde_json::json!(paid_value.to_string());
+        assert!(generate(&inputs).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_no_input_picks_nonces() {
+        // A step consuming no note of the program picks the nonces of its outputs:
+        // the `op_id` binding the proof covers the output commitments.
+        let mut inputs = sample_inputs();
+        let paid_value = value(&inputs["paid_value"])
+            + value(&inputs["inputs_value"][0])
+            + value(&inputs["inputs_value"][1]);
+        for i in 0..4 {
+            inputs["inputs_active"][i] = serde_json::json!("0");
+            inputs["inputs_value"][i] = serde_json::json!("0");
+        }
+        for k in 0..8 {
+            inputs["outputs_nonce"][k] = serde_json::json!((k + 1).to_string());
+        }
+        inputs["paid_value"] = serde_json::json!(paid_value.to_string());
+        assert!(generate(&inputs).is_ok());
     }
 
     #[test]
