@@ -38,6 +38,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   step are always derived from the nullifier of its first input. A step with `inputs_active = [0, 1, 0, 0]` could pick
   the nonces of its outputs, and create a note of the program with the commitment of an existing one. A step consuming
   no note of the program still picks the nonces of its outputs. The public signals do not change.
+- **Transfer** and **Program Spend** require the nullifiers of their active inputs to be pairwise distinct
+  (`DistinctWhenActive` in `misc/comparator.circom`), so one note cannot fill two inputs and be counted twice in the
+  balance. The public signals do not change.
 
 ## [0.7.0] - 2026-11-06
 

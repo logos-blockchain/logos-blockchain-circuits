@@ -77,6 +77,13 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
         inputs[i] <== inputs_nf[i].out * inputs_active[i];
     }
 
+    // The active input nullifiers are pairwise distinct, so a note is consumed at most once, as in the ZkTransfer.
+    component distinct_inputs = DistinctWhenActive(maxInput);
+    for(var i = 0; i < maxInput; i++){
+        distinct_inputs.in[i] <== inputs[i];
+        distinct_inputs.active[i] <== inputs_active[i];
+    }
+
     // each active input commitment is in `tx_cm_root`, 
     component merkle_root[maxInput];
     for(var i = 0; i < maxInput; i++){
