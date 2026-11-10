@@ -31,29 +31,6 @@ template KDF(){
 }
 
 
-// int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
-template NF_KDF_V1(){
-    signal output out;
-    out <== 910114230080953599566;
-}
-
-
-// nullifier key of the spending secret key 0, which holds every note of a program
-// NF_SK0 = Compression(NF_KDF_V1, 0) = 19745231567900497560154548245026581537856204580560566680980497366069099903172
-template NF_SK0(){
-    signal output out;
-    out <== 19745231567900497560154548245026581537856204580560566680980497366069099903172;
-}
-
-
-// public key of the spending secret key 0, which holds every note of a program
-// PK0 = Compression(KDF, NF_SK0) = 972202553888197888567329063379813321440011391652189983173398887118271398762
-template PK0(){
-    signal output out;
-    out <== 972202553888197888567329063379813321440011391652189983173398887118271398762;
-}
-
-
 // int.from_bytes(b"NOTE_ID_V1", byteorder="little") = 232989242343357190262606
 template NOTE_ID_V1(){
     signal output out;
@@ -74,38 +51,16 @@ template KEY_NULLIFIER_V1(){
     out <== 65580642670359595206974785265459610955;
 }
 
-// int.from_bytes(b"NOTE_CM_V1", byteorder="little") = 232989244870034910891854
-template NOTE_CM_V1(){
+
+// int.from_bytes(b"REWARD_VOUCHER", byteorder="little") = 1668646695034522932676805048878418
+template REWARD_VOUCHER(){
     signal output out;
-    out <== 232989244870034910891854;
+    out <== 1668646695034522932676805048878418;
 }
 
-// int.from_bytes(b"NOTE_NF_V1", byteorder="little") = 232989242911804701822798
-template NOTE_NF_V1(){
-    signal output out;
-    out <== 232989242911804701822798;
-}
 
-// int.from_bytes(b"NOTE_NONCE_V1", byteorder="little") = 3908910849081313593738852061006
-template NOTE_NONCE_V1(){
+// int.from_bytes(b"VOUCHER_NF", byteorder="little") = 332011368467182873038678
+template VOUCHER_NF(){
     signal output out;
-    out <== 3908910849081313593738852061006;
-}
-
-// int.from_bytes(b"PROGRAM_STEP_ID_V1", byteorder="little") = 4297892925435406160038936939178153126875728
-template PROGRAM_STEP_ID_V1(){
-    signal output out;
-    out <== 4297892925435406160038936939178153126875728;
-}
-
-// int.from_bytes(b"ELIGIBLE_SET_LEAF_V1", byteorder="little") = 281666711431130609191864295137803020528161213509
-template ELIGIBLE_SET_LEAF_V1(){
-    signal output out;
-    out <== 281666711431130609191864295137803020528161213509;
-}
-
-// int.from_bytes(b"NULLIFIER_IMT_LEAF_V1", byteorder="little") = 72106678126369435953119723346337253106302222882126
-template NULLIFIER_IMT_LEAF_V1(){
-    signal output out;
-    out <== 72106678126369435953119723346337253106302222882126;
+    out <== 332011368467182873038678;
 }

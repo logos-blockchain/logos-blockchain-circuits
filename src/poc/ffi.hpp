@@ -1,5 +1,5 @@
-#ifndef FFI_TRANSFER_HPP
-#define FFI_TRANSFER_HPP
+#ifndef FFI_POC_HPP
+#define FFI_POC_HPP
 
 #include "types.hpp"
 
@@ -19,7 +19,7 @@ extern "C" {
 ///
 /// On success, returns a `Status` with `StatusCode_Ok` and writes the witness to the specified output file.
 /// On failure, returns a `Status` with an appropriate error code.
-Status transfer_generate_witness_from_files(const char* dat, const char* inputs, const char* output);
+Status poc_generate_witness_from_files(const char* dat, const char* inputs, const char* output);
 
 /// Generates a witness from in-memory buffers.
 ///
@@ -33,7 +33,7 @@ Status transfer_generate_witness_from_files(const char* dat, const char* inputs,
 /// On success, returns a `Status` with `StatusCode_Ok` and populates `output` with the generated witness bytes. The
 /// caller is responsible for freeing the resources allocated into `output` by this function using `free_bytes`.
 /// On failure, returns a `Status` with an appropriate error code, and `output` will not be modified.
-Status transfer_generate_witness(const WitnessInput* input, Bytes* output);
+Status poc_generate_witness(const WitnessInput* input, Bytes* output);
 
 #ifdef __cplusplus
 }
