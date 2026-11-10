@@ -130,6 +130,27 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_same_note_in_two_inputs_returns_err() {
+        // Input 1 consumes the note of input 0 again, `paid_value` balancing the
+        // difference of value, so the note would be counted twice.
+        let mut inputs = sample_inputs();
+        let paid_value = value(&inputs["paid_value"]) + value(&inputs["inputs_value"][1])
+            - value(&inputs["inputs_value"][0]);
+        for field in [
+            "inputs_stake_pk",
+            "inputs_nonce",
+            "inputs_value",
+            "inputs_data",
+            "inputs_selectors",
+            "inputs_path",
+        ] {
+            inputs[field][1] = inputs[field][0].clone();
+        }
+        inputs["paid_value"] = serde_json::json!(paid_value.to_string());
+        assert!(generate(&inputs).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("program_spend_test_witness.wtns");

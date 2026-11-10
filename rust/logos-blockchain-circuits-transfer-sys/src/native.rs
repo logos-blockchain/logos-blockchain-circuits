@@ -89,6 +89,26 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_same_note_in_two_inputs_returns_err() {
+        // Input 0 consumes the note of input 1 again. The inputs still cover the
+        // outputs, so the note would be counted twice.
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        for field in [
+            "inputs_spending_sk",
+            "inputs_stake_pk",
+            "inputs_nonce",
+            "inputs_value",
+            "inputs_selectors",
+            "inputs_path",
+        ] {
+            inputs[field][0] = inputs[field][1].clone();
+        }
+        let input = TransferWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("transfer_test_witness.wtns");
