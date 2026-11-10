@@ -33,6 +33,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Witness generation**: no longer leaks memory.
+- **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is `zkhash(KDF, core_sk)`.
+  The circuit does not change.
+
+## [0.7.1] - 2026-11-10
+
+### Fixed
+
 - **Program Spend** requires the active inputs to come first: an input is active only if the previous one is, so
   `inputs_active[0]` holds exactly when the step consumes a note of the program, and the nonces of the outputs of such a
   step are always derived from the nullifier of its first input. A step with `inputs_active = [0, 1, 0, 0]` could pick
