@@ -182,7 +182,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "logos-blockchain-circuits-build"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "dirs",
  "fd-lock",
@@ -193,14 +193,14 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-common"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-types",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-pol-sys"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-poq-sys"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -220,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-program-spend-sys"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -230,14 +230,14 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-rapidsnark-sys"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-build",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-tests"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-pol-sys",
  "logos-blockchain-circuits-poq-sys",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-transfer-sys"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -255,7 +255,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-types"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bytes",
  "libc",

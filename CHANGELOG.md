@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-10
+
 ### Fixed
 
 - **Program Spend** requires the active inputs to come first: an input is active only if the previous one is, so
