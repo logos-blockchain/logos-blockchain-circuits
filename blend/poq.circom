@@ -42,7 +42,7 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input index;         // nullifier index
 
     // Core-nodes inputs
-    signal input core_sk;                       // nullifier key of the Non-ephemeral Quota Key, from which the zk_id derives
+    signal input core_sk;                       // Non-ephemeral Quota Key, from which the zk_id derives
     signal input core_path[nLevelsPK];          // Merkle path for core PK
     signal input core_path_selectors[nLevelsPK];     // path selectors (bits)
 

@@ -233,10 +233,8 @@ if not role_selector in [0,1,2]:
     sys.exit(1)
 
 # 1) Core‐node registry Merkle‐proof
-# pick a random Non-ephemeral Quota Key, derive its nullifier key core_sk, which the proof takes, and the zk_id
-# int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
-nqk       = F(randrange(0,p,1))
-core_sk   = Compression([ F(910114230080953599566), nqk ])
+# pick a random Non-ephemeral Quota Key core_sk, which the proof takes, and derive its zk_id
+core_sk   = F(randrange(0,p,1))
 pk_core   = Compression([ F(4605003), core_sk ])
 core_selectors = randrange(0,2**20,1)
 core_selectors = format(int(core_selectors),'020b')

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is `zkhash(KDF, core_sk)`.
+  The circuit does not change.
+
 ## [0.7.1] - 2026-11-10
 
 ### Fixed
