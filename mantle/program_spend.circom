@@ -195,12 +195,14 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     program_step_id <== program_step_id_hasher.out;
 
     // The outputs are well-formed, and the inputs and the paid value balance the outputs exactly.
-        // First each output value is less than 64 bits
+        // First each output value and the paid value are less than 64 bits
     component range_check[maxOutput];
     for(var i = 0; i < maxOutput; i++){
         range_check[i] = Num2Bits(64);
         range_check[i].in <== outputs_value[i];
     }
+    component paid_value_range_check = Num2Bits(64);
+    paid_value_range_check.in <== paid_value;
         // then sum the inputs and outputs
     component value_inputs = Sum64(maxInput);
     for(var i = 0; i < maxInput; i++){
@@ -210,6 +212,9 @@ template zkProgramSpend(maxInput, maxOutput, depth_merkle_tree){
     for(var i = 0; i < maxOutput; i++){
         value_outputs.in[i] <== outputs_value[i];
     }
+        // the sum of the inputs is less than 74 bits, as in the ZkTransfer, so neither side of the balance wraps around p
+    component value_inputs_range_check = Num2Bits(74);
+    value_inputs_range_check.in <== value_inputs.out;
         // the inputs and the paid value balance the outputs exactly
     value_inputs.out + paid_value === value_outputs.out;
 }

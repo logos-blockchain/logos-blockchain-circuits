@@ -151,6 +151,24 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_wrapping_paid_value_returns_err() {
+        // The user notes of outputs 4 to 7 are dropped, so the outputs are worth
+        // 2379 less than the inputs and the paid value of the sample. The paid value
+        // p - 2379, above 2^64, still balances the step modulo p.
+        let mut inputs = sample_inputs();
+        let dropped: u64 = (4..8).map(|k| value(&inputs["outputs_value"][k])).sum();
+        assert_eq!(dropped - value(&inputs["paid_value"]), 2379);
+        for k in 4..8 {
+            inputs["outputs_active"][k] = serde_json::json!("0");
+            inputs["outputs_value"][k] = serde_json::json!("0");
+        }
+        inputs["paid_value"] = serde_json::json!(
+            "21888242871839275222246405745257275088548364400416034343698204186575808493238"
+        );
+        assert!(generate(&inputs).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("program_spend_test_witness.wtns");
