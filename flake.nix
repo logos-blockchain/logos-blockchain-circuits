@@ -3,12 +3,32 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    # The Windows toolchain. It must match Logos Rapidsnark's, so that everything is built with the same compiler and
+    # runtime libraries.
+    logos-nix.url = "github:logos-co/logos-nix";
   };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, logos-nix, ... }:
     let
       lib = nixpkgs.lib;
+
+      buildPkgs = logos-nix.legacyPackages.x86_64-linux;
+      windowsPkgs = buildPkgs.pkgsWindows;
+
+      # mman-win32: sys/mman.h for Windows. The circom-generated main.cpp uses mmap.
+      windowsMman = windowsPkgs.stdenv.mkDerivation {
+        pname = "mman-win32";
+        version = "0-unstable-2026-11-03";
+        src = buildPkgs.fetchFromGitHub {
+          owner = "alitrack";
+          repo = "mman-win32";
+          rev = "780b16cdbc8e845eaa2bef3baf762011f6a7036d";
+          hash = "sha256-QtGKcwz3M8mOAIXUmHQTuCUNuHbnYAkRS4RHMmJQrOw=";
+        };
+        nativeBuildInputs = [ buildPkgs.cmake ];
+        cmakeFlags = [ "-DBUILD_SHARED_LIBS=OFF" ];
+      };
 
       systems = [
         "x86_64-linux"
@@ -82,7 +102,7 @@
         };
     in
     {
-      packages = forAll (
+      packages = lib.recursiveUpdate (forAll (
         system:
         let
           circuits = mkCircuits system;
@@ -91,6 +111,6 @@
           inherit circuits;
           default = circuits;
         }
-      );
+      )) { x86_64-linux.windows-mman = windowsMman; };
     };
 }
