@@ -30,6 +30,36 @@
         cmakeFlags = [ "-DBUILD_SHARED_LIBS=OFF" ];
       };
 
+      windowsBuildInputs = [
+        windowsPkgs.nlohmann_json
+        windowsMman
+      ];
+
+      windowsCross =
+        let
+          cc = windowsPkgs.stdenv.cc;
+        in
+        # Uses a native shell, since the code is compiled on this machine.
+        # The `*_x86_64_pc_windows_gnu` variables below make the Windows target use MinGW to link and compile C code.
+        buildPkgs.mkShell {
+          packages = [
+            cc
+            buildPkgs.gnumake
+          ];
+
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${cc.targetPrefix}gcc";
+          CC_x86_64_pc_windows_gnu = "${cc.targetPrefix}gcc";
+          CXX_x86_64_pc_windows_gnu = "${cc.targetPrefix}g++";
+          AR_x86_64_pc_windows_gnu = "${cc.targetPrefix}ar";
+          # Rust expects pthreads, but logos-nix's MinGW uses mcfgthread.
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = builtins.concatStringsSep " " [
+            "-L native=${windowsPkgs.windows.pthreads}/lib"
+            "-C link-arg=-l:libmcfgthread.a"
+            "-C link-arg=-lntdll"
+            "-C link-arg=-lkernel32"
+          ];
+        };
+
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -112,5 +142,7 @@
           default = circuits;
         }
       )) { x86_64-linux.windows-mman = windowsMman; };
+
+      devShells.x86_64-linux.windows-cross = windowsCross;
     };
 }
