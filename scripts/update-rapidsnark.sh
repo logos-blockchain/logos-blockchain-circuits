@@ -62,17 +62,6 @@ confirm() {
   [ "$answer" = "y" ]
 }
 
-# Replaces the release's lines in SHA256SUMS. Keeps the lines of other releases.
-write_sums() {
-  local release_sums="$1"
-  local others
-  others=$(awk 'NR == FNR { skip[$2]; next } !($2 in skip)' <(echo "$release_sums") "$SUMS_FILE")
-  {
-    if [ -n "$others" ]; then echo "$others"; fi
-    echo "$release_sums"
-  } > "$SUMS_FILE"
-}
-
 main() {
   if [ $# -ne 1 ]; then
     echo "usage: $0 <tag>"
@@ -104,7 +93,7 @@ main() {
     exit 1
   fi
 
-  write_sums "$release_sums"
+  echo "$release_sums" > "$SUMS_FILE"
   echo "$tag" > "$VERSION_FILE"
   echo "Updated VERSION and SHA256SUMS."
 }

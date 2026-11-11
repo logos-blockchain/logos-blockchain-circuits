@@ -138,7 +138,7 @@ On Windows, these files are still built from the `rapidsnark` submodule.
 [`deps/rapidsnark/`](deps/rapidsnark) pins the Logos Rapidsnark release:
 
 - `VERSION`: the release tag.
-- `SHA256SUMS`: the SHA-256 hash of each archive of every pinned release. CI checks every download against it.
+- `SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
 
 To update both files, run:
 
