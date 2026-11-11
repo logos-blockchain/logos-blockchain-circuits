@@ -135,12 +135,13 @@ On Windows, these files are still built from the `rapidsnark` submodule.
 
 ### Updating
 
-[`deps/rapidsnark/`](deps/rapidsnark) pins the Logos Rapidsnark release:
+The Logos Rapidsnark release is pinned in 3 places:
 
-- `VERSION`: the release tag.
-- `SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+- `deps/rapidsnark/VERSION`: the release tag.
+- `deps/rapidsnark/SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+- The `logos-blockchain-rapidsnark` input in `flake.nix`: the Windows build uses it.
 
-To update both files, run:
+To update all 3, run:
 
 ```bash
 scripts/update-rapidsnark.sh <tag>

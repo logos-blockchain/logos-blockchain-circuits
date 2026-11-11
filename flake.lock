@@ -1,5 +1,62 @@
 {
   "nodes": {
+    "ffiasm": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767109792,
+        "narHash": "sha256-DgppHleTaTj1rROK3inMH/dasvSI2urJIncPyhMHvxc=",
+        "owner": "iden3",
+        "repo": "ffiasm",
+        "rev": "aa90166dc4c5a075b835a398e15cc1e06ac90e95",
+        "type": "github"
+      },
+      "original": {
+        "owner": "iden3",
+        "repo": "ffiasm",
+        "rev": "aa90166dc4c5a075b835a398e15cc1e06ac90e95",
+        "type": "github"
+      }
+    },
+    "json": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1596714557,
+        "narHash": "sha256-THordDPdH2qwk6lFTgeFmkl7iDuA/7YH71PTUe6vJCs=",
+        "owner": "nlohmann",
+        "repo": "json",
+        "rev": "350ff4f7ced7c4117eae2fb93df02823c8021fcb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nlohmann",
+        "repo": "json",
+        "rev": "350ff4f7ced7c4117eae2fb93df02823c8021fcb",
+        "type": "github"
+      }
+    },
+    "logos-blockchain-rapidsnark": {
+      "inputs": {
+        "ffiasm": "ffiasm",
+        "json": "json",
+        "logos-nix": [
+          "logos-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794438373,
+        "narHash": "sha256-muaxJJoWjPa5dsVXb6/yoOtToiM3o+mm0RrEPGLGwFU=",
+        "owner": "logos-blockchain",
+        "repo": "logos-blockchain-rapidsnark",
+        "rev": "e2a02a02032709aafe7fc12100dcb322b850e2b5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "logos-blockchain",
+        "ref": "v0.0.8-logos.1-rc.5",
+        "repo": "logos-blockchain-rapidsnark",
+        "type": "github"
+      }
+    },
     "logos-nix": {
       "inputs": {
         "nixpkgs": "nixpkgs",
@@ -69,6 +126,7 @@
     },
     "root": {
       "inputs": {
+        "logos-blockchain-rapidsnark": "logos-blockchain-rapidsnark",
         "logos-nix": "logos-nix",
         "nixpkgs": "nixpkgs_2"
       }

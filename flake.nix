@@ -6,6 +6,9 @@
     # The Windows toolchain. It must match Logos Rapidsnark's, so that everything is built with the same compiler and
     # runtime libraries.
     logos-nix.url = "github:logos-co/logos-nix";
+    # Keep this tag the same as deps/rapidsnark/VERSION. Using `scripts/update-rapidsnark.sh` updates both.
+    logos-blockchain-rapidsnark.url = "github:logos-blockchain/logos-blockchain-rapidsnark/v0.0.8-logos.1-rc.5";
+    logos-blockchain-rapidsnark.inputs.logos-nix.follows = "logos-nix";
   };
 
   outputs =
