@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-11-12
+
 ### Changed
 
 - **PoL** and **PoQ** hash a nullifier IMT leaf as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`, without
