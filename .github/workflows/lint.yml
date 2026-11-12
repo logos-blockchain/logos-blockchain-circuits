@@ -6,13 +6,18 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       # Stable toolchain for building and clippy, version and components from rust-toolchain.toml.
       - name: Install Rust Toolchain
@@ -99,3 +104,20 @@ jobs:
           check "cargo-machete" "${{ steps.machete.outcome }}"
 
           $failed && exit 1 || true
+
+  zizmor:
+    name: Check Workflows with zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
+
+      # Fails on any finding. Accepted ones carry `# zizmor: ignore[...]` where they occur, with the reason.
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          version: 1.32.0
+          advanced-security: false
+          annotations: true

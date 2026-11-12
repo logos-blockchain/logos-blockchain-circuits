@@ -10,14 +10,26 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-prebuilt = ["dep:dirs", "dep:fd-lock", "dep:flate2", "dep:tar", "dep:ureq"]
+prebuilt = [
+  "dep:base64",
+  "dep:dirs",
+  "dep:fd-lock",
+  "dep:flate2",
+  "dep:serde_json",
+  "dep:sha2",
+  "dep:tar",
+  "dep:ureq",
+]
 
 [lints]
 workspace = true
 
 [dependencies]
+base64 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
 fd-lock = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 tar = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true }

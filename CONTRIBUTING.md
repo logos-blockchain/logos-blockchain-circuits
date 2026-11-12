@@ -53,6 +53,8 @@ When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
 - `.pre-commit-config.yaml` (hook `rev`), except `taplo`, which is pinned in `hooks/taplo.sh` (`VERSION`)
 - `.github/workflows/lint.yml` (`cargo install --version`)
 
+`snarkjs`, which generates the proving keys in CI, is pinned with its dependencies by `.github/resources/proving-keys/package-lock.json`. To change its version, edit `package.json` in the same directory and run `npm install --package-lock-only --ignore-scripts` there.
+
 ---
 
 ## Building
@@ -159,6 +161,8 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 ```
 
 > On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
+
+Each release also carries a `SHA256SUMS` file with the SHA-256 of every bundle, and a build provenance attestation for each bundle. Check a downloaded bundle with `gh attestation verify <bundle> --repo logos-blockchain/logos-blockchain-circuits`.
 
 The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).
 

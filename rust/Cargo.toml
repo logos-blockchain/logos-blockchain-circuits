@@ -34,11 +34,13 @@ lbc-signature-sys = { package = "logos-blockchain-circuits-signature-sys", path 
 lbc-types = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
 # External
+base64 = "^0.23"
 dirs = "^6"
 fd-lock = "^4"
 flate2 = "^1.1"
 libc = "^0.2"
 serde_json = "^1"
+sha2 = "^0.10"
 tar = "^0.4"
 ureq = "^3.3"
 bytes = "^1.11"

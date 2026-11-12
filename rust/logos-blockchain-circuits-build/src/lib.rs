@@ -6,12 +6,29 @@ const LBC_ROOT_DIR: &str = "LBC_ROOT_DIR";
 
 #[cfg(feature = "prebuilt")]
 mod prebuilt {
-    use std::path::{Path, PathBuf};
+    use std::{
+        collections::BTreeMap,
+        fs::File,
+        path::{Path, PathBuf},
+    };
 
-    use ureq::{Body, http::Response};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use sha2::{Digest as _, Sha256};
 
     static REPO: &str = "logos-blockchain/logos-blockchain-circuits";
     static ARTIFACT_PREFIX: &str = "logos-blockchain-circuits";
+
+    /// The SHA-256 of each release archive, as a Nix SRI hash
+    /// (`sha256-<base64>`), by version and Nix system. CI adds a release's
+    /// hashes once it has built the archives, in the commit that the
+    /// release tag then points to.
+    static ARCHIVE_HASHES: &str = include_str!("../circuits-nix-hashes.json");
+
+    /// The file in an artifact directory that holds the hash of the archive it
+    /// was unpacked from. It's written once unpacking completes, so a
+    /// directory without it was left by an interrupted unpack, or by a
+    /// version of this crate that didn't verify downloads.
+    static ARCHIVE_HASH_FILE: &str = ".archive-sha256";
 
     fn build_artifact_name(version: &str, os: &str, arch: &str) -> String {
         format!("{ARTIFACT_PREFIX}-v{version}-{os}-{arch}")
@@ -23,47 +40,61 @@ mod prebuilt {
         format!("https://github.com/{REPO}/releases/download/v{version}/{artifact_tar_gz}")
     }
 
-    fn fetch_artifact(version: &str, os: &str, arch: &str) -> Response<Body> {
+    /// The hash that the release archive for this version and platform must
+    /// have.
+    fn expected_archive_hash(version: &str, os: &str, arch: &str) -> String {
+        // Nix calls macOS `darwin`.
+        let nix_os = if os == "macos" { "darwin" } else { os };
+        let system = format!("{arch}-{nix_os}");
+        let hashes: BTreeMap<String, BTreeMap<String, String>> =
+            serde_json::from_str(ARCHIVE_HASHES)
+                .expect("Failed to parse `circuits-nix-hashes.json`.");
+        hashes
+            .get(version)
+            .and_then(|systems| systems.get(&system))
+            .cloned()
+            .unwrap_or_else(|| {
+                panic!(
+                    "`circuits-nix-hashes.json` has no hash for the {system} archive of v{version}. \
+                     CI adds it once the release is built, in the commit that the release tag \
+                     points to. Depend on that commit, or set {ENV_VAR} to point to a local build.",
+                    ENV_VAR = super::LBC_ROOT_DIR
+                )
+            })
+    }
+
+    fn download_archive(version: &str, os: &str, arch: &str, destination: &Path) {
         let url = build_artifact_url(version, os, arch);
-        // We skip checksum verification intentionally.
-        // Hardcoded hashes would protect against a silently replaced release asset but
-        // require a two-step release (build → hash → commit → tag) which feels
-        // overkill for a first-party library.
-        ureq::get(&url).call().unwrap_or_else(|error| {
+        let response = ureq::get(&url).call().unwrap_or_else(|error| {
             panic!(
                 "Failed to download a prebuilt artifact for {os}-{arch} v{version}: {error}. \
                  Set {ENV_VAR} to point to a local build instead.",
                 ENV_VAR = super::LBC_ROOT_DIR
             )
-        })
+        });
+        let mut file = File::create(destination).expect("Failed to create the archive file.");
+        std::io::copy(&mut response.into_body().into_reader(), &mut file)
+            .expect("Failed to download the archive.");
     }
 
-    fn unpack_artifact(
-        response: Response<Body>,
-        version: &str,
-        os: &str,
-        arch: &str,
-        output_dir: &Path,
-    ) -> PathBuf {
-        let gz_decoder = flate2::read::GzDecoder::new(response.into_body().into_reader());
-        let mut archive = tar::Archive::new(gz_decoder);
-        archive
+    /// The hash of the archive at `path`, in the format of
+    /// `circuits-nix-hashes.json`.
+    fn archive_hash(path: &Path) -> String {
+        let mut file = File::open(path).expect("Failed to open the downloaded archive.");
+        let mut hasher = Sha256::new();
+        std::io::copy(&mut file, &mut hasher).expect("Failed to read the downloaded archive.");
+        format!("sha256-{}", STANDARD.encode(hasher.finalize()))
+    }
+
+    fn unpack_archive(archive: &Path, output_dir: &Path) {
+        let file = File::open(archive).expect("Failed to open the downloaded archive.");
+        tar::Archive::new(flate2::read::GzDecoder::new(file))
             .unpack(output_dir)
             .expect("Failed to unpack the downloaded archive.");
-
-        let artifact_root = output_dir.join(build_artifact_name(version, os, arch));
-
-        assert!(
-            artifact_root.is_dir(),
-            "Failed to find the unpacked artifact directory at {}.",
-            artifact_root.display()
-        );
-
-        artifact_root
     }
 
     /// Produce a lockfile for the given directory
-    fn get_lockfile(directory: &Path) -> fd_lock::RwLock<std::fs::File> {
+    fn get_lockfile(directory: &Path) -> fd_lock::RwLock<File> {
         let file = std::fs::OpenOptions::new()
             .create(true)
             .truncate(false)
@@ -84,9 +115,12 @@ mod prebuilt {
         let version = env!("CARGO_PKG_VERSION");
         let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
         let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+        let expected_hash = expected_archive_hash(version, &os, &arch);
 
         let cache = get_cache_dir();
-        let artifact_root = cache.join(build_artifact_name(version, &os, &arch));
+        let artifact_name = build_artifact_name(version, &os, &arch);
+        let artifact_root = cache.join(&artifact_name);
+        let archive_hash_file = artifact_root.join(ARCHIVE_HASH_FILE);
 
         std::fs::create_dir_all(&cache).expect("Failed to create the cache directory.");
 
@@ -98,7 +132,7 @@ mod prebuilt {
         let mut lock = get_lockfile(&cache);
         let _guard = lock.write().expect("Failed to acquire cache lock.");
 
-        if artifact_root.is_dir() {
+        if std::fs::read_to_string(&archive_hash_file).is_ok_and(|hash| hash == expected_hash) {
             println!(
                 "Found a cached artifact at {}, reusing.",
                 artifact_root.display()
@@ -106,12 +140,41 @@ mod prebuilt {
             return artifact_root;
         }
 
-        println!("No cached download found, downloading v{version} for {os}-{arch}...");
-        let response = fetch_artifact(version, &os, &arch);
-        println!("Download complete, unpacking...");
-        let root = unpack_artifact(response, version, &os, &arch, &cache);
-        println!("Ready, artifact at {}.", root.display());
-        root
+        if artifact_root.exists() {
+            println!(
+                "Removing the cached artifact at {}, which wasn't unpacked from a verified archive.",
+                artifact_root.display()
+            );
+            std::fs::remove_dir_all(&artifact_root).expect("Failed to remove the cached artifact.");
+        }
+
+        println!("No verified cached artifact found, downloading v{version} for {os}-{arch}...");
+        let archive = cache.join(format!("{artifact_name}.tar.gz"));
+        download_archive(version, &os, &arch, &archive);
+
+        let hash = archive_hash(&archive);
+        if hash != expected_hash {
+            std::fs::remove_file(&archive).expect("Failed to remove the downloaded archive.");
+            panic!(
+                "The downloaded archive for {os}-{arch} v{version} has the hash {hash}, but \
+                 `circuits-nix-hashes.json` expects {expected_hash}."
+            );
+        }
+
+        println!("Download complete and verified, unpacking...");
+        unpack_archive(&archive, &cache);
+        std::fs::remove_file(&archive).expect("Failed to remove the downloaded archive.");
+
+        assert!(
+            artifact_root.is_dir(),
+            "Failed to find the unpacked artifact directory at {}.",
+            artifact_root.display()
+        );
+        std::fs::write(&archive_hash_file, &expected_hash)
+            .expect("Failed to record the hash of the unpacked archive.");
+
+        println!("Ready, artifact at {}.", artifact_root.display());
+        artifact_root
     }
 }
 
