@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- The unused constant `NOTE_ID_V1`, absent from the specification.
+
 ## [0.7.3] - 2026-11-12
 
 ### Changed

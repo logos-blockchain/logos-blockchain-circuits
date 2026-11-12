@@ -54,13 +54,6 @@ template PK0(){
 }
 
 
-// int.from_bytes(b"NOTE_ID_V1", byteorder="little") = 232989242343357190262606
-template NOTE_ID_V1(){
-    signal output out;
-    out <== 232989242343357190262606;
-}
-
-
 // int.from_bytes(b"SELECTION_RANDOMNESS_V1", byteorder="little") = 4725583332308041445519605499429790922252397838206780755
 template SELECTION_RANDOMNESS_V1(){
     signal output out;
