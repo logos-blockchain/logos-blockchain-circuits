@@ -288,11 +288,9 @@ low_leaf_nf = F(randrange(0,int(nf),1))
 if randrange(0,2,1) == 0:
     # nf is the greatest nullifier of the set
     low_leaf_next_nf = F(0)
-    low_leaf_next_index = F(0)
 else:
     low_leaf_next_nf = F(randrange(int(nf)+1,p,1))
-    low_leaf_next_index = F(randrange(1,2**40,1))
-low_leaf = poseidon2_hash([F(72106678126369435953119723346337253106302222882126),low_leaf_nf,low_leaf_next_nf,low_leaf_next_index])
+low_leaf = poseidon2_hash([F(72106678126369435953119723346337253106302222882126),low_leaf_nf,low_leaf_next_nf])
 
 low_leaf_nodes = [F(randrange(0,p,1)) for i in range(40)]
 low_leaf_selectors = randrange(0,2**40,1)
@@ -344,7 +342,6 @@ inp = {
   "set_aged_path":              [str(x) for x in set_aged_nodes],
   "low_leaf_nf":                str(low_leaf_nf),
   "low_leaf_next_nf":           str(low_leaf_next_nf),
-  "low_leaf_next_index":        str(low_leaf_next_index),
   "low_leaf_path":              [str(x) for x in low_leaf_nodes],
   "low_leaf_selectors":         [str(x) for x in low_leaf_selectors[::-1]],
   "cm_root_latest":             str(cm_root_latest),

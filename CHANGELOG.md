@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **PoL** and **PoQ** hash a nullifier IMT leaf as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`, without
+  the index of the leaf of the next nullifier. The index was only hashed, never constrained: proving a nullifier absent
+  needs the low leaf's nullifier and next nullifier alone, and the ledger inserts in the tree natively. The inputs
+  `low_leaf_next_index` (PoL) and `pol_low_leaf_next_index` (PoQ) are removed, and the verification keys change.
+  Breaking: the node must hash its IMT leaves the same way.
+
 ### Fixed
 
 - **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is `zkhash(KDF, core_sk)`.
