@@ -17,7 +17,14 @@
   };
 
   outputs =
-    { nixpkgs, logos-nix, ... }:
+    {
+      self,
+      nixpkgs,
+      logos-nix,
+      logos-blockchain-rapidsnark,
+      circomlib,
+      ...
+    }:
     let
       lib = nixpkgs.lib;
 
@@ -42,6 +49,81 @@
         windowsPkgs.nlohmann_json
         windowsMman
       ];
+
+      windowsRapidsnark = logos-blockchain-rapidsnark.packages.x86_64-linux.windows-x86_64;
+
+      # Compiles a circuit's witness generator into a Windows static library, like the compile-witness-generator action.
+      mkWindowsWitnessGeneratorLib =
+        circuitPath:
+        let
+          name = lib.removeSuffix ".circom" (baseNameOf circuitPath);
+          cpp = "${dirOf circuitPath}/${name}_cpp";
+        in
+        windowsPkgs.stdenv.mkDerivation {
+          pname = "logos-blockchain-circuits-${name}-windows-x86_64";
+          version = circuitsVersion;
+          src = self;
+
+          nativeBuildInputs = [
+            buildPkgs.circom
+            buildPkgs.gnumake
+            # fix_calcwit_leak.sh uses perl.
+            buildPkgs.perl
+          ];
+          buildInputs = windowsBuildInputs;
+
+          dontConfigure = true;
+
+          buildPhase = ''
+            runHook preBuild
+
+            resources=.github/resources/witness-generator
+
+            # Initialize the required submodules with Nix.
+            mkdir -p circomlib
+            cp -r ${circomlib}/. circomlib
+
+            (cd ${dirOf circuitPath} && circom --c --r1cs --no_asm --O2 ${name}.circom)
+
+            cp -r src/${name} ${cpp}/${name}
+            cp src/{circom_adapter.cpp,circom_adapter.hpp,circom_fwd.hpp,types.hpp,assert.h} ${cpp}/
+            cp $resources/{Makefile,isolate-symbols.sh} ${cpp}/
+
+            # circom-generated main() has no return on the success path.
+            sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' ${cpp}/main.cpp
+            sh $resources/fix_calcwit_leak.sh ${cpp}
+
+            make -C ${cpp} PROJECT=${name} windows-lib \
+              CXX="$CXX" AR="$AR" NM="$NM" OBJDUMP="$OBJDUMP" OBJCOPY="$OBJCOPY" \
+              PRIORITY_FLAGS="-I${windowsRapidsnark}/include"
+
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p $out/include
+            cp ${cpp}/lib${name}.a ${cpp}/${name}.dat $out/
+            cp ${cpp}/{calcwit.hpp,circom.hpp,fr.hpp,types.hpp,${name}/ffi.hpp} $out/include/
+
+            runHook postInstall
+          '';
+        };
+
+      windowsWitnessGeneratorLibs =
+        buildPkgs.linkFarm "logos-blockchain-circuits-witness-generator-libs-windows-x86_64" (
+          lib.mapAttrs (_: mkWindowsWitnessGeneratorLib) {
+            poc = "mantle/poc.circom";
+            pol = "mantle/pol.circom";
+            poq = "blend/poq.circom";
+            signature = "mantle/signature.circom";
+          }
+          // {
+            # Windows has no `mmap`, so clients must also link libmman.a.
+            "lib/libmman.a" = "${windowsMman}/lib/libmman.a";
+          }
+        );
 
       windowsCross =
         let
@@ -149,7 +231,12 @@
           inherit circuits;
           default = circuits;
         }
-      )) { x86_64-linux.windows-mman = windowsMman; };
+      )) {
+        x86_64-linux = {
+          windows-mman = windowsMman;
+          windows-witness-generator-libs = windowsWitnessGeneratorLibs;
+        };
+      };
 
       devShells.x86_64-linux.windows-cross = windowsCross;
     };

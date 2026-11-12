@@ -56,15 +56,22 @@ windows: LDFLAGS=-static
 windows: LDLIBS=-L/lib -lgmp -lmman
 windows: $(BIN)
 
-windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
-windows-lib: $(LIB)
+# On Windows, `ld -r` breaks the link with libstdc++, so windows-lib renames internal symbols instead.
+# See `isolate-symbols.sh`.
+windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int" -D_WIN32_WINNT=0x0601
+windows-lib: $(LIB_OBJS)
+	NM=$(NM) OBJDUMP=$(OBJDUMP) OBJCOPY=$(OBJCOPY) sh isolate-symbols.sh $(PROJECT) $^
+	rm -f $(LIB)
+	$(AR) rcs $(LIB) $^
 
 # Localizes witness-generator implementation symbols to prevent conflicts when multiple circuit libraries are linked
 # into the same binary.
 # See CONTRIBUTING.md § "Symbol Isolation".
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
-OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+OBJCOPY     ?= $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+NM          ?= nm
+OBJDUMP     ?= objdump
 SYM_PREFIX  := $(if $(filter macos,$(OS)),_,)
 
 # ---- Rules ----
