@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "circomlib": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1743709510,
+        "narHash": "sha256-TK/u5NY+ZTZRFWO1loMeYKbR5L6WHvpTgSZiiY8F3kE=",
+        "owner": "iden3",
+        "repo": "circomlib",
+        "rev": "35e54ea21da3e8762557234298dbb553c175ea8d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "iden3",
+        "repo": "circomlib",
+        "rev": "35e54ea21da3e8762557234298dbb553c175ea8d",
+        "type": "github"
+      }
+    },
     "ffiasm": {
       "flake": false,
       "locked": {
@@ -126,6 +143,7 @@
     },
     "root": {
       "inputs": {
+        "circomlib": "circomlib",
         "logos-blockchain-rapidsnark": "logos-blockchain-rapidsnark",
         "logos-nix": "logos-nix",
         "nixpkgs": "nixpkgs_2"

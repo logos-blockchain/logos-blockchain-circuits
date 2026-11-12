@@ -9,6 +9,11 @@
     # Keep this tag the same as deps/rapidsnark/VERSION. Using `scripts/update-rapidsnark.sh` updates both.
     logos-blockchain-rapidsnark.url = "github:logos-blockchain/logos-blockchain-rapidsnark/v0.0.8-logos.1-rc.5";
     logos-blockchain-rapidsnark.inputs.logos-nix.follows = "logos-nix";
+    # The circomlib submodule that the Windows build uses, at the same commit. CI checks that they match.
+    circomlib = {
+      url = "github:iden3/circomlib/35e54ea21da3e8762557234298dbb553c175ea8d";
+      flake = false;
+    };
   };
 
   outputs =

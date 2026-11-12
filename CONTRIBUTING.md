@@ -56,6 +56,12 @@ When [releasing](#releasing), these entries move to the new version's section.
 When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
    Also update `[fmt].toolchain` in the same file, the nightly used by `hooks/fmt.sh` in CI and pre-commit.
 
+#### Submodules
+
+When you update the `circomlib` submodule, set the same commit in its `flake.nix` input and run `nix flake lock`.
+They must match, so that all builds use the same version of `circomlib`.
+CI checks that they match.
+
 #### Tool Versions
 
 `taplo`, `cargo-deny`, and `cargo-machete` are pinned in two places that must stay in sync:
