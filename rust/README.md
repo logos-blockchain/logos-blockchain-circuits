@@ -41,15 +41,10 @@ The downloaded bundle version always matches `CARGO_PKG_VERSION`.
 
 ### Option B — Custom path
 
-Point the build script at any directory containing the compiled circuit libraries:
+Set `LBC_ROOT_DIR` to the top-level directory of an extracted release bundle:
 
 ```bash
-LBC_POQ_LIB_DIR=/path/to/poq
-LBC_POL_LIB_DIR=/path/to/pol
-LBC_POC_LIB_DIR=/path/to/poc
-LBC_SIGNATURE_LIB_DIR=/path/to/signature
-LBC_LIB_DIR=/path/to/lib                 # Directory containing the required libs
-                                         # If using a release bundle, this is the included lib/ directory
+LBC_ROOT_DIR=/path/to/logos-blockchain-circuits-v<version>-<os>-<arch>
 ```
 
 > The `justfile` at the repo root contains recipes (`just poq`, `just pol`, etc.) that build the circuit libraries from
