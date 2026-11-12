@@ -118,10 +118,12 @@ leading `_`. The Makefile's `SYM_PREFIX` variable handles this automatically.
 
 ##### Windows
 
-Uses GNU's `objcopy` (from MinGW binutils).
+Uses `isolate-symbols.sh` instead of `ld -r` and `objcopy`.
 
-GNU's `objcopy` works correctly on COFF, mapping local binding to storage class `C_STAT`.
-The ELF `GRP_COMDAT` problem doesn't apply: COFF COMDAT is per-section rather than group-based.
+On Windows, `ld -r` and `objcopy` also make COMDAT symbols local, e.g. template instances, so the link with `libstdc++`
+fails.
+The script renames each internal symbol to `__<project>_priv_<symbol>` instead.
+It keeps the public FFI symbols and the COMDAT symbols.
 
 #### FFI Maintenance
 
@@ -136,8 +138,6 @@ the affected symbols will be localized and linking will fail.
 The bundles ship `prover`, `verifier` and `libgmp.a` from [Logos Rapidsnark][rapidsnark]'s releases.
 The circuit libraries link against this `libgmp.a`.
 For details, see Logos Rapidsnark's [README][rapidsnark-readme] and [CONTRIBUTING][rapidsnark-contributing].
-
-On Windows, these files are still built from the `rapidsnark` submodule.
 
 ### Updating
 
@@ -213,7 +213,5 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── verifier[.exe]
 └── VERSION
 ```
-
-> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
 
 The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).

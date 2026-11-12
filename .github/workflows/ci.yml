@@ -511,8 +511,8 @@ jobs:
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
   build-windows:
-    name: Build Windows Libraries (Native)
-    runs-on: windows-latest
+    name: Build Windows Libraries (Cross)
+    runs-on: ubuntu-latest
     needs:
       - setup
       - generate-proving-keys
@@ -523,225 +523,20 @@ jobs:
       OS: windows
       ARCH: x86_64
     steps:
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2.28.0 # FIXME: Ideally use the hash to avoid supply chain attacks. Currently unable to.
-        with:
-          update: true
-          install: >-
-            base-devel
-            mingw-w64-x86_64-toolchain
-            make
-            git
-
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
 
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+      - name: Build Windows Witness Generator Libraries
+        run: nix build .#windows-witness-generator-libs --out-link witness-generator-libs -L
+
+      - name: Download Logos Rapidsnark
+        id: rapidsnark
+        uses: ./.github/actions/download-rapidsnark
         with:
-          cache: false
-
-      - name: Install Circom
-        run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
-          cd circom
-          $env:RUSTFLAGS="-A dead_code"; cargo build --release
-          $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
-          circom --version
-
-      - name: Install Dependencies [Witness Generator]
-        shell: msys2 {0}
-        run: |
-          # nlohmann/json
-          mkdir -p /include/nlohmann/
-          wget -O /include/nlohmann/json.hpp https://github.com/nlohmann/json/releases/download/v3.12.0/json.hpp
-
-          # mman-win32
-          git clone https://github.com/alitrack/mman-win32.git
-          pushd mman-win32
-          # Newer commits add a madvise that conflicts with the one in windows.mman_patch.hpp.
-          # Temporary: the Windows build revamp pins the newest commit and drops our madvise.
-          git checkout fedbdbf167241503c4a8250c1666be580890c4e2
-          ./configure --prefix= # Path: /
-          make
-          make install
-          popd
-
-      - name: Install Dependencies [Prover]
-        shell: msys2 {0}
-        run: pacman --noconfirm -Sy --needed cmake nasm mingw-w64-ucrt-x86_64-libsodium
-
-      - name: Replace Prover Makefile # TODO: Make a fork generate the appropriate Windows Makefile
-        shell: msys2 {0}
-        run: cp .github/resources/prover/Makefile rapidsnark/Makefile
-
-      - name: Replace Prover CMakeLists
-        shell: msys2 {0}
-        run: cp .github/resources/prover/${{ env.OS }}.src-CMakeLists.txt rapidsnark/src/CMakeLists.txt
-
-      - name: Patch Windows mman
-        shell: msys2 {0}
-        run: cp .github/resources/prover/${{ env.OS }}.mman_patch.hpp /include/mman_patch.hpp
-
-      - name: Add uio.h headers
-        shell: msys2 {0}
-        run: cp .github/resources/prover/${{ env.OS }}.uio.h /include/sys/uio.h
-
-      - name: Replace build_gmp
-        shell: msys2 {0}
-        run: cp .github/resources/prover/${{ env.OS }}.build_gmp.sh rapidsnark/build_gmp.sh
-
-      - name: Cache GMP Archive
-        id: cache-gmp
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: rapidsnark/depends/gmp-6.2.1.tar.xz
-          key: gmp-6.2.1
-
-      - name: Download GMP Archive
-        if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p rapidsnark/depends
-          cd rapidsnark/depends
-          URLS=(
-            "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
-            "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
-            "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
-          )
-          for url in "${URLS[@]}"; do
-            echo "Trying $url"
-            if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
-              --connect-timeout 20 --max-time 300 \
-              -o gmp-6.2.1.tar.xz "$url"; then
-              echo "Download complete from $url"
-              exit 0
-            fi
-          done
-          echo "All GMP download sources failed"
-          exit 1
-
-      - name: Compile Prover and Verifier
-        shell: msys2 {0}
-        working-directory: rapidsnark
-        run: |
-          ./build_gmp.sh host
-          make host_windows_x86_64_static
-
-      - name: Prioritize Built GMP Headers Over System GMP
-        shell: msys2 {0}
-        run: |
-          # System gmp (6.3.0) is preinstalled on the runner. Prepend our built gmp headers
-          # so the witness generator compiles against the same gmp version as the prover.
-          echo "PRIORITY_FLAGS=-I$(cygpath -u "$GITHUB_WORKSPACE")/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
-
-      - name: Bundle Rapidsnark Prover
-        shell: msys2 {0}
-        env:
-          BINARY_NAME: prover
-          BUNDLE_NAME: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME}.exe "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Bundle Rapidsnark Verifier
-        shell: msys2 {0}
-        env:
-          BINARY_NAME: verifier
-          BUNDLE_NAME: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME}.exe "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-
-      - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-
-      - name: Compile PoL Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoL"
-          circuit-name-binary: "pol"
-          circuit-path: "mantle/pol.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
-      - name: Compile PoQ Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoQ"
-          circuit-name-binary: "poq"
-          circuit-path: "blend/poq.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
-      - name: Compile Signature Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
-      - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
-      - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/pol-artifact
-
-      - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poq-artifact
-
-      - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
-
-      - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
+          platform: windows-x86_64
 
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
@@ -749,69 +544,34 @@ jobs:
           pattern: "*-proving-key"
           path: proving-keys/
 
-      - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-artifact/
-
-      - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-artifact/
-
       - name: Create Unified Release Bundle
-        shell: msys2 {0}
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          RAPIDSNARK: ${{ steps.rapidsnark.outputs.path }}
         run: |
-          # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
-
-          # Create VERSION file
-          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
-
-          # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover.exe "${BUNDLE_NAME}/prover.exe"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier.exe "${BUNDLE_NAME}/verifier.exe"
-
-          # Move witness libraries into their respective circuit directories
-          mv witness-generators/pol-artifact/pol.lib "${BUNDLE_NAME}/pol/"
-          mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
-          mv witness-generators/poq-artifact/poq.lib "${BUNDLE_NAME}/poq/"
-          mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/signature.lib "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/poc.lib "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
-
-          # Copy proving keys and verification keys into each circuit directory
-          cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
-          cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
-          cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
-          cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
-
-          # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
-          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+          echo "${VERSION}" > "${BUNDLE_NAME}/VERSION"
 
-          # Create tarball
+          cp "${RAPIDSNARK}/bin/prover.exe" "${RAPIDSNARK}/bin/verifier.exe" "${BUNDLE_NAME}/"
+          cp "${RAPIDSNARK}/lib/libgmp.a" "${BUNDLE_NAME}/lib/"
+          cp witness-generator-libs/lib/libmman.a "${BUNDLE_NAME}/lib/"
+
+          for circuit in poc pol poq signature; do
+            mkdir -p "${BUNDLE_NAME}/${circuit}"
+            cp "witness-generator-libs/${circuit}/lib${circuit}.a" "${BUNDLE_NAME}/${circuit}/"
+            cp "witness-generator-libs/${circuit}/${circuit}.dat" "${BUNDLE_NAME}/${circuit}/witness_generator.dat"
+            cp -r "witness-generator-libs/${circuit}/include" "${BUNDLE_NAME}/${circuit}/"
+            cp "proving-keys/${circuit}-proving-key/${circuit}.zkey" "${BUNDLE_NAME}/${circuit}/proving_key.zkey"
+            cp "proving-keys/${circuit}-proving-key/${circuit}_verification_key.json" \
+              "${BUNDLE_NAME}/${circuit}/verification_key.json"
+          done
+
+          # Files from the Nix store are read-only.
+          chmod -R u+w "${BUNDLE_NAME}"
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
       - name: Compute SRI Hash
         id: hash
-        shell: bash
         run: |
           TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
           echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
