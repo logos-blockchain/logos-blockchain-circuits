@@ -81,5 +81,11 @@
         "aarch64-linux": "sha256-pEPB74eLnDGb0bDJ4Oa2MD8MmZp1Yqw8rV/DF3uS/Gk=",
         "x86_64-linux": "sha256-2u9jFVb0lZNFwx18aw2lgCfkXDQ3e1hWl77OrBZxjA4=",
         "x86_64-windows": "sha256-0diQj/Y7kDIZIXL+0+lIQSx2Q+XId7t0dIVo7EeEzFU="
+    },
+    "0.7.3": {
+        "aarch64-darwin": "sha256-JIuez8wHEoWll71xNzD4nq4OphSnHwPV8CfaIUT//ZA=",
+        "aarch64-linux": "sha256-7iC5PupgH0RsDkgwGhiowbCbwQ7YTnrJ4aaIMLsWhzs=",
+        "x86_64-linux": "sha256-jtYw/u86E0ygCdKwKnS5dnDwEZRLMrEZHi0SWyw6Rw4=",
+        "x86_64-windows": "sha256-dwcyN43tJ+HrqOEpeKHBHXNUqdvhdUZAZSimE6FM+Io="
     }
 }
