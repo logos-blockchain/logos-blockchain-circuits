@@ -78,3 +78,27 @@ template SafeLessThan(n) {
 
     out <== lt.out;
 }
+
+// Asserts that any two active entries of `in` differ, each flag of `active` being a bit.
+template DistinctWhenActive(n) {
+    signal input in[n];
+    signal input active[n];
+
+    // Only the pairs (i, j) with i < j are used.
+    signal both_active[n][n];
+    signal inverse[n][n];
+    for (var i = 0; i < n; i++) {
+        for (var j = i + 1; j < n; j++) {
+            // First, both_active[i][j] is 1 if the entries i and j are both active, and 0 otherwise
+            both_active[i][j] <== active[i] * active[j];
+
+            // Then the prover gives the inverse of in[i] - in[j] when both are active and differ, and 0 otherwise
+            inverse[i][j] <-- (both_active[i][j] == 1 && in[i] != in[j]) ? 1 / (in[i] - in[j]) : 0;
+
+            // Finally (in[i] - in[j]) * inverse[i][j] must equal both_active[i][j]:
+            //   - both active: (in[i] - in[j]) * inverse[i][j] == 1, so in[i] - in[j] has an inverse and in[i] != in[j]
+            //   - otherwise: (in[i] - in[j]) * inverse[i][j] == 0, which inverse[i][j] = 0 satisfies, so nothing is asserted
+            (in[i] - in[j]) * inverse[i][j] === both_active[i][j];
+        }
+    }
+}
