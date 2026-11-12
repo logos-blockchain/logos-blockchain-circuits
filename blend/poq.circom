@@ -58,7 +58,6 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input pol_cm_aged_selectors[depth_merkle_tree];
     signal input pol_low_leaf_nf;           // greatest nullifier of the set at the freeze lower than the note nullifier
     signal input pol_low_leaf_next_nf;      // next greater nullifier of the set at the freeze, 0 if none
-    signal input pol_low_leaf_next_index;   // index of the IMT leaf holding pol_low_leaf_next_nf, 0 if none
     signal input pol_low_leaf_path[depth_merkle_tree];
     signal input pol_low_leaf_selectors[depth_merkle_tree];
     signal input pol_set_aged_path[depth_merkle_tree];
@@ -113,12 +112,11 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     for (var i = 0; i < depth_merkle_tree; i++) {
         pol_low_leaf_selectors[i] * (1 - pol_low_leaf_selectors[i]) === 0;
     }
-    component low_leaf = Poseidon2_hash(4);
+    component low_leaf = Poseidon2_hash(3);
     component dst_low_leaf = NULLIFIER_IMT_LEAF_V1();
     low_leaf.inp[0] <== dst_low_leaf.out;
     low_leaf.inp[1] <== pol_low_leaf_nf;
     low_leaf.inp[2] <== pol_low_leaf_next_nf;
-    low_leaf.inp[3] <== pol_low_leaf_next_index;
     component nf_root_aged = compute_merkle_root(depth_merkle_tree);
     for (var i = 0; i < depth_merkle_tree; i++) {
         nf_root_aged.nodes[i] <== pol_low_leaf_path[i];

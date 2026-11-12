@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **PoL** and **PoQ** hash a nullifier IMT leaf as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`, without
+  the index of the leaf of the next nullifier. The index was only hashed, never constrained: proving a nullifier absent
+  needs the low leaf's nullifier and next nullifier alone, and the ledger inserts in the tree natively. The inputs
+  `low_leaf_next_index` (PoL) and `pol_low_leaf_next_index` (PoQ) are removed, and the verification keys change.
+  Breaking: the node must hash its IMT leaves the same way.
 
 ### Fixed
 
