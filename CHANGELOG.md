@@ -29,6 +29,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+
+### Removed
+
+- The unused constant `NOTE_ID_V1`, absent from the specification.
+
+### Fixed
+
+- **Witness generation**: no longer leaks memory.
+
+## [0.7.3] - 2026-11-12
+
+### Changed
+
 - **PoL** and **PoQ** hash a nullifier IMT leaf as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`, without
   the index of the leaf of the next nullifier. The index was only hashed, never constrained: proving a nullifier absent
   needs the low leaf's nullifier and next nullifier alone, and the ledger inserts in the tree natively. The inputs
@@ -37,7 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- **Witness generation**: no longer leaks memory.
 - **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is `zkhash(KDF, core_sk)`.
   The circuit does not change.
 
