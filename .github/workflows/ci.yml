@@ -582,6 +582,101 @@ jobs:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
+  # The tests are cross-built on Linux, then run on Windows.
+  build-windows-tests:
+    name: Build Windows Tests
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-windows
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: windows
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+
+      - name: Install Rust Target
+        run: rustup target add x86_64-pc-windows-gnu
+
+      - name: Download Windows Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Build Tests
+        env:
+          LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: >
+          nix develop .#windows-cross -c
+          cargo test
+          --manifest-path rust/Cargo.toml
+          --all
+          --all-features
+          --no-run
+          --target x86_64-pc-windows-gnu
+          --message-format=json-render-diagnostics
+          > build.json
+
+      - name: Stage Test Binaries
+        run: |
+          mkdir windows-tests
+          jq -r 'select(.profile.test) | .executable' build.json | xargs -I{} cp {} windows-tests/
+
+      - name: Upload Test Binaries
+        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        with:
+          name: windows-tests
+          path: windows-tests
+          if-no-files-found: error
+
+  test-windows:
+    name: Test Windows
+    runs-on: windows-latest
+    needs:
+      - setup
+      - build-windows-tests
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: windows
+      ARCH: x86_64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download Windows Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Download Test Binaries
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: windows-tests
+          path: windows-tests
+
+      - name: Test
+        env:
+          LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+        run: |
+          for exe in windows-tests/*.exe; do
+            echo "::group::$exe"
+            "$exe"
+            echo "::endgroup::"
+          done
+
   build-macos:
     name: Build MacOS Libraries (Native)
     runs-on: macos-latest
@@ -853,6 +948,7 @@ jobs:
       - build-macos
       - clippy
       - test
+      - test-windows
     permissions:
       contents: write
     env:
