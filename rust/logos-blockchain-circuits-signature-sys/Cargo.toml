@@ -12,6 +12,7 @@ version.workspace = true
 [features]
 default = ["prebuilt"]
 prebuilt = ["lbc-build/prebuilt"]
+test-inputs = []
 
 [lints]
 workspace = true
@@ -19,6 +20,9 @@ workspace = true
 [dependencies]
 lbc-types = { workspace = true }
 lbc-common = { workspace = true }
+
+[dev-dependencies]
+lbc-common = { workspace = true, features = ["test-utils"] }
 
 [build-dependencies]
 lbc-build = { workspace = true }
