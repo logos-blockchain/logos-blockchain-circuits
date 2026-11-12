@@ -48,8 +48,7 @@ mod tests {
 
     use super::{PolWitnessInput, generate_witness, generate_witness_from_files};
 
-    static LIB_DIR: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("pol"));
+    static LIB_DIR: LazyLock<PathBuf> = LazyLock::new(|| lbc_common::lbc_root_dir!().join("pol"));
     static INPUTS: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 

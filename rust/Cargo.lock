@@ -233,6 +233,7 @@ name = "logos-blockchain-circuits-rapidsnark-sys"
 version = "0.5.7"
 dependencies = [
  "logos-blockchain-circuits-build",
+ "logos-blockchain-circuits-common",
 ]
 
 [[package]]

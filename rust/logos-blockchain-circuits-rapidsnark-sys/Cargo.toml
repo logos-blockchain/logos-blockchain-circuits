@@ -17,6 +17,7 @@ prebuilt = ["lbc-build/prebuilt"]
 workspace = true
 
 [dependencies]
+lbc-common = { workspace = true }
 
 [build-dependencies]
 lbc-build = { workspace = true }

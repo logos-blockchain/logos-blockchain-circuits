@@ -53,6 +53,32 @@ LBC_ROOT_DIR=/path/to/logos-blockchain-circuits-v<version>-<os>-<arch>
 > This is not yet an officially supported workflow, but it can serve as a reference if you need to produce the
 > libraries yourself.
 
+### Running on a different machine
+
+The crates give access to the bundle in 2 ways.
+
+#### Embedded data
+
+It's copied into the program at build time, so it works on any machine:
+
+- `artifacts::{PROVING_KEY, VERIFICATION_KEY, CIRCUIT_DAT}`, in each circuit's `-sys` crate.
+- The witness generator, through `generate_witness`.
+
+#### Paths
+
+They point to files in the bundle, so these files must exist when the program runs:
+
+- `artifacts::{PROVING_KEY_PATH, VERIFICATION_KEY_PATH, CIRCUIT_DAT_PATH}`, in each circuit's `-sys` crate.
+- `prover()` and `verifier()`, in `logos-blockchain-circuits-rapidsnark-sys`. They return the paths to
+  [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s executables.
+
+The paths are resolved when the program runs:
+
+- If `LBC_ROOT_DIR` is set, the paths point to that directory.
+- If it is not set, the paths point to the bundle directory that the build used.
+   > This second case works out-of-the-box only on the machine that built the program.
+   > On any other machine, set `LBC_ROOT_DIR` to the extracted bundle's top-level directory.
+
 ## Usage
 
 ### In-memory witness generation

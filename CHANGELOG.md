@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
   [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
   instead of being built from the `rapidsnark` submodule.
   Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
+- **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
+  machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
+  `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
+  **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
+  `LazyLock<PathBuf>` statics instead of `&str` constants.
 
 ## [0.5.0] — 2026-05-25
 

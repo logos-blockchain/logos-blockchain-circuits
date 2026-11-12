@@ -52,7 +52,7 @@ mod tests {
     use super::{SignatureWitnessInput, generate_witness, generate_witness_from_files};
 
     static LIB_DIR: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("signature"));
+        LazyLock::new(|| lbc_common::lbc_root_dir!().join("signature"));
     static INPUTS: LazyLock<PathBuf> =
         LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
 
