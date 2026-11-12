@@ -117,9 +117,7 @@ runs:
     - name: Install llvm-objcopy (macOS)
       if: ${{ inputs.os == 'macos' }}
       shell: bash
-      run: |
-        brew install llvm
-        echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+      run: brew install llvm
 
     # TODO: Instead of insertion, make a fork that includes the appropriate patch (or the actual fix)
     - name: Patch MacOS GMP
@@ -129,7 +127,7 @@ runs:
         WITNESS_GENERATOR_RESOURCES_PATH: ${{ steps.parse-circuit-path.outputs.WITNESS_GENERATOR_RESOURCES_PATH }}
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
         OS: ${{ inputs.os }}
-      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/${{ env.OS }}.gmp_patch.hpp" "${CIRCUIT_CPP_PATH}/gmp_patch.hpp"
+      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/${OS}.gmp_patch.hpp" "${CIRCUIT_CPP_PATH}/gmp_patch.hpp"
 
     - name: Compile ${{ inputs.circuit-name-display }}
       if: ${{ inputs.os != 'windows' }}
@@ -138,7 +136,10 @@ runs:
       env:
         CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
         OS: ${{ inputs.os }}
-      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
+      run: |
+        # Homebrew's LLVM is keg-only: put its llvm-objcopy on the PATH of this step only.
+        if [ "$OS" = "macos" ]; then PATH="$(brew --prefix llvm)/bin:$PATH"; fi
+        make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
 
     - name: Compile ${{ inputs.circuit-name-display }}
       if: ${{ inputs.os == 'windows' }}
@@ -163,7 +164,7 @@ runs:
         mv "${CIRCUIT_CPP_PATH}/types.hpp" "${CIRCUIT_CPP_PATH}/include/"
 
     - name: Upload ${{ inputs.circuit-name-display }}
-      uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ inputs.circuit-name-binary }}-${{ inputs.version }}-${{ inputs.os }}-${{ inputs.arch }}
         path: |

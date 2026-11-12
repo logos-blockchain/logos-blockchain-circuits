@@ -1,0 +1,8 @@
+{
+  "name": "proving-keys",
+  "private": true,
+  "description": "The snarkjs that CI generates the proving keys with. package-lock.json pins it and its dependencies.",
+  "dependencies": {
+    "snarkjs": "0.7.6"
+  }
+}

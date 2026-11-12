@@ -11,8 +11,14 @@ on:
         description: "Tag to release. Must follow the format of 'vX.Y.Z'."
         required: true
 
+permissions:
+  contents: read
+
 env:
-  CIRCOM_TAG: v2.2.2
+  # circom v2.2.2, fetched by commit because a tag can be moved.
+  CIRCOM_COMMIT: e410b0d5cd2948a15931df0bc50d79ce56fa8c32
+  # The SHA-256 of gmp-6.2.1.tar.xz, which the build jobs download or restore from the cache.
+  GMP_SHA256: fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2
 
 jobs:
   setup:
@@ -51,8 +57,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Checkout
-        uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
+          persist-credentials: false
           sparse-checkout: rust/Cargo.toml
           sparse-checkout-cone-mode: false
 
@@ -102,7 +109,9 @@ jobs:
       PTAU_SHA256: "6b662a324867139fb1a20a324d90b6ff61856dfb23f59326909f14b0e2483ae0"
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
@@ -114,19 +123,23 @@ jobs:
 
       - name: Install Circom
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          git init --quiet circom
           cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
+          git fetch --depth 1 https://github.com/iden3/circom.git "$CIRCOM_COMMIT"
+          git checkout --quiet FETCH_HEAD
+          RUSTFLAGS="-A dead_code" cargo build --release --locked
+          RUSTFLAGS="-A dead_code" cargo install --locked --path circom
           circom --version
 
-      - name: Setup Node.js
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b
+      # setup-node v4 only caches when `cache` is set, which this step doesn't set.
+      - name: Setup Node.js # zizmor: ignore[cache-poisoning]
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version: '20'
 
       - name: Install snarkjs
-        run: npm install -g snarkjs@0.7.6
+        working-directory: .github/resources/proving-keys
+        run: npm ci --ignore-scripts
 
       - name: Assemble Powers of Tau
         run: |
@@ -138,6 +151,7 @@ jobs:
 
       - name: Generate Proving Key
         run: |
+          PATH="$GITHUB_WORKSPACE/.github/resources/proving-keys/node_modules/.bin:$PATH"
           cd ${{ matrix.circuit.dir }}
           circom --r1cs --O2 ${{ matrix.circuit.file }}
           snarkjs groth16 setup ${CIRCUIT_NAME}.r1cs ../${{ env.PTAU_FILE }} ${{ matrix.circuit.name }}-0.zkey
@@ -148,7 +162,7 @@ jobs:
           CIRCUIT_NAME: ${{ matrix.circuit.file == 'signature.circom' && 'signature' || matrix.circuit.name }}
 
       - name: Upload Proving Key
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.circuit.name }}-proving-key
           path: |
@@ -169,7 +183,9 @@ jobs:
       ARCH: x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
@@ -181,10 +197,12 @@ jobs:
 
       - name: Install Circom
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          git init --quiet circom
           cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
+          git fetch --depth 1 https://github.com/iden3/circom.git "$CIRCOM_COMMIT"
+          git checkout --quiet FETCH_HEAD
+          RUSTFLAGS="-A dead_code" cargo build --release --locked
+          RUSTFLAGS="-A dead_code" cargo install --locked --path circom
           circom --version
 
       - name: Setup Dependencies
@@ -200,7 +218,8 @@ jobs:
       - name: Replace Prover Makefile # TODO: Make a fork generate the appropriate Linux Makefile
         run: cp .github/resources/prover/Makefile rapidsnark/Makefile
 
-      - name: Cache GMP Archive
+      # A poisoned cache entry can't reach the build: the archive is checked against GMP_SHA256 below.
+      - name: Cache GMP Archive # zizmor: ignore[cache-poisoning]
         id: cache-gmp
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
@@ -230,6 +249,15 @@ jobs:
           done
           echo "All GMP download sources failed"
           exit 1
+
+      - name: Verify GMP Archive
+        shell: bash
+        run: |
+          ACTUAL=$(openssl dgst -sha256 -r rapidsnark/depends/gmp-6.2.1.tar.xz | cut -d' ' -f1)
+          if [ "$ACTUAL" != "$GMP_SHA256" ]; then
+            echo "::error::gmp-6.2.1.tar.xz has the SHA-256 $ACTUAL, but GMP_SHA256 is $GMP_SHA256."
+            exit 1
+          fi
 
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
@@ -270,19 +298,19 @@ jobs:
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
       - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Compile PoL Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoL"
           circuit-name-binary: "pol"
@@ -292,7 +320,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoQ Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoQ"
           circuit-name-binary: "poq"
@@ -302,7 +330,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile Signature Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "Signature"
           circuit-name-binary: "signature"
@@ -312,7 +340,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoC"
           circuit-name-binary: "poc"
@@ -322,43 +350,43 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/pol-artifact
 
       - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
       - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
 
       - name: Download All Proving Key Artifacts
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: "*-proving-key"
           path: proving-keys/
 
       - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-artifact/
 
       - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-artifact/
@@ -371,13 +399,13 @@ jobs:
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
-          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+          echo "$VERSION" > "${BUNDLE_NAME}/VERSION"
 
           # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
+          tar -xzf "prover-artifact/prover-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          tar -xzf "verifier-artifact/verifier-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          mv "prover-${VERSION}-${OS}-${ARCH}/prover/prover" "${BUNDLE_NAME}/prover"
+          mv "verifier-${VERSION}-${OS}-${ARCH}/verifier/verifier" "${BUNDLE_NAME}/verifier"
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
@@ -415,11 +443,11 @@ jobs:
       - name: Compute SRI Hash
         id: hash
         run: |
-          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          TARBALL="logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz"
           echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Unified Release Bundle
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
@@ -438,7 +466,9 @@ jobs:
       ARCH: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
@@ -450,10 +480,12 @@ jobs:
 
       - name: Install Circom
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          git init --quiet circom
           cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
+          git fetch --depth 1 https://github.com/iden3/circom.git "$CIRCOM_COMMIT"
+          git checkout --quiet FETCH_HEAD
+          RUSTFLAGS="-A dead_code" cargo build --release --locked
+          RUSTFLAGS="-A dead_code" cargo install --locked --path circom
           circom --version
 
       - name: Setup Dependencies
@@ -469,7 +501,8 @@ jobs:
       - name: Replace Prover Makefile
         run: cp .github/resources/prover/Makefile rapidsnark/Makefile
 
-      - name: Cache GMP Archive
+      # A poisoned cache entry can't reach the build: the archive is checked against GMP_SHA256 below.
+      - name: Cache GMP Archive # zizmor: ignore[cache-poisoning]
         id: cache-gmp
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
@@ -499,6 +532,15 @@ jobs:
           done
           echo "All GMP download sources failed"
           exit 1
+
+      - name: Verify GMP Archive
+        shell: bash
+        run: |
+          ACTUAL=$(openssl dgst -sha256 -r rapidsnark/depends/gmp-6.2.1.tar.xz | cut -d' ' -f1)
+          if [ "$ACTUAL" != "$GMP_SHA256" ]; then
+            echo "::error::gmp-6.2.1.tar.xz has the SHA-256 $ACTUAL, but GMP_SHA256 is $GMP_SHA256."
+            exit 1
+          fi
 
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
@@ -541,19 +583,19 @@ jobs:
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
       - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Compile PoL Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoL"
           circuit-name-binary: "pol"
@@ -563,7 +605,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoQ Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoQ"
           circuit-name-binary: "poq"
@@ -573,7 +615,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile Signature Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "Signature"
           circuit-name-binary: "signature"
@@ -583,7 +625,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoC"
           circuit-name-binary: "poc"
@@ -593,43 +635,43 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/pol-artifact
 
       - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
       - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
 
       - name: Download All Proving Key Artifacts
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: "*-proving-key"
           path: proving-keys/
 
       - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-artifact/
 
       - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-artifact/
@@ -642,13 +684,13 @@ jobs:
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
-          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+          echo "$VERSION" > "${BUNDLE_NAME}/VERSION"
 
           # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
+          tar -xzf "prover-artifact/prover-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          tar -xzf "verifier-artifact/verifier-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          mv "prover-${VERSION}-${OS}-${ARCH}/prover/prover" "${BUNDLE_NAME}/prover"
+          mv "verifier-${VERSION}-${OS}-${ARCH}/verifier/verifier" "${BUNDLE_NAME}/verifier"
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
@@ -686,11 +728,11 @@ jobs:
       - name: Compute SRI Hash
         id: hash
         run: |
-          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          TARBALL="logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz"
           echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Unified Release Bundle
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
@@ -709,7 +751,7 @@ jobs:
       ARCH: x86_64
     steps:
       - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2.28.0 # FIXME: Ideally use the hash to avoid supply chain attacks. Currently unable to.
+        uses: msys2/setup-msys2@40677d36a502eb2cf0fb808cc9dec31bf6152638 # v2.28.0
         with:
           update: true
           install: >-
@@ -719,7 +761,9 @@ jobs:
             git
 
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
@@ -731,18 +775,24 @@ jobs:
 
       - name: Install Circom
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          git init --quiet circom
           cd circom
-          $env:RUSTFLAGS="-A dead_code"; cargo build --release
-          $env:RUSTFLAGS="-A dead_code"; cargo install --path circom
+          git fetch --depth 1 https://github.com/iden3/circom.git $env:CIRCOM_COMMIT
+          git checkout --quiet FETCH_HEAD
+          $env:RUSTFLAGS="-A dead_code"; cargo build --release --locked
+          $env:RUSTFLAGS="-A dead_code"; cargo install --locked --path circom
           circom --version
 
       - name: Install Dependencies [Witness Generator]
         shell: msys2 {0}
+        env:
+          # The SHA-256 that the v3.12.0 release notes give for json.hpp.
+          JSON_HPP_SHA256: aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63
         run: |
           # nlohmann/json
           mkdir -p /include/nlohmann/
           wget -O /include/nlohmann/json.hpp https://github.com/nlohmann/json/releases/download/v3.12.0/json.hpp
+          echo "${JSON_HPP_SHA256}  /include/nlohmann/json.hpp" | sha256sum -c -
 
           # mman-win32
           git clone https://github.com/alitrack/mman-win32.git
@@ -779,7 +829,8 @@ jobs:
         shell: msys2 {0}
         run: cp .github/resources/prover/${{ env.OS }}.build_gmp.sh rapidsnark/build_gmp.sh
 
-      - name: Cache GMP Archive
+      # A poisoned cache entry can't reach the build: the archive is checked against GMP_SHA256 below.
+      - name: Cache GMP Archive # zizmor: ignore[cache-poisoning]
         id: cache-gmp
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
@@ -809,6 +860,15 @@ jobs:
           done
           echo "All GMP download sources failed"
           exit 1
+
+      - name: Verify GMP Archive
+        shell: bash
+        run: |
+          ACTUAL=$(openssl dgst -sha256 -r rapidsnark/depends/gmp-6.2.1.tar.xz | cut -d' ' -f1)
+          if [ "$ACTUAL" != "$GMP_SHA256" ]; then
+            echo "::error::gmp-6.2.1.tar.xz has the SHA-256 $ACTUAL, but GMP_SHA256 is $GMP_SHA256."
+            exit 1
+          fi
 
       - name: Compile Prover and Verifier
         shell: msys2 {0}
@@ -853,19 +913,19 @@ jobs:
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
       - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Compile PoL Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoL"
           circuit-name-binary: "pol"
@@ -875,7 +935,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoQ Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoQ"
           circuit-name-binary: "poq"
@@ -885,7 +945,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile Signature Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "Signature"
           circuit-name-binary: "signature"
@@ -895,7 +955,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoC"
           circuit-name-binary: "poc"
@@ -905,43 +965,43 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/pol-artifact
 
       - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
       - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
 
       - name: Download All Proving Key Artifacts
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: "*-proving-key"
           path: proving-keys/
 
       - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-artifact/
 
       - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-artifact/
@@ -955,13 +1015,13 @@ jobs:
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
-          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+          echo "$VERSION" > "${BUNDLE_NAME}/VERSION"
 
           # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover.exe "${BUNDLE_NAME}/prover.exe"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier.exe "${BUNDLE_NAME}/verifier.exe"
+          tar -xzf "prover-artifact/prover-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          tar -xzf "verifier-artifact/verifier-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          mv "prover-${VERSION}-${OS}-${ARCH}/prover/prover.exe" "${BUNDLE_NAME}/prover.exe"
+          mv "verifier-${VERSION}-${OS}-${ARCH}/verifier/verifier.exe" "${BUNDLE_NAME}/verifier.exe"
 
           # Move witness libraries into their respective circuit directories
           mv witness-generators/pol-artifact/pol.lib "${BUNDLE_NAME}/pol/"
@@ -998,11 +1058,11 @@ jobs:
         id: hash
         shell: bash
         run: |
-          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          TARBALL="logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz"
           echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Unified Release Bundle
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
@@ -1021,7 +1081,9 @@ jobs:
       OS: macos
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Initialise Submodules
         run: git submodule update --init --recursive
@@ -1033,10 +1095,12 @@ jobs:
 
       - name: Install Circom
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
+          git init --quiet circom
           cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
+          git fetch --depth 1 https://github.com/iden3/circom.git "$CIRCOM_COMMIT"
+          git checkout --quiet FETCH_HEAD
+          RUSTFLAGS="-A dead_code" cargo build --release --locked
+          RUSTFLAGS="-A dead_code" cargo install --locked --path circom
           circom --version
 
       - name: Setup Dependencies
@@ -1048,7 +1112,8 @@ jobs:
       - name: Install Dependencies [Prover]
         run: brew install nasm m4
 
-      - name: Cache GMP Archive
+      # A poisoned cache entry can't reach the build: the archive is checked against GMP_SHA256 below.
+      - name: Cache GMP Archive # zizmor: ignore[cache-poisoning]
         id: cache-gmp
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
@@ -1078,6 +1143,15 @@ jobs:
           done
           echo "All GMP download sources failed"
           exit 1
+
+      - name: Verify GMP Archive
+        shell: bash
+        run: |
+          ACTUAL=$(openssl dgst -sha256 -r rapidsnark/depends/gmp-6.2.1.tar.xz | cut -d' ' -f1)
+          if [ "$ACTUAL" != "$GMP_SHA256" ]; then
+            echo "::error::gmp-6.2.1.tar.xz has the SHA-256 $ACTUAL, but GMP_SHA256 is $GMP_SHA256."
+            exit 1
+          fi
 
       - name: Compile Prover and Verifier
         working-directory: rapidsnark
@@ -1124,19 +1198,19 @@ jobs:
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
 
       - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
 
       - name: Compile PoL Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoL"
           circuit-name-binary: "pol"
@@ -1146,7 +1220,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoQ Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoQ"
           circuit-name-binary: "poq"
@@ -1156,7 +1230,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile Signature Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "Signature"
           circuit-name-binary: "signature"
@@ -1166,7 +1240,7 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
+        uses: $/.github/actions/compile-witness-generator
         with:
           circuit-name-display: "PoC"
           circuit-name-binary: "poc"
@@ -1176,43 +1250,43 @@ jobs:
           arch: ${{ env.ARCH }}
 
       - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/pol-artifact
 
       - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poq-artifact
 
       - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/signature-artifact
 
       - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           path: witness-generators/poc-artifact
 
       - name: Download All Proving Key Artifacts
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: "*-proving-key"
           path: proving-keys/
 
       - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: prover-artifact/
 
       - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: verifier-artifact/
@@ -1225,13 +1299,13 @@ jobs:
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
 
           # Create VERSION file
-          echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
+          echo "$VERSION" > "${BUNDLE_NAME}/VERSION"
 
           # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
+          tar -xzf "prover-artifact/prover-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          tar -xzf "verifier-artifact/verifier-${VERSION}-${OS}-${ARCH}.tar.gz" -C .
+          mv "prover-${VERSION}-${OS}-${ARCH}/prover/prover" "${BUNDLE_NAME}/prover"
+          mv "verifier-${VERSION}-${OS}-${ARCH}/verifier/verifier" "${BUNDLE_NAME}/verifier"
           chmod +x "${BUNDLE_NAME}/prover"
           chmod +x "${BUNDLE_NAME}/verifier"
 
@@ -1269,11 +1343,11 @@ jobs:
       - name: Compute SRI Hash
         id: hash
         run: |
-          TARBALL="logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz"
+          TARBALL="logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz"
           echo "value=sha256-$(openssl dgst -sha256 -binary "$TARBALL" | base64)" >> "$GITHUB_OUTPUT"
 
       - name: Upload Unified Release Bundle
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
@@ -1295,21 +1369,24 @@ jobs:
       ARCH: x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
         with:
+          cache: false
           rust-src-dir: rust
 
       - name: Download Linux Bundle
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: circuit-libs/
 
       - name: Extract Bundle
-        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+        run: tar -xzf "circuit-libs/logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz" -C circuit-libs/
 
       - name: Clippy
         run: >
@@ -1336,21 +1413,24 @@ jobs:
       ARCH: x86_64
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
         with:
+          cache: false
           rust-src-dir: rust
 
       - name: Download Linux Bundle
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
           path: circuit-libs/
 
       - name: Extract Bundle
-        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+        run: tar -xzf "circuit-libs/logos-blockchain-circuits-${VERSION}-${OS}-${ARCH}.tar.gz" -C circuit-libs/
 
       - name: Test
         run: >
@@ -1361,8 +1441,10 @@ jobs:
         env:
           LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
 
-  publish-release:
-    name: Create Release
+  # Puts the bundles that the build jobs made into a draft release, with their `SHA256SUMS` and build provenance. It
+  # builds nothing, so its write permissions never share a job with compiled code.
+  create-draft-release:
+    name: Create Draft Release
     runs-on: ubuntu-latest
     # Only create releases for tags, not for PRs
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
@@ -1375,74 +1457,54 @@ jobs:
       - build-macos
       - clippy
       - test
+    permissions:
+      # Creates the draft release and uploads its assets.
+      contents: write
+      # Attests the build provenance of the bundles.
+      attestations: write
+      id-token: write
     env:
       TAG: ${{ needs.setup.outputs.tag }}
       VERSION: ${{ needs.setup.outputs.version }}
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        uses: actions/create-release@4c11c9fe1dcd9636620a16455165783b20fc7ea0
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download Unified Bundles
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          tag_name: ${{ env.TAG }}
-          release_name: Circom Circuits ${{ env.VERSION }}
-          body: |
-            This is a release of Circom Circuits ${{ env.VERSION }}.
-            ## Changelog
-            - feature(X): new feature
-            - fix(Y): bug description
-            - feature: performance improvement on Z
-            ## Checklist
-            Before publishing please ensure:
-            - [ ] Description is complete
-            - [ ] Changelog is correct
-            - [ ] Assets for all platforms exist
-            - [ ] Pre-release is checked if necessary
-            - [ ] Remove this checklist before publishing the release.
-          draft: true
-          prerelease: true
+          pattern: logos-blockchain-circuits-${{ env.VERSION }}-*.tar.gz
+          path: ${{ runner.temp }}/bundles
+          merge-multiple: true
 
-  upload-artifacts:
-    name: Upload Unified Bundles to Release
-    runs-on: ubuntu-latest
-    # Only upload to release for tags, not for PRs
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
-    needs:
-      - setup
-      - publish-release
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - os: linux
-            arch: x86_64
-          - os: linux
-            arch: aarch64
-          - os: macos
-            arch: aarch64
-          - os: windows
-            arch: x86_64
-    env:
-      UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
-      ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
-    steps:
-      - name: Download Unified Bundle
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: ${{ env.ARTIFACT_NAME }}
+      - name: Write SHA256SUMS
+        working-directory: ${{ runner.temp }}/bundles
+        run: |
+          sha256sum -- *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
 
-      - name: Upload Unified Bundle to Release
-        uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Attest the Build Provenance of the Bundles
+        uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2.2.3
         with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ${{ env.ARTIFACT_NAME }}
-          asset_name: ${{ env.ARTIFACT_NAME }}
-          asset_content_type: application/octet-stream
+          subject-path: ${{ runner.temp }}/bundles/*.tar.gz
+
+      - name: Create Draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --prerelease \
+            --title "Circom Circuits $VERSION" --notes-file - \
+            "$RUNNER_TEMP"/bundles/*.tar.gz "$RUNNER_TEMP/bundles/SHA256SUMS" <<EOF
+          This is a release of Circom Circuits $VERSION.
+          ## Changelog
+          - feature(X): new feature
+          - fix(Y): bug description
+          - feature: performance improvement on Z
+          ## Checklist
+          Before publishing please ensure:
+          - [ ] Description is complete
+          - [ ] Changelog is correct
+          - [ ] Assets for all platforms exist
+          - [ ] Pre-release is checked if necessary
+          - [ ] Remove this checklist before publishing the release.
+          EOF
 
   update-nix-hashes:
     name: Update Nix Hashes
@@ -1454,11 +1516,13 @@ jobs:
       - build-linux-aarch64
       - build-windows
       - build-macos
-      - upload-artifacts
+      - create-draft-release
     permissions:
       contents: write
     env:
       VERSION: ${{ needs.setup.outputs.version }}
+      # In the build crate, which verifies downloaded archives against it.
+      CIRCUITS_NIX_HASHES_FILE: rust/logos-blockchain-circuits-build/circuits-nix-hashes.json
     steps:
       - name: Find Release Branch
         id: release
@@ -1466,18 +1530,18 @@ jobs:
           TAG: ${{ needs.setup.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH=$(gh api "repos/${{ github.repository }}/commits/$TAG/branches-where-head" -q 'map(.name) | if index("main") then "main" else .[0] // "" end')
+          BRANCH=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG/branches-where-head" -q 'map(.name) | if index("main") then "main" else .[0] // "" end')
           [ -n "$BRANCH" ] || { echo "::error::$TAG is not the head of any branch"; exit 1; }
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Release Commit
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
+          persist-credentials: false
           ref: ${{ needs.setup.outputs.tag }}
 
       - name: Update versions.nix
         env:
-          CIRCUITS_NIX_HASHES_FILE: circuits-nix-hashes.json
           CIRCUIT_HASH_LINUX_X86_64: ${{ needs.build-linux.outputs.hash }}
           CIRCUIT_HASH_LINUX_AARCH64: ${{ needs.build-linux-aarch64.outputs.hash }}
           CIRCUIT_HASH_WINDOWS_X86_64: ${{ needs.build-windows.outputs.hash }}
@@ -1487,17 +1551,18 @@ jobs:
       - name: Commit Nix Hashes
         id: commit
         env:
+          BRANCH: ${{ steps.release.outputs.branch }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git diff --quiet -- circuits-nix-hashes.json && exit 0
+          git diff --quiet -- "$CIRCUITS_NIX_HASHES_FILE" && exit 0
           OID=$(gh api graphql \
             -f query='mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }' \
-            -f "input[branch][repositoryNameWithOwner]=${{ github.repository }}" \
-            -f "input[branch][branchName]=${{ steps.release.outputs.branch }}" \
+            -f "input[branch][repositoryNameWithOwner]=$GITHUB_REPOSITORY" \
+            -f "input[branch][branchName]=$BRANCH" \
             -f "input[expectedHeadOid]=$(git rev-parse HEAD)" \
-            -f "input[message][headline]=chore(ci): auto-update Nix hashes for ${{ env.VERSION }}" \
-            -f "input[fileChanges][additions][][path]=circuits-nix-hashes.json" \
-            -f "input[fileChanges][additions][][contents]=$(base64 -w0 circuits-nix-hashes.json)" \
+            -f "input[message][headline]=chore(ci): auto-update Nix hashes for $VERSION" \
+            -f "input[fileChanges][additions][][path]=$CIRCUITS_NIX_HASHES_FILE" \
+            -f "input[fileChanges][additions][][contents]=$(base64 -w0 "$CIRCUITS_NIX_HASHES_FILE")" \
             -q .data.createCommitOnBranch.commit.oid)
           echo "oid=$OID" >> "$GITHUB_OUTPUT"
 
@@ -1505,5 +1570,6 @@ jobs:
         if: steps.commit.outputs.oid != ''
         env:
           TAG: ${{ needs.setup.outputs.tag }}
+          OID: ${{ steps.commit.outputs.oid }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X PATCH "repos/${{ github.repository }}/git/refs/tags/$TAG" -f sha=${{ steps.commit.outputs.oid }} -F force=true
+        run: gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" -f "sha=$OID" -F force=true

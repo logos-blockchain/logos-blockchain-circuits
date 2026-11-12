@@ -11,6 +11,9 @@ result
 # Rust Codebase
 rust/**/target/
 
+# Node.js packages, from .github/resources/proving-keys
+node_modules/
+
 # Build
 .cache
 build
