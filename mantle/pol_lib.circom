@@ -169,7 +169,6 @@ template proof_of_leadership(depth_merkle_tree){
     signal input set_aged_path[depth_merkle_tree];         // path of the leaf of the set to eligible_aged
     signal input low_leaf_nf;               // greatest nullifier of the set lower than the note nullifier
     signal input low_leaf_next_nf;          // next greater nullifier of the set, 0 if none
-    signal input low_leaf_next_index;       // index of the IMT leaf holding low_leaf_next_nf, 0 if none
     signal input low_leaf_path[depth_merkle_tree];
     signal input low_leaf_selectors[depth_merkle_tree];
     signal input cm_root_latest;            // latest commitment MMR root of the set
@@ -215,12 +214,11 @@ template proof_of_leadership(depth_merkle_tree){
 
     // Check the low_nf is in the latest IMT
         // First compute the nullifier leaf
-    component low_leaf = Poseidon2_hash(4);
+    component low_leaf = Poseidon2_hash(3);
     component dst = NULLIFIER_IMT_LEAF_V1();
     low_leaf.inp[0] <== dst.out;
     low_leaf.inp[1] <== low_leaf_nf;
     low_leaf.inp[2] <== low_leaf_next_nf;
-    low_leaf.inp[3] <== low_leaf_next_index;
         // compute the IMT root
     component nf_root_latest = compute_merkle_root(depth_merkle_tree);
     for(var i = 0; i < depth_merkle_tree; i++){
