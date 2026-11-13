@@ -5,11 +5,6 @@ on:
     tags:
       - "v*.*.*"
   pull_request:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release. Must follow the format of 'vX.Y.Z'."
-        required: true
 
 env:
   CIRCOM_TAG: v2.2.2
@@ -25,9 +20,9 @@ jobs:
       - name: Define version
         id: define-version
         env:
-          # Use the tag name if it is available, otherwise use the input version.
+          # Use the tag name if it is available.
           # For PR testing, use a test version based on PR number and commit SHA.
-          TAG: ${{ (github.ref_type == 'tag' && github.ref_name) || inputs.tag || format('v0.0.0-pr{0}-{1}', github.event.pull_request.number || '0', github.sha) }}
+          TAG: ${{ (github.ref_type == 'tag' && github.ref_name) || format('v0.0.0-pr{0}-{1}', github.event.pull_request.number || '0', github.sha) }}
         run: |
           if [ -z "$TAG" ]; then
             echo "Could not determine tag."
@@ -38,12 +33,11 @@ jobs:
           if [[ "$TAG" =~ ^v0\.0\.0-pr ]]; then
             echo "Using test version for PR: $TAG"
             VERSION="$TAG"
-          elif [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "TAG must follow the format of 'vX.Y.Z'. Value: '$TAG'."
+          elif [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "TAG must follow the format of 'vX.Y.Z' or 'vX.Y.Z-rc.N'. Value: '$TAG'."
             exit 2
           else
-            # Parse Version: Take only the vX.Y.Z part.
-            VERSION=$(echo $TAG | cut -d'-' -f1)
+            VERSION="$TAG"
           fi
 
           # Export the tag and version.
@@ -53,7 +47,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@85e6279cec87321a52edac9c87bce653a07cf6c2  # v4.2.2
         with:
-          sparse-checkout: rust/Cargo.toml
+          sparse-checkout: |
+            rust/Cargo.toml
+            CHANGELOG.md
           sparse-checkout-cone-mode: false
 
       - name: Verify Cargo version
@@ -70,6 +66,15 @@ jobs:
             exit 1
           fi
           echo "Version check passed: $CARGO_VERSION"
+
+      # Release candidates use the notes in the [Unreleased] section; final releases use their version's section.
+      - name: Verify Changelog Section
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ steps.define-version.outputs.tag }}
+        run: |
+          SECTION=$([[ "$TAG" == *-rc.* ]] && echo Unreleased || echo "${TAG#v}")
+          grep -qF "## [$SECTION]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no [$SECTION] section"; exit 1; }
 
   generate-proving-keys:
     name: Generate ${{ matrix.circuit.display }} Proving Key
@@ -1364,8 +1369,7 @@ jobs:
   publish-release:
     name: Create Release
     runs-on: ubuntu-latest
-    # Only create releases for tags, not for PRs
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     needs:
       - setup
       - generate-proving-keys
@@ -1375,86 +1379,49 @@ jobs:
       - build-macos
       - clippy
       - test
+    permissions:
+      contents: write
     env:
       TAG: ${{ needs.setup.outputs.tag }}
-      VERSION: ${{ needs.setup.outputs.version }}
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        uses: actions/create-release@4c11c9fe1dcd9636620a16455165783b20fc7ea0
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
         with:
-          tag_name: ${{ env.TAG }}
-          release_name: Circom Circuits ${{ env.VERSION }}
-          body: |
-            This is a release of Circom Circuits ${{ env.VERSION }}.
-            ## Changelog
-            - feature(X): new feature
-            - fix(Y): bug description
-            - feature: performance improvement on Z
-            ## Checklist
-            Before publishing please ensure:
-            - [ ] Description is complete
-            - [ ] Changelog is correct
-            - [ ] Assets for all platforms exist
-            - [ ] Pre-release is checked if necessary
-            - [ ] Remove this checklist before publishing the release.
-          draft: true
-          prerelease: true
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
 
-  upload-artifacts:
-    name: Upload Unified Bundles to Release
-    runs-on: ubuntu-latest
-    # Only upload to release for tags, not for PRs
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
-    needs:
-      - setup
-      - publish-release
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - os: linux
-            arch: x86_64
-          - os: linux
-            arch: aarch64
-          - os: macos
-            arch: aarch64
-          - os: windows
-            arch: x86_64
-    env:
-      UPLOAD_URL: ${{ needs.publish-release.outputs.upload_url }}
-      ARTIFACT_NAME: logos-blockchain-circuits-${{ needs.setup.outputs.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}.tar.gz
-    steps:
-      - name: Download Unified Bundle
+      - name: Download Unified Bundles
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          pattern: logos-blockchain-circuits-*
+          path: dist
+          merge-multiple: true
 
-      - name: Upload Unified Bundle to Release
-        uses: actions/upload-release-asset@ef2adfe8cb8ebfa540930c452c576b3819990faa
+      # The setup job checks that the section exists.
+      - name: Extract Release Notes
+        run: |
+          SECTION=$([[ "$TAG" == *-rc.* ]] && echo Unreleased || echo "${TAG#v}")
+          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md > notes.md
+
+      - name: Create Draft Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ${{ env.ARTIFACT_NAME }}
-          asset_name: ${{ env.ARTIFACT_NAME }}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prerelease=$([[ "$TAG" == *-rc.* ]] && echo --prerelease || true)
+          gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --verify-tag $prerelease \
+            --title "Circom Circuits $TAG" --notes-file notes.md --generate-notes
 
   update-nix-hashes:
     name: Update Nix Hashes
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    if: github.ref_type == 'tag'
     needs:
       - setup
       - build-linux
       - build-linux-aarch64
       - build-windows
       - build-macos
-      - upload-artifacts
+      - publish-release
     permissions:
       contents: write
     env:
