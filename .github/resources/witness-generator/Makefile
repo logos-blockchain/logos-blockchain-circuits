@@ -1,4 +1,4 @@
-.PHONY: linux macos windows linux-lib macos-lib windows-lib build clean
+.PHONY: linux macos linux-lib macos-lib windows-lib build clean
 
 # ---- Arguments ----
 ifndef PROJECT
@@ -17,14 +17,7 @@ LIB_SRCS        := $(COMMON_SRCS) $(LIB_ONLY_SRCS)
 LIB_OBJS        := $(COMMON_OBJS) $(LIB_ONLY_OBJS)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp $(PROJECT)/ffi.hpp
 BIN             := $(PROJECT)
-ifeq ($(OS),windows)
-LIB_EXT         := .lib
-LIB_PREFIX      :=
-else
-LIB_EXT         := .a
-LIB_PREFIX      := lib
-endif
-LIB             := $(LIB_PREFIX)$(PROJECT)$(LIB_EXT)
+LIB             := lib$(PROJECT).a
 
 # ---- Linux (x86_64 and aarch64) ----
 # NOTE: linux (bin) links system gmp via -lgmp. CI uses linux-lib only, which
@@ -49,13 +42,6 @@ macos-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/i
 macos-lib: $(LIB)
 
 # ---- Windows (MinGW) ----
-# NOTE: windows (bin) links system gmp via -lgmp. CI uses windows-lib only, which
-# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
-windows: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/include -Duint="unsigned int"
-windows: LDFLAGS=-static
-windows: LDLIBS=-L/lib -lgmp -lmman
-windows: $(BIN)
-
 # On Windows, `ld -r` breaks the link with libstdc++, so windows-lib renames internal symbols instead.
 # See `isolate-symbols.sh`.
 windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int" -D_WIN32_WINNT=0x0601
@@ -69,7 +55,7 @@ windows-lib: $(LIB_OBJS)
 # See CONTRIBUTING.md § "Symbol Isolation".
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
-OBJCOPY     ?= $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+OBJCOPY     ?= llvm-objcopy
 NM          ?= nm
 OBJDUMP     ?= objdump
 SYM_PREFIX  := $(if $(filter macos,$(OS)),_,)
