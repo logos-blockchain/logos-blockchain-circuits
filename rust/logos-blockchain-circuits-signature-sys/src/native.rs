@@ -45,16 +45,19 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     .try_into()
 }
 
+#[cfg(any(test, feature = "test-inputs"))]
+pub const SAMPLE_INPUTS: &str = include_str!("../sample.input.json");
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{SignatureWitnessInput, generate_witness, generate_witness_from_files};
+    use super::{
+        SAMPLE_INPUTS, SignatureWitnessInput, generate_witness, generate_witness_from_files,
+    };
 
     static LIB_DIR: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("signature"));
-    static INPUTS: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
+        LazyLock::new(|| lbc_common::lbc_root_dir!().join("signature"));
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
@@ -72,14 +75,14 @@ mod tests {
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("signature_test_witness.wtns");
+        // Write the embedded inputs to a file, so the test also runs on a machine other
+        // than the one that built it.
+        let inputs = lbc_common::test_utils::temp_file(SAMPLE_INPUTS);
 
-        generate_witness_from_files(&dat, &INPUTS, &witness_output_path)
+        generate_witness_from_files(&dat, inputs.path(), &witness_output_path)
             .expect("generate_witness_from_files failed.");
 
-        let inputs_json = std::fs::read_to_string(&*INPUTS)
-            .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
-
-        let input = SignatureWitnessInput::new(inputs_json)
+        let input = SignatureWitnessInput::new(SAMPLE_INPUTS.to_owned())
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 
