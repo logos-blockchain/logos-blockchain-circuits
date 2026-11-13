@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use lbc_poq_sys::PoqWitnessInput;
-
     #[test]
     fn test_both_circuits_generate_witness() {
         let pol_inputs_raw = lbc_pol_sys::native::SAMPLE_INPUTS.to_owned();
-        let pol_witness_input = lbc_pol_sys::PolWitnessInput::new(pol_inputs_raw).unwrap();
+        let pol_witness_input = lbc_pol_sys::PolWitnessInput::embedded(pol_inputs_raw).unwrap();
 
         // Each sys crate compiles a copy of the same C++ runtime (loadCircuit,
         // get_size_of_witness, ...) under identical symbol names. When two
@@ -17,9 +15,9 @@ mod tests {
         let _pol_witness = lbc_pol_sys::generate_witness(&pol_witness_input);
 
         let inputs_json_raw = lbc_poq_sys::native::SAMPLE_INPUTS.to_owned();
-        let inputs_json = PoqWitnessInput::new(inputs_json_raw).unwrap();
-        let poq_result = lbc_poq_sys::generate_witness(&inputs_json);
-        assert!(poq_result.is_ok());
+        let poq_witness_input = lbc_poq_sys::PoqWitnessInput::embedded(inputs_json_raw).unwrap();
+        let poq_witness_result = lbc_poq_sys::generate_witness(&poq_witness_input);
+        assert!(poq_witness_result.is_ok());
     }
 
     #[test]
@@ -30,14 +28,14 @@ mod tests {
             .map(|_| {
                 let json = inputs_json_raw.clone();
                 std::thread::spawn(move || {
-                    let input = PoqWitnessInput::new(json).unwrap();
-                    lbc_poq_sys::generate_witness(&input)
+                    let poq_witness_input = lbc_poq_sys::PoqWitnessInput::embedded(json).unwrap();
+                    lbc_poq_sys::generate_witness(&poq_witness_input)
                 })
             })
             .collect();
 
-        for h in handles {
-            assert!(h.join().unwrap().is_ok());
+        for handle in handles {
+            assert!(handle.join().unwrap().is_ok());
         }
     }
 }
