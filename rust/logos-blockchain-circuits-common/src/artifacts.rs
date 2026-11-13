@@ -8,14 +8,24 @@
 ///
 /// # Generated items
 ///
-/// | Item                    | Description                             |
-/// |-------------------------|-----------------------------------------|
-/// | `PROVING_KEY_PATH`      | Path to the proving key (`.zkey`)       |
-/// | `PROVING_KEY`           | Proving key bytes                       |
-/// | `VERIFICATION_KEY_PATH` | Path to the verification key (`.json`)  |
-/// | `VERIFICATION_KEY`      | Verification key bytes                  |
-/// | `CIRCUIT_DAT_PATH`      | Path to the witness generator data      |
-/// | `CIRCUIT_DAT`           | Witness generator data bytes            |
+/// | Item                    | Description                            | Feature    |
+/// |-------------------------|----------------------------------------|------------|
+/// | `PROVING_KEY_PATH`      | Path to the proving key (`.zkey`)      | `paths`    |
+/// | `PROVING_KEY`           | Proving key bytes                      | `embedded` |
+/// | `VERIFICATION_KEY_PATH` | Path to the verification key (`.json`) | `paths`    |
+/// | `VERIFICATION_KEY`      | Verification key bytes                 | `embedded` |
+/// | `CIRCUIT_PATH`          | Path to the witness generator data     | `paths`    |
+/// | `CIRCUIT`               | Witness generator data bytes           | `embedded` |
+///
+/// With the `paths` feature, the macro also generates a test that checks that
+/// the 3 paths are files.
+///
+/// # Feature flags
+///
+/// The crate that calls this macro must declare the `embedded` and `paths`
+/// features in its `Cargo.toml`.
+/// The macro's `#[cfg(feature = "...")]` checks compile in that crate, so
+/// features in this crate have no effect.
 ///
 /// # Example
 ///
@@ -26,6 +36,7 @@
 macro_rules! circuit_artifacts {
     ($circuit_dir:literal) => {
         pub mod artifacts {
+            #[cfg(feature = "paths")]
             use std::{path::PathBuf, sync::LazyLock};
 
             macro_rules! __circuit_path {
@@ -42,18 +53,36 @@ macro_rules! circuit_artifacts {
                 };
             }
 
+            #[cfg(feature = "paths")]
             pub static PROVING_KEY_PATH: LazyLock<PathBuf> = __circuit_path!("proving_key.zkey");
+            #[cfg(feature = "embedded")]
             pub static PROVING_KEY: &[u8] = include_bytes!(__circuit_file!("proving_key.zkey"));
 
+            #[cfg(feature = "paths")]
             pub static VERIFICATION_KEY_PATH: LazyLock<PathBuf> =
                 __circuit_path!("verification_key.json");
+            #[cfg(feature = "embedded")]
             pub static VERIFICATION_KEY: &[u8] =
                 include_bytes!(__circuit_file!("verification_key.json"));
 
-            pub static CIRCUIT_DAT_PATH: LazyLock<PathBuf> =
-                __circuit_path!("witness_generator.dat");
-            pub static CIRCUIT_DAT: &[u8] =
-                include_bytes!(__circuit_file!("witness_generator.dat"));
+            #[cfg(feature = "paths")]
+            pub static CIRCUIT_PATH: LazyLock<PathBuf> = __circuit_path!("witness_generator.dat");
+            #[cfg(feature = "embedded")]
+            pub static CIRCUIT: &[u8] = include_bytes!(__circuit_file!("witness_generator.dat"));
+
+            #[cfg(all(test, feature = "paths"))]
+            mod tests {
+                #[test]
+                fn test_paths_exist() {
+                    for path in [
+                        &*super::PROVING_KEY_PATH,
+                        &*super::VERIFICATION_KEY_PATH,
+                        &*super::CIRCUIT_PATH,
+                    ] {
+                        assert!(path.is_file(), "{} is not a file.", path.display());
+                    }
+                }
+            }
         }
     };
 }

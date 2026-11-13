@@ -19,7 +19,7 @@ if [[ "$current" != "cargo-hack $VERSION" ]]; then
 fi
 
 # `prebuilt` is always on, so the build scripts can download the bundle when `LBC_ROOT_DIR` isn't set.
-# `--no-dev-deps` stops dev-dependencies from enabling features, e.g. the tests crate enables `test-inputs`.
+# `--no-dev-deps` stops dev-dependencies from enabling features, e.g. the tests crate enables `embedded`.
 export RUSTFLAGS="-D warnings"
 exec cargo hack check \
   --manifest-path rust/Cargo.toml \
