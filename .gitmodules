@@ -1,6 +1,3 @@
 [submodule "circomlib"]
 	path = circomlib
 	url = https://github.com/iden3/circomlib.git
-[submodule "rapidsnark"]
-	path = rapidsnark
-	url = https://github.com/iden3/rapidsnark.git

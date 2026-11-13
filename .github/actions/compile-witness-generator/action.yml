@@ -22,7 +22,7 @@ inputs:
     description: "The version of the bundle. E.g.: v1.0.0."
     required: true
   os:
-    description: "The target operating system for the bundle (linux, windows, macos)."
+    description: "The target operating system for the bundle (linux, macos)."
     required: true
   arch:
     description: "The target architecture for the bundle (x86_64, aarch64)."
@@ -39,19 +39,11 @@ runs:
         BUNDLE_TRIPLET: ${{ inputs.version }}-${{ inputs.os }}-${{ inputs.arch }}
         CIRCUIT_NAME_BINARY: ${{ inputs.circuit-name-binary }}
         RESOURCES_PATH: ${{ inputs.resources-path }}
-        OS: ${{ inputs.os }}
       run: |
         CIRCUIT_DIRECTORY="$(dirname ${CIRCUIT_PATH})"
         CIRCUIT_FILENAME="$(basename ${CIRCUIT_PATH})"
         CIRCUIT_FILESTEM="${CIRCUIT_FILENAME%.circom}"
         CIRCUIT_CPP_DIRNAME="${CIRCUIT_FILESTEM}_cpp"
-        if [ "${OS}" = "windows" ]; then
-          LIB_EXT=".lib"
-          LIB_PREFIX=""
-        else
-          LIB_EXT=".a"
-          LIB_PREFIX="lib"
-        fi
 
         {
           echo "CIRCUIT_DIRECTORY=${CIRCUIT_DIRECTORY}"
@@ -61,7 +53,7 @@ runs:
           echo "CIRCUIT_CPP_PATH=${CIRCUIT_DIRECTORY}/${CIRCUIT_CPP_DIRNAME}"
           echo "WITNESS_GENERATOR_RESOURCES_PATH=${RESOURCES_PATH}/witness-generator"
           echo "BUNDLE_TRIPLET=${BUNDLE_TRIPLET}"
-          echo "LIB_NAME=${LIB_PREFIX}${CIRCUIT_FILESTEM}${LIB_EXT}"
+          echo "LIB_NAME=lib${CIRCUIT_FILESTEM}.a"
         } >> "${GITHUB_OUTPUT}"
 
     - name: Generate ${{ inputs.circuit-name-display }}
@@ -91,7 +83,7 @@ runs:
       env:
         WITNESS_GENERATOR_RESOURCES_PATH: ${{ steps.parse-circuit-path.outputs.WITNESS_GENERATOR_RESOURCES_PATH }}
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
-      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}"/{Makefile,isolate-symbols.sh} "${CIRCUIT_CPP_PATH}/"
+      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/Makefile" "${CIRCUIT_CPP_PATH}/Makefile"
 
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     - name: Patch ${{ inputs.circuit-name-display }} Missing Return
@@ -132,17 +124,7 @@ runs:
       run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/${{ env.OS }}.gmp_patch.hpp" "${CIRCUIT_CPP_PATH}/gmp_patch.hpp"
 
     - name: Compile ${{ inputs.circuit-name-display }}
-      if: ${{ inputs.os != 'windows' }}
       shell: bash
-      working-directory: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
-      env:
-        CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
-        OS: ${{ inputs.os }}
-      run: make PROJECT="${CIRCUIT_FILESTEM}" "${OS}-lib"
-
-    - name: Compile ${{ inputs.circuit-name-display }}
-      if: ${{ inputs.os == 'windows' }}
-      shell: msys2 {0}
       working-directory: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
       env:
         CIRCUIT_FILESTEM: ${{ steps.parse-circuit-path.outputs.CIRCUIT_FILESTEM }}
