@@ -1,5 +1,9 @@
 # Contributor's Guide
 
+[rapidsnark]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark
+[rapidsnark-readme]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark/blob/HEAD/README.md
+[rapidsnark-contributing]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark/blob/HEAD/CONTRIBUTING.md
+
 ## Development Setup
 
 ### Prerequisites
@@ -118,6 +122,29 @@ The ELF `GRP_COMDAT` problem doesn't apply: COFF COMDAT is per-section rather th
 `PUBLIC_SYMS` is hardcoded to `$(PROJECT)_generate_witness` and `$(PROJECT)_generate_witness_from_files` in the
 Makefile. If the public FFI API ever changes — entry points renamed or new ones added — update that variable, otherwise
 the affected symbols will be localized and linking will fail.
+
+---
+
+## Rapidsnark
+
+The bundles ship `prover`, `verifier` and `libgmp.a` from [Logos Rapidsnark][rapidsnark]'s releases.
+The circuit libraries link against this `libgmp.a`.
+For details, see Logos Rapidsnark's [README][rapidsnark-readme] and [CONTRIBUTING][rapidsnark-contributing].
+
+On Windows, these files are still built from the `rapidsnark` submodule.
+
+### Updating
+
+[`deps/rapidsnark/`](deps/rapidsnark) pins the Logos Rapidsnark release:
+
+- `VERSION`: the release tag.
+- `SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+
+To update both files, run:
+
+```bash
+scripts/update-rapidsnark.sh <tag>
+```
 
 ---
 

@@ -177,7 +177,7 @@ jobs:
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
-        run: git submodule update --init --recursive
+        run: git submodule update --init --recursive circomlib
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
@@ -193,98 +193,20 @@ jobs:
           circom --version
 
       - name: Setup Dependencies
-        working-directory: rapidsnark
         run: sudo apt update -y
-
-      - name: Install Dependencies [Prover]
-        run: sudo apt install -y build-essential cmake libsodium-dev nasm curl m4
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
 
-      - name: Replace Prover Makefile # TODO: Make a fork generate the appropriate Linux Makefile
-        run: cp .github/resources/prover/Makefile rapidsnark/Makefile
-
-      - name: Cache GMP Archive
-        id: cache-gmp
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - name: Download Logos Rapidsnark
+        id: rapidsnark
+        uses: ./.github/actions/download-rapidsnark
         with:
-          path: rapidsnark/depends/gmp-6.2.1.tar.xz
-          key: gmp-6.2.1
+          platform: linux-x86_64
 
-      - name: Download GMP Archive
-        if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p rapidsnark/depends
-          cd rapidsnark/depends
-          URLS=(
-            "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
-            "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
-            "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
-          )
-          for url in "${URLS[@]}"; do
-            echo "Trying $url"
-            if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
-              --connect-timeout 20 --max-time 300 \
-              -o gmp-6.2.1.tar.xz "$url"; then
-              echo "Download complete from $url"
-              exit 0
-            fi
-          done
-          echo "All GMP download sources failed"
-          exit 1
-
-      - name: Compile Prover and Verifier
-        working-directory: rapidsnark
-        run: |
-          ./build_gmp.sh host
-          make host_linux_x86_64_static
-
-      - name: Prioritize Built GMP Headers Over System GMP
-        run: |
-          # System gmp (6.2.1) is preinstalled on the runner. Prepend our built gmp headers
-          # so the witness generator compiles against the same gmp version as the prover.
-          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
-
-      - name: Bundle Rapidsnark Prover
-        env:
-          BINARY_NAME: prover
-          BUNDLE_NAME: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Bundle Rapidsnark Verifier
-        env:
-          BINARY_NAME: verifier
-          BUNDLE_NAME: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-
-      - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+      - name: Use Logos Rapidsnark's GMP Headers
+        # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
+        run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -356,18 +278,6 @@ jobs:
           pattern: "*-proving-key"
           path: proving-keys/
 
-      - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-artifact/
-
-      - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-artifact/
-
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
@@ -378,13 +288,9 @@ jobs:
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
 
-          # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
-          chmod +x "${BUNDLE_NAME}/prover"
-          chmod +x "${BUNDLE_NAME}/verifier"
+          # Add prover and verifier binaries
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/prover" "${BUNDLE_NAME}/prover"
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
           mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
@@ -412,7 +318,7 @@ jobs:
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
-          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+          cp "${{ steps.rapidsnark.outputs.path }}/lib/libgmp.a" "${BUNDLE_NAME}/lib/libgmp.a"
 
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
@@ -446,7 +352,7 @@ jobs:
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
-        run: git submodule update --init --recursive
+        run: git submodule update --init --recursive circomlib
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
@@ -462,100 +368,20 @@ jobs:
           circom --version
 
       - name: Setup Dependencies
-        working-directory: rapidsnark
         run: sudo apt update -y
-
-      - name: Install Dependencies [Prover]
-        run: sudo apt install -y build-essential cmake libsodium-dev nasm curl m4
 
       - name: Install Dependencies [Witness Generator]
         run: sudo apt install -y nlohmann-json3-dev llvm
 
-      - name: Replace Prover Makefile
-        run: cp .github/resources/prover/Makefile rapidsnark/Makefile
-
-      - name: Cache GMP Archive
-        id: cache-gmp
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - name: Download Logos Rapidsnark
+        id: rapidsnark
+        uses: ./.github/actions/download-rapidsnark
         with:
-          path: rapidsnark/depends/gmp-6.2.1.tar.xz
-          key: gmp-6.2.1
+          platform: linux-arm64
 
-      - name: Download GMP Archive
-        if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p rapidsnark/depends
-          cd rapidsnark/depends
-          URLS=(
-            "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
-            "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
-            "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
-          )
-          for url in "${URLS[@]}"; do
-            echo "Trying $url"
-            if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
-              --connect-timeout 20 --max-time 300 \
-              -o gmp-6.2.1.tar.xz "$url"; then
-              echo "Download complete from $url"
-              exit 0
-            fi
-          done
-          echo "All GMP download sources failed"
-          exit 1
-
-      - name: Compile Prover and Verifier
-        working-directory: rapidsnark
-        run: |
-          ./build_gmp.sh host
-          # Create symlink for TARGET_PLATFORM=aarch64 to find GMP
-          ln -s package depends/gmp/package_aarch64
-          make host_linux_aarch64_static
-
-      - name: Prioritize Built GMP Headers Over System GMP
-        run: |
-          # System gmp (6.2.1) is preinstalled on the runner. Prepend our built gmp headers
-          # so the witness generator compiles against the same gmp version as the prover.
-          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package/include" >> $GITHUB_ENV
-
-      - name: Bundle Rapidsnark Prover
-        env:
-          BINARY_NAME: prover
-          BUNDLE_NAME: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Bundle Rapidsnark Verifier
-        env:
-          BINARY_NAME: verifier
-          BUNDLE_NAME: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}"/bin/${BINARY_NAME} "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-
-      - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+      - name: Use Logos Rapidsnark's GMP Headers
+        # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
+        run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -627,18 +453,6 @@ jobs:
           pattern: "*-proving-key"
           path: proving-keys/
 
-      - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-artifact/
-
-      - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-artifact/
-
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
@@ -649,13 +463,9 @@ jobs:
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
 
-          # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
-          chmod +x "${BUNDLE_NAME}/prover"
-          chmod +x "${BUNDLE_NAME}/verifier"
+          # Add prover and verifier binaries
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/prover" "${BUNDLE_NAME}/prover"
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
           mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
@@ -683,7 +493,7 @@ jobs:
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
-          cp rapidsnark/depends/gmp/package/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+          cp "${{ steps.rapidsnark.outputs.path }}/lib/libgmp.a" "${BUNDLE_NAME}/lib/libgmp.a"
 
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
@@ -1029,7 +839,7 @@ jobs:
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Initialise Submodules
-        run: git submodule update --init --recursive
+        run: git submodule update --init --recursive circomlib
 
       - name: Install Rust Toolchain
         uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
@@ -1050,95 +860,15 @@ jobs:
       - name: Install Dependencies [Witness Generator]
         run: brew install nlohmann-json binutils
 
-      - name: Install Dependencies [Prover]
-        run: brew install nasm m4
-
-      - name: Cache GMP Archive
-        id: cache-gmp
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - name: Download Logos Rapidsnark
+        id: rapidsnark
+        uses: ./.github/actions/download-rapidsnark
         with:
-          path: rapidsnark/depends/gmp-6.2.1.tar.xz
-          key: gmp-6.2.1
+          platform: macOS-arm64
 
-      - name: Download GMP Archive
-        if: steps.cache-gmp.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p rapidsnark/depends
-          cd rapidsnark/depends
-          URLS=(
-            "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
-            "https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz"
-            "https://ftpmirror.gnu.org/gmp/gmp-6.2.1.tar.xz"
-          )
-          for url in "${URLS[@]}"; do
-            echo "Trying $url"
-            if curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors \
-              --connect-timeout 20 --max-time 300 \
-              -o gmp-6.2.1.tar.xz "$url"; then
-              echo "Download complete from $url"
-              exit 0
-            fi
-          done
-          echo "All GMP download sources failed"
-          exit 1
-
-      - name: Compile Prover and Verifier
-        working-directory: rapidsnark
-        run: |
-          # build_gmp.sh hardcodes -mmacos-version-min=14.0 in CFLAGS, ignoring
-          # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
-          # aarch64-apple-darwin toolchain target (macOS 11.0+).
-          sed -i '' 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
-          sed -i '' 's/ -arch arm64e//g' build_gmp.sh
-          ./build_gmp.sh macos_arm64
-          make macos_arm64
-
-      - name: Prioritize Built GMP Headers Over System GMP
-        run: |
-          # System gmp (6.3.0) is preinstalled on the runner. Prepend our built gmp headers
-          # so the witness generator compiles against the same gmp version as the prover,
-          # and the built gmp targets macOS 11.0 rather than the runner's current OS version.
-          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_macos_arm64/include" >> $GITHUB_ENV
-
-      - name: Bundle Rapidsnark Prover
-        env:
-          BINARY_NAME: prover
-          BUNDLE_NAME: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package_macos_arm64
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}/bin/${BINARY_NAME}" "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Bundle Rapidsnark Verifier
-        env:
-          BINARY_NAME: verifier
-          BUNDLE_NAME: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          RAPIDSNARK_DIR: rapidsnark/package_macos_arm64
-        run: |
-          BUNDLE_DIR="${BUNDLE_NAME}/${BINARY_NAME}"
-          mkdir -p "$BUNDLE_DIR"
-
-          mv "${RAPIDSNARK_DIR}/bin/${BINARY_NAME}" "$BUNDLE_DIR/"
-
-          tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"
-
-      - name: Upload Rapidsnark Prover
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-
-      - name: Upload Rapidsnark Verifier
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+      - name: Use Logos Rapidsnark's GMP Headers
+        # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
+        run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
@@ -1210,18 +940,6 @@ jobs:
           pattern: "*-proving-key"
           path: proving-keys/
 
-      - name: Download Prover Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: prover-artifact/
-
-      - name: Download Verifier Artifact
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
-          path: verifier-artifact/
-
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
@@ -1232,13 +950,9 @@ jobs:
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
 
-          # Extract and add prover and verifier binaries
-          tar -xzf prover-artifact/prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          tar -xzf verifier-artifact/verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C .
-          mv prover-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/prover/prover "${BUNDLE_NAME}/prover"
-          mv verifier-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}/verifier/verifier "${BUNDLE_NAME}/verifier"
-          chmod +x "${BUNDLE_NAME}/prover"
-          chmod +x "${BUNDLE_NAME}/verifier"
+          # Add prover and verifier binaries
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/prover" "${BUNDLE_NAME}/prover"
+          cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
           mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
@@ -1266,7 +980,7 @@ jobs:
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
-          cp rapidsnark/depends/gmp/package_macos_arm64/lib/libgmp.a "${BUNDLE_NAME}/lib/libgmp.a"
+          cp "${{ steps.rapidsnark.outputs.path }}/lib/libgmp.a" "${BUNDLE_NAME}/lib/libgmp.a"
 
           # Create tarball
           tar -czf "${BUNDLE_NAME}.tar.gz" "${BUNDLE_NAME}"

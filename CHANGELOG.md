@@ -4,6 +4,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **Rapidsnark**: on Linux and macOS, the bundled `prover`, `verifier` and `libgmp.a` come from
+  [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
+  instead of being built from the `rapidsnark` submodule.
+  Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
+
 ## [0.5.0] — 2026-05-25
 
 ### Added

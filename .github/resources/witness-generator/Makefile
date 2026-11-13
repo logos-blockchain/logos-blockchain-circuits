@@ -28,7 +28,7 @@ LIB             := $(LIB_PREFIX)$(PROJECT)$(LIB_EXT)
 
 # ---- Linux (x86_64 and aarch64) ----
 # NOTE: linux (bin) links system gmp via -lgmp. CI uses linux-lib only, which
-# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
+# relies on PRIORITY_FLAGS to use Logos Rapidsnark's GMP headers.
 linux: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
@@ -39,7 +39,7 @@ linux-lib: $(LIB)
 
 # ---- macOS ----
 # NOTE: macos (bin) hardcodes Homebrew gmp for both includes and linking. CI uses
-# macos-lib only, which relies on PRIORITY_FLAGS to prefer the gmp built from source.
+# macos-lib only, which relies on PRIORITY_FLAGS to use Logos Rapidsnark's GMP headers.
 macos: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos: LDFLAGS=-Wl,-search_paths_first -Wl,-dead_strip
 macos: LDLIBS=/opt/homebrew/lib/libgmp.a

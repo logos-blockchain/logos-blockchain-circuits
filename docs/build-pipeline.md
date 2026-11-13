@@ -16,7 +16,7 @@ This document walks through the CI build steps, from `.circom` source to the ful
 | [6 — The `.dat` file](#step-6--the-dat-file)                                | Binary circuit data embedded in the Rust crate at compile time      |
 | [7 — GMP](#step-7--gmp)                                                     | Bundled static `libgmp.a` used instead of system GMP                |
 | [8 — Rust build script](#step-8--rust-build-script)                         | Resolves library paths, emits Cargo link directives                 |
-| [9 — Rapidsnark](#step-9--rapidsnark)                                       | Prover and verifier binaries built and bundled                      |
+| [9 — Rapidsnark](#step-9--rapidsnark)                                       | Prover and verifier binaries downloaded and bundled                 |
 
 ---
 
@@ -106,9 +106,11 @@ explanation and implementation details.
 
 ## Step 7 — GMP
 
-To standardise the GMP version used by all circuits, `libgmp.a` is built from source as part of
-the CI build and placed in a `lib/` directory alongside the circuit artifacts. CI sets
-include/link flags to point at the bundled GMP before any system path, ensuring it takes priority.
+`libgmp.a` comes from [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s release
+archive, so it is the same GMP that `prover` is built with.
+It goes in a `lib/` directory next to the circuit artifacts.
+CI puts the archive's GMP headers before any system path, so the circuits compile against the same GMP.
+On Windows, GMP is still built from the `rapidsnark` submodule.
 
 ---
 
@@ -122,8 +124,10 @@ links `lib{circuit}.a` and `libgmp.a` into Cargo, and re-exports the path to
 
 ## Step 9 — Rapidsnark
 
-The `prover` and `verifier` binaries are built from the rapidsnark submodule and bundled with
-the release artifacts alongside the circuit libraries.
+The `prover` and `verifier` binaries come from Logos Rapidsnark's release archive, and are bundled with the
+circuit libraries. See [CONTRIBUTING.md § Rapidsnark](../CONTRIBUTING.md#rapidsnark).
+
+On Windows, these binaries are still built from the `rapidsnark` submodule.
 
 ---
 
