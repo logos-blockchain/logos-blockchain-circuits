@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pins a Logos Rapidsnark release in deps/rapidsnark/. See CONTRIBUTING.md § Rapidsnark.
+# Pins a Logos Rapidsnark release in deps/rapidsnark/ and in the flake input. See CONTRIBUTING.md § Rapidsnark.
 set -euo pipefail
 
 readonly REPO="logos-blockchain/logos-blockchain-rapidsnark"
@@ -7,6 +7,9 @@ DEPS="$(dirname "$0")/../deps/rapidsnark"
 readonly DEPS
 readonly VERSION_FILE="$DEPS/VERSION"
 readonly SUMS_FILE="$DEPS/SHA256SUMS"
+ROOT="$(dirname "$0")/.."
+readonly ROOT
+readonly FLAKE_INPUT_PREFIX="logos-blockchain-rapidsnark.url = \"github:$REPO/"
 
 # Prints "<hash>  <archive>" for each archive of the release.
 fetch_release_sums() {
@@ -56,6 +59,27 @@ report_sums() {
   fi
 }
 
+# Prints the tag of the flake input.
+flake_tag() {
+  sed -n "s|.*$FLAKE_INPUT_PREFIX\([^\"]*\)\";|\1|p" "$ROOT/flake.nix"
+}
+
+report_flake() {
+  local current="$1" tag="$2"
+  if [ "$current" = "$tag" ]; then
+    echo "The flake input is already $tag."
+  else
+    echo "Flake input: $current -> $tag"
+  fi
+}
+
+update_flake() {
+  local current="$1" tag="$2"
+  sed -i.bak "s|$FLAKE_INPUT_PREFIX$current\"|$FLAKE_INPUT_PREFIX$tag\"|" "$ROOT/flake.nix"
+  rm "$ROOT/flake.nix.bak"
+  (cd "$ROOT" && nix flake update logos-blockchain-rapidsnark)
+}
+
 confirm() {
   local answer
   read -r -p "Apply? [y/N] " answer
@@ -69,7 +93,7 @@ main() {
   fi
 
   local tag="$1"
-  local release_sums current diff
+  local release_sums current diff current_flake
 
   release_sums=$(fetch_release_sums "$tag")
   if [ -z "$release_sums" ]; then
@@ -79,11 +103,13 @@ main() {
 
   current=$(cat "$VERSION_FILE")
   diff=$(diff_sums "$release_sums")
+  current_flake=$(flake_tag)
 
   report_version "$current" "$tag"
   report_sums "$tag" "$diff"
+  report_flake "$current_flake" "$tag"
 
-  if [ "$current" = "$tag" ] && [ -z "$diff" ]; then
+  if [ "$current" = "$tag" ] && [ -z "$diff" ] && [ "$current_flake" = "$tag" ]; then
     echo "Nothing to do."
     exit 0
   fi
@@ -93,9 +119,11 @@ main() {
     exit 1
   fi
 
+  # The flake update can fail, so it goes first.
+  update_flake "$current_flake" "$tag"
   echo "$release_sums" > "$SUMS_FILE"
   echo "$tag" > "$VERSION_FILE"
-  echo "Updated VERSION and SHA256SUMS."
+  echo "Updated VERSION, SHA256SUMS and the flake input."
 }
 
 main "$@"

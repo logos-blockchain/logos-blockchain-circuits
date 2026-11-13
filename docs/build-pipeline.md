@@ -110,7 +110,6 @@ explanation and implementation details.
 archive, so it is the same GMP that `prover` is built with.
 It goes in a `lib/` directory next to the circuit artifacts.
 CI puts the archive's GMP headers before any system path, so the circuits compile against the same GMP.
-On Windows, GMP is still built from the `rapidsnark` submodule.
 
 ---
 
@@ -126,8 +125,6 @@ links `lib{circuit}.a` and `libgmp.a` into Cargo, and re-exports the path to
 
 The `prover` and `verifier` binaries come from Logos Rapidsnark's release archive, and are bundled with the
 circuit libraries. See [CONTRIBUTING.md § Rapidsnark](../CONTRIBUTING.md#rapidsnark).
-
-On Windows, these binaries are still built from the `rapidsnark` submodule.
 
 ---
 

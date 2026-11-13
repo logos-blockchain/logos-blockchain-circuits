@@ -56,6 +56,12 @@ When [releasing](#releasing), these entries move to the new version's section.
 When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
    Also update `[fmt].toolchain` in the same file, the nightly used by `hooks/fmt.sh` in CI and pre-commit.
 
+#### Submodules
+
+When you update the `circomlib` submodule, set the same commit in its `flake.nix` input and run `nix flake lock`.
+They must match, so that all builds use the same version of `circomlib`.
+CI checks that they match.
+
 #### Tool Versions
 
 `taplo`, `cargo-deny`, and `cargo-machete` are pinned in two places that must stay in sync:
@@ -112,10 +118,12 @@ leading `_`. The Makefile's `SYM_PREFIX` variable handles this automatically.
 
 ##### Windows
 
-Uses GNU's `objcopy` (from MinGW binutils).
+Uses `isolate-symbols.sh` instead of `ld -r` and `objcopy`.
 
-GNU's `objcopy` works correctly on COFF, mapping local binding to storage class `C_STAT`.
-The ELF `GRP_COMDAT` problem doesn't apply: COFF COMDAT is per-section rather than group-based.
+On Windows, `ld -r` and `objcopy` also make COMDAT symbols local, e.g. template instances, so the link with `libstdc++`
+fails.
+The script renames each internal symbol to `__<project>_priv_<symbol>` instead.
+It keeps the public FFI symbols and the COMDAT symbols.
 
 #### FFI Maintenance
 
@@ -131,16 +139,15 @@ The bundles ship `prover`, `verifier` and `libgmp.a` from [Logos Rapidsnark][rap
 The circuit libraries link against this `libgmp.a`.
 For details, see Logos Rapidsnark's [README][rapidsnark-readme] and [CONTRIBUTING][rapidsnark-contributing].
 
-On Windows, these files are still built from the `rapidsnark` submodule.
-
 ### Updating
 
-[`deps/rapidsnark/`](deps/rapidsnark) pins the Logos Rapidsnark release:
+The Logos Rapidsnark release is pinned in 3 places:
 
-- `VERSION`: the release tag.
-- `SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+- `deps/rapidsnark/VERSION`: the release tag.
+- `deps/rapidsnark/SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+- The `logos-blockchain-rapidsnark` input in `flake.nix`: the Windows build uses it.
 
-To update both files, run:
+To update all 3, run:
 
 ```bash
 scripts/update-rapidsnark.sh <tag>
@@ -206,7 +213,5 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── verifier[.exe]
 └── VERSION
 ```
-
-> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
 
 The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).

@@ -8,10 +8,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- **Rapidsnark**: on Linux and macOS, the bundled `prover`, `verifier` and `libgmp.a` come from
+- **Rapidsnark**: the bundled `prover`, `verifier` and `libgmp.a` come from
   [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
   instead of being built from the `rapidsnark` submodule.
   Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
+- **Windows**: the bundle is cross-built on Linux with logos-nix's MinGW toolchain, the same toolchain as Logos
+  Rapidsnark's, instead of with MSYS2.
+  **Breaking**: the circuit libraries are named `lib<circuit>.a` instead of `<circuit>.lib`, and consumers must link
+  them with the same toolchain.
+  The bundle adds `lib/libmman.a` (mman-win32), which provides `mmap` to the circuit libraries. Consumers must link it
+  too.
 - **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
   machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.

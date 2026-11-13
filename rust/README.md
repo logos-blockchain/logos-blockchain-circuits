@@ -118,3 +118,6 @@ The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_poc_sys` an
 ```bash
 cargo test
 ```
+
+If the tests run on a different machine from the one that compiled them, set `LBC_ROOT_DIR` on that machine to the
+top-level directory of an extracted release bundle.

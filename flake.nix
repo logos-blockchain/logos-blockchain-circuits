@@ -3,12 +3,152 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    # The Windows toolchain. It must match Logos Rapidsnark's, so that everything is built with the same compiler and
+    # runtime libraries.
+    logos-nix.url = "github:logos-co/logos-nix";
+    # Keep this tag the same as deps/rapidsnark/VERSION. Using `scripts/update-rapidsnark.sh` updates both.
+    logos-blockchain-rapidsnark.url = "github:logos-blockchain/logos-blockchain-rapidsnark/v0.0.8-logos.1-rc.5";
+    logos-blockchain-rapidsnark.inputs.logos-nix.follows = "logos-nix";
+    # The circomlib submodule that the Windows build uses, at the same commit. CI checks that they match.
+    circomlib = {
+      url = "github:iden3/circomlib/35e54ea21da3e8762557234298dbb553c175ea8d";
+      flake = false;
+    };
   };
 
   outputs =
-    { nixpkgs, ... }:
+    {
+      self,
+      nixpkgs,
+      logos-nix,
+      logos-blockchain-rapidsnark,
+      circomlib,
+      ...
+    }:
     let
       lib = nixpkgs.lib;
+
+      buildPkgs = logos-nix.legacyPackages.x86_64-linux;
+      windowsPkgs = buildPkgs.pkgsWindows;
+
+      # mman-win32: sys/mman.h for Windows. The circom-generated main.cpp uses mmap.
+      windowsMman = windowsPkgs.stdenv.mkDerivation {
+        pname = "mman-win32";
+        version = "0-unstable-2026-11-03";
+        src = buildPkgs.fetchFromGitHub {
+          owner = "alitrack";
+          repo = "mman-win32";
+          rev = "780b16cdbc8e845eaa2bef3baf762011f6a7036d";
+          hash = "sha256-QtGKcwz3M8mOAIXUmHQTuCUNuHbnYAkRS4RHMmJQrOw=";
+        };
+        nativeBuildInputs = [ buildPkgs.cmake ];
+        cmakeFlags = [ "-DBUILD_SHARED_LIBS=OFF" ];
+      };
+
+      windowsBuildInputs = [
+        windowsPkgs.nlohmann_json
+        windowsMman
+      ];
+
+      windowsRapidsnark = logos-blockchain-rapidsnark.packages.x86_64-linux.windows-x86_64;
+
+      # Compiles a circuit's witness generator into a Windows static library, like the compile-witness-generator action.
+      mkWindowsWitnessGeneratorLib =
+        circuitPath:
+        let
+          name = lib.removeSuffix ".circom" (baseNameOf circuitPath);
+          cpp = "${dirOf circuitPath}/${name}_cpp";
+        in
+        windowsPkgs.stdenv.mkDerivation {
+          pname = "logos-blockchain-circuits-${name}-windows-x86_64";
+          version = circuitsVersion;
+          src = self;
+
+          nativeBuildInputs = [
+            buildPkgs.circom
+            buildPkgs.gnumake
+            # fix_calcwit_leak.sh uses perl.
+            buildPkgs.perl
+          ];
+          buildInputs = windowsBuildInputs;
+
+          dontConfigure = true;
+
+          buildPhase = ''
+            runHook preBuild
+
+            resources=.github/resources/witness-generator
+
+            # Initialize the required submodules with Nix.
+            mkdir -p circomlib
+            cp -r ${circomlib}/. circomlib
+
+            (cd ${dirOf circuitPath} && circom --c --r1cs --no_asm --O2 ${name}.circom)
+
+            cp -r src/${name} ${cpp}/${name}
+            cp src/{circom_adapter.cpp,circom_adapter.hpp,circom_fwd.hpp,types.hpp,assert.h} ${cpp}/
+            cp $resources/{Makefile,isolate-symbols.sh} ${cpp}/
+
+            # circom-generated main() has no return on the success path.
+            sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' ${cpp}/main.cpp
+            sh $resources/fix_calcwit_leak.sh ${cpp}
+
+            make -C ${cpp} PROJECT=${name} windows-lib \
+              CXX="$CXX" AR="$AR" NM="$NM" OBJDUMP="$OBJDUMP" OBJCOPY="$OBJCOPY" \
+              PRIORITY_FLAGS="-I${windowsRapidsnark}/include"
+
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p $out/include
+            cp ${cpp}/lib${name}.a ${cpp}/${name}.dat $out/
+            cp ${cpp}/{calcwit.hpp,circom.hpp,fr.hpp,types.hpp,${name}/ffi.hpp} $out/include/
+
+            runHook postInstall
+          '';
+        };
+
+      windowsWitnessGeneratorLibs =
+        buildPkgs.linkFarm "logos-blockchain-circuits-witness-generator-libs-windows-x86_64" (
+          lib.mapAttrs (_: mkWindowsWitnessGeneratorLib) {
+            poc = "mantle/poc.circom";
+            pol = "mantle/pol.circom";
+            poq = "blend/poq.circom";
+            signature = "mantle/signature.circom";
+          }
+          // {
+            # Windows has no `mmap`, so clients must also link libmman.a.
+            "lib/libmman.a" = "${windowsMman}/lib/libmman.a";
+          }
+        );
+
+      windowsCross =
+        let
+          cc = windowsPkgs.stdenv.cc;
+        in
+        # Uses a native shell, since the code is compiled on this machine.
+        # The `*_x86_64_pc_windows_gnu` variables below make the Windows target use MinGW to link and compile C code.
+        buildPkgs.mkShell {
+          packages = [
+            cc
+            buildPkgs.gnumake
+          ];
+
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${cc.targetPrefix}gcc";
+          CC_x86_64_pc_windows_gnu = "${cc.targetPrefix}gcc";
+          CXX_x86_64_pc_windows_gnu = "${cc.targetPrefix}g++";
+          AR_x86_64_pc_windows_gnu = "${cc.targetPrefix}ar";
+          # Rust expects pthreads, but logos-nix's MinGW uses mcfgthread.
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = builtins.concatStringsSep " " [
+            "-L native=${windowsPkgs.windows.pthreads}/lib"
+            "-C link-arg=-l:libmcfgthread.a"
+            "-C link-arg=-lntdll"
+            "-C link-arg=-lkernel32"
+          ];
+        };
 
       systems = [
         "x86_64-linux"
@@ -82,7 +222,7 @@
         };
     in
     {
-      packages = forAll (
+      packages = lib.recursiveUpdate (forAll (
         system:
         let
           circuits = mkCircuits system;
@@ -91,6 +231,13 @@
           inherit circuits;
           default = circuits;
         }
-      );
+      )) {
+        x86_64-linux = {
+          windows-mman = windowsMman;
+          windows-witness-generator-libs = windowsWitnessGeneratorLibs;
+        };
+      };
+
+      devShells.x86_64-linux.windows-cross = windowsCross;
     };
 }

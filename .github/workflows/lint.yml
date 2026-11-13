@@ -76,6 +76,19 @@ jobs:
         continue-on-error: true
         run: cargo machete rust/
 
+      - name: Check Nix Inputs Match Submodules
+        id: submodules
+        continue-on-error: true
+        run: |
+          for dep in circomlib; do
+            submodule=$(git ls-tree HEAD "$dep" | awk '{ print $3 }')
+            locked=$(jq -r ".nodes.$dep.locked.rev" flake.lock)
+            if [ "$submodule" != "$locked" ]; then
+              echo "::error::$dep is at $submodule, but flake.lock has $locked."
+              exit 1
+            fi
+          done
+
       - name: Report
         if: always()
         run: |
@@ -97,5 +110,6 @@ jobs:
           check "taplo fmt"     "${{ steps.taplo-fmt.outcome }}"
           check "taplo lint"    "${{ steps.taplo-lint.outcome }}"
           check "cargo-machete" "${{ steps.machete.outcome }}"
+          check "submodules"    "${{ steps.submodules.outcome }}"
 
           $failed && exit 1 || true
