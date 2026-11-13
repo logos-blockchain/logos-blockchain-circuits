@@ -61,14 +61,17 @@ The crates give access to the bundle in 2 ways.
 
 It's copied into the program at build time, so it works on any machine:
 
-- `artifacts::{PROVING_KEY, VERIFICATION_KEY, CIRCUIT_DAT}`, in each circuit's `-sys` crate.
+- `artifacts::{PROVING_KEY, VERIFICATION_KEY, CIRCUIT}`, in each circuit's `-sys` crate.
+  The `embedded` feature, on by default, enables them.
 - The witness generator, through `generate_witness`.
 
 #### Paths
 
 They point to files in the bundle, so these files must exist when the program runs:
 
-- `artifacts::{PROVING_KEY_PATH, VERIFICATION_KEY_PATH, CIRCUIT_DAT_PATH}`, in each circuit's `-sys` crate.
+- `artifacts::{PROVING_KEY_PATH, VERIFICATION_KEY_PATH, CIRCUIT_PATH}`, in each circuit's `-sys` crate.
+  The `paths` feature, off by default, enables them.
+  To generate a witness, use `CircuitWitnessInput::new` with the bytes read from `CIRCUIT_PATH`.
 - `prover()` and `verifier()`, in `logos-blockchain-circuits-rapidsnark-sys`. They return the paths to
   [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s executables.
 
@@ -89,7 +92,7 @@ use lbc_types::native::{Error, Witness};
 
 fn main() -> Result<Witness, Error> {
     let inputs_json = std::fs::read_to_string("poq-input.json").expect("failed to read input");
-    let input = PoqWitnessInput::new(inputs_json)?;
+    let input = PoqWitnessInput::embedded(inputs_json)?;
     generate_witness(&input)
 }
 ```

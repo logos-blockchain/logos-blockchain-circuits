@@ -3,19 +3,20 @@ use std::path::Path;
 use lbc_common::string::path_as_null_terminated_string;
 use lbc_types::{
     ffi,
-    native::{Error, Witness},
+    native::{CircuitWitnessInput, Error, Witness},
 };
 
 use crate::ffi::{pol_generate_witness, pol_generate_witness_from_files};
 
 lbc_common::circuit_artifacts!("pol");
 
-pub struct PolDat;
-impl<'dat> lbc_types::CircuitDat<'dat> for PolDat {
-    const DAT: &'dat [u8] = artifacts::CIRCUIT_DAT;
-}
+pub struct PolCircuit;
+pub type PolWitnessInput<'dat> = CircuitWitnessInput<'dat, PolCircuit>;
 
-pub type PolWitnessInput<'dat> = lbc_types::CircuitWitnessInput<'dat, PolDat>;
+#[cfg(feature = "embedded")]
+impl<'dat> lbc_types::native::EmbeddedCircuit<'dat> for PolCircuit {
+    const DAT: &'dat [u8] = artifacts::CIRCUIT;
+}
 
 pub fn generate_witness(input: &PolWitnessInput) -> Result<Witness, Error> {
     let ffi_input_guard = input.as_ffi();
@@ -45,7 +46,7 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
 #[cfg(any(test, feature = "test-inputs"))]
 pub const SAMPLE_INPUTS: &str = include_str!("../sample.input.json");
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embedded"))]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
@@ -55,13 +56,13 @@ mod tests {
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
-        let input = PolWitnessInput::new("{".to_owned()).unwrap();
+        let input = PolWitnessInput::embedded("{".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
     #[test]
     fn test_generate_witness_missing_inputs_returns_err() {
-        let input = PolWitnessInput::new("{}".to_owned()).unwrap();
+        let input = PolWitnessInput::embedded("{}".to_owned()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -69,7 +70,7 @@ mod tests {
     fn test_generate_witness_constraint_violation_returns_err() {
         let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
         inputs["ledger_aged"] = serde_json::json!("1");
-        let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        let input = PolWitnessInput::embedded(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }
 
@@ -84,7 +85,7 @@ mod tests {
         generate_witness_from_files(&dat, inputs.path(), &witness_output_path)
             .expect("generate_witness_from_files failed.");
 
-        let input = PolWitnessInput::new(SAMPLE_INPUTS.to_owned())
+        let input = PolWitnessInput::embedded(SAMPLE_INPUTS.to_owned())
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 
