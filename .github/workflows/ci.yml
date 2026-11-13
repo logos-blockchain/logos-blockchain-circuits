@@ -898,6 +898,45 @@ jobs:
           LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
 
   # See clippy above — same reason.
+  cargo-hack:
+    name: Cargo Hack
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-linux
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Rust Toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
+        with:
+          rust-src-dir: rust
+
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@13608cbb45b01feb47ef444ab1a42dc41ad56f1a  # v2.79.11
+        with:
+          tool: cargo-hack@0.6.36
+
+      - name: Download Linux Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Check Feature Combinations
+        run: ./hooks/cargo-hack.sh
+        env:
+          LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+
+  # See clippy above — same reason.
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -946,6 +985,7 @@ jobs:
       - build-linux-aarch64
       - build-windows
       - build-macos
+      - cargo-hack
       - clippy
       - test
       - test-windows
