@@ -44,6 +44,20 @@ and a circuit-specific FFI layer (`src/{circuit}/ffi.cpp`), and built into a sta
 
 The Rust sys crates link directly against these libraries.
 
+## Nix
+
+The flake packages the release bundle of the version in `rust/Cargo.toml`, for `x86_64-linux`, `aarch64-linux` and
+`aarch64-darwin`.
+Pin it to a release tag:
+
+```nix
+{
+  inputs.logos-blockchain-circuits.url = "github:logos-blockchain/logos-blockchain-circuits/<tag>";
+
+  # logos-blockchain-circuits.packages.${system}.default
+}
+```
+
 ## Docs
 
 | Document                                         | What's in it                                               |
