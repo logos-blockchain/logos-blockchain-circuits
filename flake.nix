@@ -31,6 +31,23 @@
       buildPkgs = logos-nix.legacyPackages.x86_64-linux;
       windowsPkgs = buildPkgs.pkgsWindows;
 
+      # circom at the version the CI builds with (CIRCOM_TAG), which every circuit's pragma requires.
+      circom = buildPkgs.circom.overrideAttrs (
+        finalAttrs: _: {
+          version = "2.2.3";
+          src = buildPkgs.fetchFromGitHub {
+            owner = "iden3";
+            repo = "circom";
+            rev = "v${finalAttrs.version}";
+            hash = "sha256-om9rLaQAimbBQx3kl+OlRpewqYcEEu0MiudaFfSDI2A=";
+          };
+          cargoDeps = buildPkgs.rustPlatform.fetchCargoVendor {
+            inherit (finalAttrs) src;
+            hash = "sha256-h7jdcSXQ0qcsWcG7d0nb2iQCsQmXFj9hO5NAptwVe28=";
+          };
+        }
+      );
+
       # mman-win32: sys/mman.h for Windows. The circom-generated main.cpp uses mmap.
       windowsMman = windowsPkgs.stdenv.mkDerivation {
         pname = "mman-win32";
@@ -65,7 +82,7 @@
           src = self;
 
           nativeBuildInputs = [
-            buildPkgs.circom
+            circom
             buildPkgs.gnumake
             # fix_calcwit_leak.sh uses perl.
             buildPkgs.perl
