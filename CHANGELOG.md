@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Releases**: branches can publish dev releases, tagged `v<base>+<name>.<n>`, e.g. `v0.8.0-rc.2+putxos.1`.
+  Consumers can use circuits before they reach `main`. See `CONTRIBUTING.md`.
+
 ### Changed
 
 - **Rapidsnark**: the bundled `prover`, `verifier` and `libgmp.a` come from
@@ -23,6 +28,7 @@ All notable changes to this project will be documented in this file.
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **Releases**: CI rejects `v<x.y.z>` and `v<x.y.z>-rc.<n>` tags that are not on `main` or a `release/*` branch.
 
 ## [0.5.0] — 2026-05-25
 
