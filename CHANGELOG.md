@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
   constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification
   keys change. Breaking: the node must pass both slots, and core and proof of work provers must fill `pol_sl` with a
   slot of the window instead of arbitrary data.
+- The circuits are built with circom 2.2.3 (was 2.2.2), in CI (`CIRCOM_TAG`) and in the Nix Windows cross-build (`flake.nix`
+  overrides the circom of logos-nix), and every circuit declares `pragma circom 2.2.3`.
 
 ### Removed
 

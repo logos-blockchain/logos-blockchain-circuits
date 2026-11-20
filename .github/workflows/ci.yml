@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  CIRCOM_TAG: v2.2.2
+  CIRCOM_TAG: v2.2.3
 
 jobs:
   setup:
