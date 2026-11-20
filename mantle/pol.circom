@@ -1,5 +1,5 @@
 //
-pragma circom 2.1.9;
+pragma circom 2.2.3;
 
 include "pol_lib.circom";
 

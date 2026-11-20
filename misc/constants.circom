@@ -1,5 +1,5 @@
 //test
-pragma circom 2.1.9;
+pragma circom 2.2.3;
 
 include "../circomlib/circuits/bitify.circom";
 include "../circomlib/circuits/comparators.circom";
