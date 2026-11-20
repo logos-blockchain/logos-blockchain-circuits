@@ -4,6 +4,7 @@
 
 #include <string>
 #include <algorithm>
+#include <memory>
 
 #include "../types.hpp"
 
@@ -90,22 +91,15 @@ static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     const ConstBytes& circuit_bytes = input->dat;
 
     Circom_Circuit* circuit = getCachedCircuit(circuit_bytes);
-    Circom_CalcWit* ctx = new Circom_CalcWit(circuit);
+    const std::unique_ptr<Circom_CalcWit, void (*)(Circom_CalcWit*)> ctx(new Circom_CalcWit(circuit), deleteCalcWit);
 
-    try {
-        loadJson(ctx, input->inputs_json);
-    } catch (...) {
-        delete ctx;
-        throw;
-    }
+    loadJson(ctx.get(), input->inputs_json);
     if (ctx->getRemaingInputsToBeSet()!=0) {
         const std::string message = "Not all inputs have been set. Only " + std::to_string(get_main_input_signal_no()-ctx->getRemaingInputsToBeSet()) + " out of " + std::to_string(get_main_input_signal_no()) + ".";
-        delete ctx;
         return status_new(StatusCode_InvalidInput, message.c_str());
     }
 
-    writeBinWitness(ctx, output);
-    delete ctx;
+    writeBinWitness(ctx.get(), output);
 
     return status_ok();
 }

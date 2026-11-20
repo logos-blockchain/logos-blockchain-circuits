@@ -20,4 +20,10 @@ Circom_Circuit* getCachedCircuit(const ConstBytes& circuit);
 void loadJson(Circom_CalcWit *ctx, const char* inputs_json);
 void writeBinWitness(Circom_CalcWit *ctx, Bytes* output_witness);
 
+// Frees `ctx` and the arrays of its main component.
+//
+// circom's `release_memory_component` skips the main component (position 0), so its arrays are never freed.
+// Must run before `delete ctx`, because the destructor frees `componentMemory`.
+void deleteCalcWit(Circom_CalcWit* ctx);
+
 #endif
