@@ -1,4 +1,4 @@
-#include "signature/ffi.hpp"
+#include "program_spend/ffi.hpp"
 #include "circom_fwd.hpp"
 #include "circom_adapter.hpp"
 
@@ -49,7 +49,7 @@ static Status generate_witness_from_files_impl(const char* dat, const char* inpu
     return status_new(StatusCode_DynError, message.c_str());
 }
 
-extern "C" Status signature_generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
+extern "C" Status program_spend_generate_witness_from_files(const char* dat, const char* inputs, const char* output) {
     const Status status = validate_generate_witness_from_files_arguments(dat, inputs, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;
@@ -110,7 +110,7 @@ static Status generate_witness_impl(const WitnessInput* input, Bytes* output) {
     return status_ok();
 }
 
-extern "C" Status signature_generate_witness(const WitnessInput* input, Bytes* output) {
+extern "C" Status program_spend_generate_witness(const WitnessInput* input, Bytes* output) {
     const Status status = validate_witness_arguments(input, output); // NOLINT: if-init
     if (status_is_error(status)) {
         return status;

@@ -1,11 +1,24 @@
-#!/usr/bin/sage
-# -*- mode: python ; -*-
+#!/usr/bin/env python3
 
-
-from sage.all import *
+import sys
+from random import randrange
 
 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-F = FiniteField(p)
+Integer = int
+
+class F:
+    def __init__(self, v): self.v = int(v) % p
+    def __int__(self): return self.v
+    def __add__(self, o): return F(self.v + int(o))
+    __radd__ = __add__
+    def __sub__(self, o): return F(self.v - int(o))
+    def __lt__(self, o): return self.v < int(o) % p
+    def __gt__(self, o): return self.v > int(o) % p
+    def __mul__(self, o): return F(self.v * int(o))
+    __rmul__ = __mul__
+    def __pow__(self, e): return F(pow(self.v, e, p))
+    def __eq__(self, o): return self.v == int(o) % p
+    def __repr__(self): return str(self.v)
 
 def poseidon2_hash(data):
     return PoseidonSponge(data,2,1)[0]
@@ -219,8 +232,8 @@ if total_stake >= p:
     print("total stake must be less than p")
     exit()
     
-t0_constant = F(0x1a3fb997fd58374772808c13d1c2ddacb5ab3ea77413f86fd6e0d3d978e5438)
-t1_constant = F(0x71e790b41991052e30c93934b5612412e7958837bac8b1c524c24d84cc7d0)
+t0_constant = F(0x1a3fb997fd5838f2a1585ee090a95c88129ab25cc4d2e2d28f1a95f81d85465)
+t1_constant = F(0x71e790b4199113a9a00298d823c5716ddac764a110a45fe3b770bbb3e8a57)
 
 t0 = F(int(t0_constant) // total_stake)
 t1 = F(p- (int(t1_constant) // total_stake**2))
@@ -229,60 +242,112 @@ t1 = F(p- (int(t1_constant) // total_stake**2))
 value = F(total_stake / 100)
 threshold = (t0 + t1 * value) * value
 
-sk = F(randrange(0,p,1))
-tx_hash = F(randrange(0,p,1))
-output_number = F(randrange(0,50,1))
-pk = Compression([F(4605003),sk])
+nf_sk = F(randrange(0,p,1))
+staking_sk = F(randrange(0,p,1))
+nonce = F(randrange(0,p,1))
+# a note of a program leads like a user note
+program = F(randrange(1,p,1))
+data = F(randrange(0,p,1))
+pk = Compression([F(4605003),nf_sk])
+stake_pk = Compression([F(4605003),staking_sk])
 
-note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
-ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
+cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 while(ticket > threshold):
-    output_number += 1
-    note_id = poseidon2_hash([F(232989242343357190262606),tx_hash,output_number,value,pk])
-    ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),note_id,sk])
- 
-aged_nodes = [F(randrange(0,p,1)) for i in range(32)]
-aged_selectors = randrange(0,2**32,1)
-aged_selectors = format(aged_selectors,'032b')
-aged_root = note_id
-for i in range(32):
-    if int(aged_selectors[31-i]) == 0:
-        aged_root = Compression([aged_root,aged_nodes[i]])
+    nonce += 1
+    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+    ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
+
+# position of the note set in the eligible tree, shared by the aged and the latest paths
+set_selectors = randrange(0,2**40,1)
+set_selectors = format(set_selectors,'040b')
+
+# aged: the note commitment in the commitment MMR of its set, and the set under eligible_aged
+cm_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
+cm_aged_selectors = randrange(0,2**40,1)
+cm_aged_selectors = format(cm_aged_selectors,'040b')
+cm_root_aged = cm
+for i in range(40):
+    if int(cm_aged_selectors[39-i]) == 0:
+        cm_root_aged = Compression([cm_root_aged,cm_aged_nodes[i]])
     else:
-        aged_root = Compression([aged_nodes[i],aged_root])
+        cm_root_aged = Compression([cm_aged_nodes[i],cm_root_aged])
 
-unspent_nodes = [F(randrange(0,p,1)) for i in range(32)]
-unspent_selectors = randrange(0,2**32,1)
-unspent_selectors = format(unspent_selectors,'032b')
-
-latest_root = note_id
-for i in range(32):
-    if int(unspent_selectors[31-i]) == 0:
-        latest_root = Compression([latest_root,unspent_nodes[i]])
+nf_root_aged = F(randrange(0,p,1))
+set_aged_nodes = [F(randrange(0,p,1)) for i in range(40)]
+eligible_aged = poseidon2_hash([F(281666711431130609191864295137803020528161213509),cm_root_aged,nf_root_aged])
+for i in range(40):
+    if int(set_selectors[39-i]) == 0:
+        eligible_aged = Compression([eligible_aged,set_aged_nodes[i]])
     else:
-        latest_root = Compression([unspent_nodes[i],latest_root])
-   
+        eligible_aged = Compression([set_aged_nodes[i],eligible_aged])
 
+# latest: the low leaf of the nullifier in the nullifier IMT of the set, and the set under eligible_latest
+nf = poseidon2_hash([F(232989242911804701822798),cm,nf_sk])
+low_leaf_nf = F(randrange(0,int(nf),1))
+if randrange(0,2,1) == 0:
+    # nf is the greatest nullifier of the set
+    low_leaf_next_nf = F(0)
+else:
+    low_leaf_next_nf = F(randrange(int(nf)+1,p,1))
+low_leaf = poseidon2_hash([F(72106678126369435953119723346337253106302222882126),low_leaf_nf,low_leaf_next_nf])
+
+low_leaf_nodes = [F(randrange(0,p,1)) for i in range(40)]
+low_leaf_selectors = randrange(0,2**40,1)
+low_leaf_selectors = format(low_leaf_selectors,'040b')
+nf_root_latest = low_leaf
+for i in range(40):
+    if int(low_leaf_selectors[39-i]) == 0:
+        nf_root_latest = Compression([nf_root_latest,low_leaf_nodes[i]])
+    else:
+        nf_root_latest = Compression([low_leaf_nodes[i],nf_root_latest])
+
+cm_root_latest = F(randrange(0,p,1))
+set_latest_nodes = [F(randrange(0,p,1)) for i in range(40)]
+eligible_latest = poseidon2_hash([F(281666711431130609191864295137803020528161213509),cm_root_latest,nf_root_latest])
+for i in range(40):
+    if int(set_selectors[39-i]) == 0:
+        eligible_latest = Compression([eligible_latest,set_latest_nodes[i]])
+    else:
+        eligible_latest = Compression([set_latest_nodes[i],eligible_latest])
+
+
+# the note of the leader reward, committed to by the public reward_commitment output
+reward_value = F(randrange(0,2**64,1))
+reward_nonce = F(randrange(0,p,1))
+reward_public_key = Compression([F(4605003),F(randrange(0,p,1))])
+reward_commitment = poseidon2_hash([F(232989244870034910891854),reward_value,reward_nonce,reward_public_key,reward_public_key,F(0),F(0)])
 
 
 # 5) Assemble JSON
 inp = {
-  "sl":                       str(slot_number),
+  "sl":                         str(slot_number),
   "epoch_nonce":                str(epoch_nonce),
   "t0":                         str(t0),
   "t1":                         str(t1),
-  "secret_key":                 str(sk),
-  "P_lead_part_one":            str(F(123456)),
-  "P_lead_part_two":            str(F(654321)),
-  "noteid_aged_path":           [str(x) for x in aged_nodes],
-  "noteid_aged_selectors":      [str(x) for x in aged_selectors],
-  "ledger_aged":                str(aged_root),
-  "note_tx_hash":               str(tx_hash),
-  "note_output_number":         str(output_number),
-  "noteid_latest_path":         [str(x) for x in unspent_nodes],
-  "noteid_latest_selectors":    [str(x) for x in unspent_selectors],
-  "ledger_latest":              str(latest_root),
-  "v":                          str(value)
+  "eligible_aged":              str(eligible_aged),
+  "eligible_latest":            str(eligible_latest),
+  "msg":                        str(F(randrange(0,p,1))),
+  "reward_value":               str(reward_value),
+  "nf_sk":                      str(nf_sk),
+  "staking_sk":                 str(staking_sk),
+  "value":                      str(value),
+  "nonce":                      str(nonce),
+  "program":                    str(program),
+  "data":                       str(data),
+  "set_selectors":              [str(x) for x in set_selectors[::-1]],  # leaf level first
+  "cm_aged_path":               [str(x) for x in cm_aged_nodes],
+  "cm_aged_selectors":          [str(x) for x in cm_aged_selectors[::-1]],
+  "nf_root_aged":               str(nf_root_aged),
+  "set_aged_path":              [str(x) for x in set_aged_nodes],
+  "low_leaf_nf":                str(low_leaf_nf),
+  "low_leaf_next_nf":           str(low_leaf_next_nf),
+  "low_leaf_path":              [str(x) for x in low_leaf_nodes],
+  "low_leaf_selectors":         [str(x) for x in low_leaf_selectors[::-1]],
+  "cm_root_latest":             str(cm_root_latest),
+  "set_latest_path":            [str(x) for x in set_latest_nodes],
+  "reward_public_key":          str(reward_public_key),
+  "reward_nonce":               str(reward_nonce)
 }
 
 import json
@@ -291,3 +356,4 @@ with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
 print("Wrote input of pol")
+print("reward_commitment:", reward_commitment)
