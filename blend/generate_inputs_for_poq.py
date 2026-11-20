@@ -331,11 +331,17 @@ else:
 # 3) Choose branch & index
 index    = randrange(0, Qc if role_selector == 0 else (Ql if role_selector == 1 else Qp),1)
 
-# 4) One‐time key
+# 4) Window of slots holding pol_sl, which every branch must satisfy (here, the epoch of pol_sl)
+EPOCH_LENGTH      = 648000   # 10 * floor(k / f) slots, with k = 2160 and f = 1/30
+epoch             = int(slot_number) // EPOCH_LENGTH
+window_first_slot = epoch * EPOCH_LENGTH
+window_last_slot  = (epoch + 1) * EPOCH_LENGTH - 1
+
+# 5) One‐time key
 K_one = F(123456)
 K_two = F(654321)
 
-# 5) Assemble JSON
+# 6) Assemble JSON
 inp = {
   "core_quota":                 str(Qc),
   "leader_quota":               str(Ql),
@@ -353,6 +359,8 @@ inp = {
   "pol_epoch_nonce":            str(epoch_nonce),
   "pol_t0":                     str(t0),
   "pol_t1":                     str(t1),
+  "pol_window_first_slot":       str(window_first_slot),
+  "pol_window_last_slot":        str(window_last_slot),
   "pol_nullifier_key":          str(nf_sk),
   "pol_staking_secret_key":     str(staking_sk),
   "pol_note_value":             str(value),
