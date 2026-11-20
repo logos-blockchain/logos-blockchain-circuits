@@ -200,3 +200,15 @@ void writeBinWitness(Circom_CalcWit *ctx, Bytes* output_witness) {
     output_witness->size = size;
     memcpy(output_witness->data, buf.data(), size);
 }
+
+void deleteCalcWit(Circom_CalcWit* ctx) {
+    if (ctx == nullptr) return;
+    Circom_Component& main_component = ctx->componentMemory[0];
+    delete[] main_component.subcomponents;
+    delete[] main_component.subcomponentsParallel;
+    delete[] main_component.outputIsSet;
+    delete[] main_component.mutexes;
+    delete[] main_component.cvs;
+    delete[] main_component.sbct;
+    delete ctx;
+}
