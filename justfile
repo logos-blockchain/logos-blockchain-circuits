@@ -102,5 +102,19 @@ test-signature: signature
     g++ -std=c++11 -O3 -I mantle/signature_cpp mantle/signature_cpp/test_signature.cpp -L mantle/signature_cpp -lwitness_signature -lgmp -o mantle/signature_cpp/test_signature
     cd mantle/signature_cpp && ./test_signature
 
+# Build a circuit's witness generator and check `<circuit>_generate_witness` for leaks with valgrind.
+# Example: just valgrind pol
+valgrind circuit iterations='3':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just {{circuit}}
+    dir="{{ if circuit == "poq" { "blend" } else { "mantle" } }}"
+    cpp="${dir}/{{circuit}}_cpp"
+    g++ -std=c++11 -O1 -g -DGENERATE_WITNESS={{circuit}}_generate_witness \
+        -I "${cpp}/{{circuit}}" -I "${cpp}" tests/witness_leak.cpp \
+        -L "${cpp}" -l{{circuit}} -lgmp -lpthread -o "${cpp}/witness_leak"
+    valgrind --leak-check=full --errors-for-leak-kinds=definite,indirect --error-exitcode=1 \
+        "${cpp}/witness_leak" "${cpp}/{{circuit}}.dat" "rust/logos-blockchain-circuits-{{circuit}}-sys/sample.input.json" {{iterations}}
+
 clean:
     rm -rf blend/poq_cpp mantle/pol_cpp mantle/poc_cpp mantle/signature_cpp

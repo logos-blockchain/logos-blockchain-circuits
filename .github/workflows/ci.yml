@@ -974,6 +974,63 @@ jobs:
         env:
           LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
 
+  valgrind:
+    name: Valgrind ${{ matrix.circuit.display }} Witness Generator
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        circuit:
+          - name: pol
+            display: PoL
+          - name: poq
+            display: PoQ
+          - name: signature
+            display: Signature
+          - name: poc
+            display: PoC
+    env:
+      VERSION: ${{ needs.setup.outputs.version }}
+      OS: linux
+      ARCH: x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Install Valgrind
+        run: sudo apt update -y && sudo apt install -y valgrind
+
+      - name: Download Linux Bundle
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
+        with:
+          name: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz
+          path: circuit-libs/
+
+      - name: Extract Bundle
+        run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
+
+      - name: Compile Leak Test
+        env:
+          BUNDLE: circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          CIRCUIT: ${{ matrix.circuit.name }}
+        run: >
+          g++ -std=c++11 -O1 -g -DGENERATE_WITNESS=${CIRCUIT}_generate_witness
+          -I "${BUNDLE}/${CIRCUIT}/include" tests/witness_leak.cpp
+          "${BUNDLE}/${CIRCUIT}/lib${CIRCUIT}.a" "${BUNDLE}/lib/libgmp.a" -lpthread
+          -o witness_leak
+
+      - name: Run Leak Test
+        env:
+          BUNDLE: circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          CIRCUIT: ${{ matrix.circuit.name }}
+          INPUTS: rust/logos-blockchain-circuits-${{ matrix.circuit.name }}-sys/sample.input.json
+        run: >
+          valgrind --leak-check=full --errors-for-leak-kinds=definite,indirect --error-exitcode=1
+          ./witness_leak "${BUNDLE}/${CIRCUIT}/witness_generator.dat" "${INPUTS}" 3
+
   publish-release:
     name: Create Release
     runs-on: ubuntu-latest
