@@ -9,8 +9,12 @@ readme.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+test-utils = ["dep:tempfile"]
+
 [lints]
 workspace = true
 
 [dependencies]
 lbc-types = { workspace = true }
+tempfile = { workspace = true, optional = true }

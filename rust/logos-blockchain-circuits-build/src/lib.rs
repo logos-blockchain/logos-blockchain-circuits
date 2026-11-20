@@ -184,12 +184,21 @@ pub fn build_circuit(circuit_name: &str) {
     println!("cargo:rustc-link-search=native={circuit_dir_str}");
     println!("cargo:rustc-link-search=native={lib_dir_str}");
     println!("cargo:rustc-link-lib=static={circuit_name}");
-    let cpp_lib = std::env::var("CARGO_CFG_TARGET_OS").map_or_else(
-        |_| "stdc++",
-        |os| if os == "macos" { "c++" } else { "stdc++" },
-    );
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS");
+    let cpp_lib = match target_os.as_deref() {
+        Ok("macos") => "c++",
+        // Link the C++ runtime statically, so binaries don't depend on a MinGW installation.
+        Ok("windows") => "static:-bundle=stdc++",
+        _ => "stdc++",
+    };
     println!("cargo:rustc-link-lib={cpp_lib}");
     println!("cargo:rustc-link-lib=static=gmp");
+
+    // Windows has no `mmap`, which the witness generator uses, so link mman-win32's
+    // from the bundle.
+    if target_os.as_deref() == Ok("windows") {
+        println!("cargo:rustc-link-lib=static=mman");
+    }
 }
 
 pub fn build_rapidsnark() {

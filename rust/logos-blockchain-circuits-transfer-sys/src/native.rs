@@ -45,16 +45,19 @@ pub fn generate_witness_from_files(dat: &Path, inputs: &Path, output: &Path) -> 
     .try_into()
 }
 
+#[cfg(any(test, feature = "test-inputs"))]
+pub const SAMPLE_INPUTS: &str = include_str!("../sample.input.json");
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, sync::LazyLock};
 
-    use super::{TransferWitnessInput, generate_witness, generate_witness_from_files};
+    use super::{
+        SAMPLE_INPUTS, TransferWitnessInput, generate_witness, generate_witness_from_files,
+    };
 
     static LIB_DIR: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("LBC_ROOT_DIR")).join("transfer"));
-    static INPUTS: LazyLock<PathBuf> =
-        LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("sample.input.json"));
+        LazyLock::new(|| lbc_common::lbc_root_dir!().join("transfer"));
 
     #[test]
     fn test_generate_witness_invalid_json_returns_err() {
@@ -70,8 +73,7 @@ mod tests {
 
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
-        let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
         inputs["tx_cm_root"] = serde_json::json!("1");
         let input = TransferWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
@@ -81,8 +83,7 @@ mod tests {
     fn test_generate_witness_other_staking_key_returns_err() {
         // The staking key is a field of the input note: another one gives another
         // commitment, outside `tx_cm_root`.
-        let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
         inputs["inputs_stake_pk"][0] = serde_json::json!("1");
         let input = TransferWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
@@ -92,8 +93,7 @@ mod tests {
     fn test_generate_witness_same_note_in_two_inputs_returns_err() {
         // Input 0 consumes the note of input 1 again. The inputs still cover the
         // outputs, so the note would be counted twice.
-        let json = std::fs::read_to_string(&*INPUTS).unwrap();
-        let mut inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
         for field in [
             "inputs_spending_sk",
             "inputs_stake_pk",
@@ -112,14 +112,14 @@ mod tests {
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("transfer_test_witness.wtns");
+        // Write the embedded inputs to a file, so the test also runs on a machine other
+        // than the one that built it.
+        let inputs = lbc_common::test_utils::temp_file(SAMPLE_INPUTS);
 
-        generate_witness_from_files(&dat, &INPUTS, &witness_output_path)
+        generate_witness_from_files(&dat, inputs.path(), &witness_output_path)
             .expect("generate_witness_from_files failed.");
 
-        let inputs_json = std::fs::read_to_string(&*INPUTS)
-            .unwrap_or_else(|_| panic!("Failed to read {}.", INPUTS.display()));
-
-        let input = TransferWitnessInput::new(inputs_json)
+        let input = TransferWitnessInput::new(SAMPLE_INPUTS.to_owned())
             .expect("Failed to construct the input for the witness generator.");
         let output = generate_witness(&input).expect("generate_witness failed.");
 

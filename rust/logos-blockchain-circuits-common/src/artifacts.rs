@@ -1,8 +1,10 @@
 /// Generates a `pub mod artifacts` containing the circuit compilation
 /// artifacts.
 ///
-/// The artifacts are loaded from `LBC_ROOT_DIR/{circuit_dir}/`, set by the
-/// crate's build script.
+/// The circuit artifacts are in `{LBC_ROOT_DIR}/<circuit_dir>/`.
+/// The bytes are embedded from the build-time `LBC_ROOT_DIR`.
+/// The paths use the run-time `LBC_ROOT_DIR` if it is set, or the build-time
+/// one if it is not.
 ///
 /// # Generated items
 ///
@@ -24,6 +26,14 @@
 macro_rules! circuit_artifacts {
     ($circuit_dir:literal) => {
         pub mod artifacts {
+            use std::{path::PathBuf, sync::LazyLock};
+
+            macro_rules! __circuit_path {
+                ($file:literal) => {
+                    LazyLock::new(|| $crate::lbc_root_dir!().join($circuit_dir).join($file))
+                };
+            }
+
             macro_rules! __circuit_file {
                 ($file:literal) => {
                     // "LBC_ROOT_DIR" must stay in sync with the constant in `lbc-build`.
@@ -32,14 +42,16 @@ macro_rules! circuit_artifacts {
                 };
             }
 
-            pub const PROVING_KEY_PATH: &str = __circuit_file!("proving_key.zkey");
+            pub static PROVING_KEY_PATH: LazyLock<PathBuf> = __circuit_path!("proving_key.zkey");
             pub static PROVING_KEY: &[u8] = include_bytes!(__circuit_file!("proving_key.zkey"));
 
-            pub const VERIFICATION_KEY_PATH: &str = __circuit_file!("verification_key.json");
+            pub static VERIFICATION_KEY_PATH: LazyLock<PathBuf> =
+                __circuit_path!("verification_key.json");
             pub static VERIFICATION_KEY: &[u8] =
                 include_bytes!(__circuit_file!("verification_key.json"));
 
-            pub const CIRCUIT_DAT_PATH: &str = __circuit_file!("witness_generator.dat");
+            pub static CIRCUIT_DAT_PATH: LazyLock<PathBuf> =
+                __circuit_path!("witness_generator.dat");
             pub static CIRCUIT_DAT: &[u8] =
                 include_bytes!(__circuit_file!("witness_generator.dat"));
         }

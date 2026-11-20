@@ -1,3 +1,5 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -6,12 +8,28 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **Rapidsnark**: the bundled `prover`, `verifier` and `libgmp.a` come from
+  [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
+  instead of being built from the `rapidsnark` submodule.
+  Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
+- **Windows**: the bundle is cross-built on Linux with logos-nix's MinGW toolchain, the same toolchain as Logos
+  Rapidsnark's, instead of with MSYS2.
+  **Breaking**: the circuit libraries are named `lib<circuit>.a` instead of `<circuit>.lib`, and consumers must link
+  them with the same toolchain.
+  The bundle adds `lib/libmman.a` (mman-win32), which provides `mmap` to the circuit libraries. Consumers must link it
+  too.
+- **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
+  machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
+  `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
+  **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
+  `LazyLock<PathBuf>` statics instead of `&str` constants.
 - **PoQ** requires `pol_sl` to lie in a public window of slots in every branch (RFC-526, where the window is the epoch):
   the public inputs `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and
   `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
   constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification keys change. Breaking: the node must pass both slots, and core and proof of work
   provers must fill `pol_sl` with a slot of the window instead of arbitrary data.
-- The circuits are built with circom 2.2.3 (was 2.2.2), and every circuit declares `pragma circom 2.2.3`.
+- The circuits are built with circom 2.2.3 (was 2.2.2), in CI (`CIRCOM_TAG`) and in the Nix Windows cross-build (`flake.nix`
+  overrides the circom of logos-nix), and every circuit declares `pragma circom 2.2.3`.
 
 ### Removed
 

@@ -83,6 +83,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrand"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
+
+[[package]]
 name = "fd-lock"
 version = "4.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -129,6 +135,17 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "r-efi",
 ]
 
 [[package]]
@@ -182,7 +199,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "logos-blockchain-circuits-build"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "dirs",
  "fd-lock",
@@ -193,14 +210,15 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-common"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-types",
+ "tempfile",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-pol-sys"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -210,7 +228,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-poq-sys"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -220,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-program-spend-sys"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -230,14 +248,15 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-rapidsnark-sys"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-build",
+ "logos-blockchain-circuits-common",
 ]
 
 [[package]]
 name = "logos-blockchain-circuits-tests"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-pol-sys",
  "logos-blockchain-circuits-poq-sys",
@@ -245,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-transfer-sys"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "logos-blockchain-circuits-build",
  "logos-blockchain-circuits-common",
@@ -255,7 +274,7 @@ dependencies = [
 
 [[package]]
 name = "logos-blockchain-circuits-types"
-version = "0.7.3"
+version = "0.8.0-rc.1"
 dependencies = [
  "bytes",
  "libc",
@@ -314,6 +333,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "r-efi"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
 name = "redox_users"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -331,7 +356,7 @@ checksum = "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7"
 dependencies = [
  "cc",
  "cfg-if",
- "getrandom",
+ "getrandom 0.2.17",
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
@@ -468,6 +493,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempfile"
+version = "3.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
+dependencies = [
+ "fastrand",
+ "getrandom 0.4.3",
+ "once_cell",
+ "rustix",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -542,9 +580,9 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.11"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5f280bbb2b287bc8e7de7e3852945a0ff50d1bbcb5ed42b6c7a568c546df171"
+checksum = "1c1c8e20c8a38fc7d65abfe74eb7280e4aa667e8eec8bc84996d2874810748d9"
 dependencies = [
  "rustls-pki-types",
 ]

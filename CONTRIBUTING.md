@@ -1,5 +1,9 @@
 # Contributor's Guide
 
+[rapidsnark]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark
+[rapidsnark-readme]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark/blob/HEAD/README.md
+[rapidsnark-contributing]: https://github.com/logos-blockchain/logos-blockchain-rapidsnark/blob/HEAD/CONTRIBUTING.md
+
 ## Development Setup
 
 ### Prerequisites
@@ -39,12 +43,24 @@ To run the checks manually against all files:
 pre-commit run --all-files
 ```
 
+### Changelog
+
+Every PR with a user-facing change must add an entry under `[Unreleased]` in `CHANGELOG.md`.
+Group entries by [type of change](https://keepachangelog.com/en/1.1.0/#types), e.g. `Added`, `Changed` or `Fixed`.
+When [releasing](#releasing), these entries move to the new version's section.
+
 ### Maintenance
 
 #### Rust Toolchain
 
 When bumping the stable toolchain, update `channel` in `rust-toolchain.toml`.
    Also update `[fmt].toolchain` in the same file, the nightly used by `hooks/fmt.sh` in CI and pre-commit.
+
+#### Submodules
+
+When you update the `circomlib` submodule, set the same commit in its `flake.nix` input and run `nix flake lock`.
+They must match, so that all builds use the same version of `circomlib`.
+CI checks that they match.
 
 #### Tool Versions
 
@@ -102,10 +118,12 @@ leading `_`. The Makefile's `SYM_PREFIX` variable handles this automatically.
 
 ##### Windows
 
-Uses GNU's `objcopy` (from MinGW binutils).
+Uses `isolate-symbols.sh` instead of `ld -r` and `objcopy`.
 
-GNU's `objcopy` works correctly on COFF, mapping local binding to storage class `C_STAT`.
-The ELF `GRP_COMDAT` problem doesn't apply: COFF COMDAT is per-section rather than group-based.
+On Windows, `ld -r` and `objcopy` also make COMDAT symbols local, e.g. template instances, so the link with `libstdc++`
+fails.
+The script renames each internal symbol to `__<project>_priv_<symbol>` instead.
+It keeps the public FFI symbols and the COMDAT symbols.
 
 #### FFI Maintenance
 
@@ -115,25 +133,63 @@ the affected symbols will be localized and linking will fail.
 
 ---
 
+## Rapidsnark
+
+The bundles ship `prover`, `verifier` and `libgmp.a` from [Logos Rapidsnark][rapidsnark]'s releases.
+The circuit libraries link against this `libgmp.a`.
+For details, see Logos Rapidsnark's [README][rapidsnark-readme] and [CONTRIBUTING][rapidsnark-contributing].
+
+### Updating
+
+The Logos Rapidsnark release is pinned in 3 places:
+
+- `deps/rapidsnark/VERSION`: the release tag.
+- `deps/rapidsnark/SHA256SUMS`: the SHA-256 hash of each archive of the release. CI checks every download against it.
+- The `logos-blockchain-rapidsnark` input in `flake.nix`: the Windows build uses it.
+
+To update all 3, run:
+
+```bash
+scripts/update-rapidsnark.sh <tag>
+```
+
+---
+
 ## Releasing
 
-### Triggering a Release Build
+Tags are `v<x.y.z>`, e.g. `v0.8.0`.
+Release candidates add `-rc.<n>`.
 
-To trigger a release build:
-
-1. Create and push a tag in the format `vX.Y.Z`:
+1. Bump `version` in `rust/Cargo.toml` and `rust/Cargo.lock` in a PR.
+   For a final release, also move `[Unreleased]` in `CHANGELOG.md` to a new version section, following
+   [Keep a Changelog](https://keepachangelog.com/en/1.1.0/#effort).
+2. Tag the merge commit and push the tag:
 
    ```bash
-   git tag v1.2.3 -m "Release v1.2.3"
-   git push --tags
+   git fetch origin
+   git tag v0.8.0 origin/main
+   git push origin v0.8.0
    ```
 
-2. This will automatically trigger the `.github/workflows/build_circuits.yml` workflow.
-3. Once the workflow finishes, the generated artifacts will be attached to a new release.
+3. CI checks that the tag matches `rust/Cargo.toml`, builds and tests every platform, then creates a draft release
+   with the bundles.
+   Tags with `-rc` are marked as pre-releases.
+4. CI commits the bundle hashes in `circuits-nix-hashes.json` to the tag's branch, then moves the tag onto that commit.
+   The flake reads this file to download the release.
+   Don't edit it by hand.
 
-> Pull Requests will also generate artifacts, which may be found on the job's page, but won't generate a new release.
+   > [!NOTE]
+   > This fails if the branch got new commits after the tag. Then tag the new last commit with the next version,
+   > e.g. `-rc.2`.
 
-#### Generated artifacts
+5. Review the draft and publish it.
+
+### Releasing From a Branch
+
+A tag on a branch other than `main` also creates a release, e.g. to test circuits before their PR merges.
+The tagged commits don't reach `main`'s history after the squash merge, so CI warns on the PR.
+
+### Release Bundles
 
 For each supported platform (Linux x86_64, Linux aarch64, macOS aarch64, Windows x86_64), a release artifact is
 generated:
@@ -158,20 +214,4 @@ logos-blockchain-circuits-{version}-{os}-{arch}/
 └── VERSION
 ```
 
-> On Windows, static libraries use the `.lib` extension instead of `.a` (e.g. `pol.lib`, `gmp.lib`).
-
 The proving keys are generated using the Hermez Powers of Tau ceremony — see [docs/build-pipeline.md § Step 2](docs/build-pipeline.md#step-2--proving-key-generation).
-
-### Publishing
-
-Releases are marked as **Draft** and **Pre-Release** to ensure the changelog and pre-release steps are manually reviewed
-before going public. Before publishing:
-
-1. **Review the changelog**  
-   Ensure that all relevant changes are clearly listed and properly formatted.
-
-2. **Confirm the pre-release checklist**  
-   Verify that all required steps have been completed, then remove the checklist from the release notes.
-3. **Mark the release as published**  
-   - Uncheck **“This is a pre-release.”**  
-   - Publish the release (removing the Draft state).

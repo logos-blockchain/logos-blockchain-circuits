@@ -1,4 +1,4 @@
-.PHONY: linux macos windows linux-lib macos-lib windows-lib build clean
+.PHONY: linux macos linux-lib macos-lib windows-lib build clean
 
 # ---- Arguments ----
 ifndef PROJECT
@@ -17,18 +17,11 @@ LIB_SRCS        := $(COMMON_SRCS) $(LIB_ONLY_SRCS)
 LIB_OBJS        := $(COMMON_OBJS) $(LIB_ONLY_OBJS)
 DEPS_HPP        := circom.hpp calcwit.hpp fr.hpp types.hpp $(PROJECT)/ffi.hpp
 BIN             := $(PROJECT)
-ifeq ($(OS),windows)
-LIB_EXT         := .lib
-LIB_PREFIX      :=
-else
-LIB_EXT         := .a
-LIB_PREFIX      := lib
-endif
-LIB             := $(LIB_PREFIX)$(PROJECT)$(LIB_EXT)
+LIB             := lib$(PROJECT).a
 
 # ---- Linux (x86_64 and aarch64) ----
 # NOTE: linux (bin) links system gmp via -lgmp. CI uses linux-lib only, which
-# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
+# relies on PRIORITY_FLAGS to use Logos Rapidsnark's GMP headers.
 linux: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON)
 linux: LDFLAGS=-static
 linux: LDLIBS=-lgmp
@@ -39,7 +32,7 @@ linux-lib: $(LIB)
 
 # ---- macOS ----
 # NOTE: macos (bin) hardcodes Homebrew gmp for both includes and linking. CI uses
-# macos-lib only, which relies on PRIORITY_FLAGS to prefer the gmp built from source.
+# macos-lib only, which relies on PRIORITY_FLAGS to use Logos Rapidsnark's GMP headers.
 macos: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/opt/homebrew/include -include gmp_patch.hpp -mmacosx-version-min=11.0
 macos: LDFLAGS=-Wl,-search_paths_first -Wl,-dead_strip
 macos: LDLIBS=/opt/homebrew/lib/libgmp.a
@@ -49,22 +42,22 @@ macos-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/opt/homebrew/i
 macos-lib: $(LIB)
 
 # ---- Windows (MinGW) ----
-# NOTE: windows (bin) links system gmp via -lgmp. CI uses windows-lib only, which
-# relies on PRIORITY_FLAGS to prefer the gmp built from source over the system one.
-windows: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -I/include -Duint="unsigned int"
-windows: LDFLAGS=-static
-windows: LDLIBS=-L/lib -lgmp -lmman
-windows: $(BIN)
-
-windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
-windows-lib: $(LIB)
+# On Windows, `ld -r` breaks the link with libstdc++, so windows-lib renames internal symbols instead.
+# See `isolate-symbols.sh`.
+windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int" -D_WIN32_WINNT=0x0601
+windows-lib: $(LIB_OBJS)
+	NM=$(NM) OBJDUMP=$(OBJDUMP) OBJCOPY=$(OBJCOPY) sh isolate-symbols.sh $(PROJECT) $^
+	rm -f $(LIB)
+	$(AR) rcs $(LIB) $^
 
 # Localizes witness-generator implementation symbols to prevent conflicts when multiple circuit libraries are linked
 # into the same binary.
 # See CONTRIBUTING.md § "Symbol Isolation".
 PUBLIC_SYMS := $(PROJECT)_generate_witness $(PROJECT)_generate_witness_from_files
 LOCAL_OBJ   := $(PROJECT)_local.o
-OBJCOPY     := $(if $(filter windows,$(OS)),objcopy,llvm-objcopy)
+OBJCOPY     ?= llvm-objcopy
+NM          ?= nm
+OBJDUMP     ?= objdump
 SYM_PREFIX  := $(if $(filter macos,$(OS)),_,)
 
 # ---- Rules ----

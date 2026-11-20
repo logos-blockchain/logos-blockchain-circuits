@@ -1,0 +1,39 @@
+name: "Download Logos Rapidsnark"
+description: "Downloads a Logos Rapidsnark release archive and checks its hash"
+branding:
+  icon: "download"
+  color: "blue"
+
+inputs:
+  platform:
+    description: "The archive's platform, e.g. linux-x86_64."
+    required: true
+
+outputs:
+  path:
+    description: "The unpacked archive, with bin/, lib/ and include/."
+    value: ${{ steps.download.outputs.path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Logos Rapidsnark
+      id: download
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PLATFORM: ${{ inputs.platform }}
+      run: |
+        # See CONTRIBUTING.md § Rapidsnark.
+        DEPS="${GITHUB_WORKSPACE}/deps/rapidsnark"
+        VERSION=$(cat "${DEPS}/VERSION")
+        ARCHIVE="rapidsnark-${PLATFORM}-${VERSION}.tar.gz"
+        LINE=$(awk -v f="$ARCHIVE" '$2 == f' "${DEPS}/SHA256SUMS")
+        if [ -z "$LINE" ]; then
+          echo "::error::No hash for ${ARCHIVE} in deps/rapidsnark/SHA256SUMS"
+          exit 1
+        fi
+        gh release download "$VERSION" --repo logos-blockchain/logos-blockchain-rapidsnark --pattern "$ARCHIVE"
+        echo "$LINE" | shasum -a 256 -c -
+        tar -xzf "$ARCHIVE"
+        echo "path=${PWD}/${ARCHIVE%.tar.gz}" >> "$GITHUB_OUTPUT"
