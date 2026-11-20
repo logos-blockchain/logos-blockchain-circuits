@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
   `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
   constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification keys change. Breaking: the node must pass both slots, and core and proof of work
   provers must fill `pol_sl` with a slot of the window instead of arbitrary data.
+- The circuits are built with circom 2.2.3 (was 2.2.2), and every circuit declares `pragma circom 2.2.3`.
 
 ### Removed
 

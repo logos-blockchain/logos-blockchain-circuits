@@ -2,7 +2,7 @@ cargo_root      := justfile_directory() + "/rust"
 src             := justfile_directory() + "/src"
 ci_makefile     := justfile_directory() + "/.github/resources/witness-generator/Makefile"
 calcwit_fix     := justfile_directory() + "/.github/resources/witness-generator/fix_calcwit_leak.sh"
-circom_version  := "2.2.2" # This version must match the version used in the CI
+circom_version  := "2.2.3" # This version must match the version used in the CI
 
 os := `uname -s`
 sed_i := if os == "Darwin" { "sed -i ''" } else { "sed -i" }
