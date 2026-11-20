@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **PoQ** requires `pol_sl` to lie in a public window of slots in every branch (RFC-526, where the window is the epoch):
+  the public inputs `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and
+  `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
+  constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification
+  keys change. Breaking: the node must pass both slots, and core and proof of work provers must fill `pol_sl` with a
+  slot of the window instead of arbitrary data.
+
 ### Removed
 
 - The unused constant `NOTE_ID_V1`, absent from the specification.
