@@ -75,6 +75,25 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_witness_slot_outside_window_returns_err() {
+        let json = std::fs::read_to_string(&*INPUTS).unwrap();
+        let inputs: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let slot: u64 = inputs["pol_sl"].as_str().unwrap().parse().unwrap();
+
+        let mut before_window = inputs.clone();
+        before_window["pol_window_first_slot"] = serde_json::json!((slot + 1).to_string());
+        before_window["pol_window_last_slot"] = serde_json::json!((slot + 2).to_string());
+        let input = PoqWitnessInput::new(serde_json::to_string(&before_window).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+
+        let mut after_window = inputs;
+        after_window["pol_window_first_slot"] = serde_json::json!((slot - 2).to_string());
+        after_window["pol_window_last_slot"] = serde_json::json!((slot - 1).to_string());
+        let input = PoqWitnessInput::new(serde_json::to_string(&after_window).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
     fn test_generate_witness() {
         let dat = LIB_DIR.join("witness_generator");
         let witness_output_path = std::env::temp_dir().join("poq_test_witness.wtns");

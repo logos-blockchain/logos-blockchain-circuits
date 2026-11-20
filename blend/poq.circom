@@ -27,6 +27,8 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input pol_epoch_nonce;
     signal input pol_t0;
     signal input pol_t1;
+    signal input pol_window_first_slot;  // first slot of the window pol_sl must lie in (64 bits)
+    signal input pol_window_last_slot;   // last slot of the window pol_sl must lie in (64 bits)
 
 
     // dummy constraints to avoid unused public input to be erased after compilation optimisation
@@ -79,6 +81,12 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     component inv_2 = INV_2();
     L1 <== - selector_squared + 2 * selector;
     L2 <== (selector_squared - selector) * inv_2.out;
+
+    // the pol_sl is in the public window to avoid grinding
+    component sl_after_first = Num2Bits(64);
+    sl_after_first.in <== pol_sl - pol_window_first_slot;
+    component sl_before_last = Num2Bits(64);
+    sl_before_last.in <== pol_window_last_slot - pol_sl;
 
 
     // Quota check: index < core_quota if core, index < leader_quota if leader, index < pow_quota if pow
@@ -204,5 +212,5 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
 }
 
 // Instantiate with chosen depths: 20 for core PK tree
-component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_eligible_aged, pow_blend_difficulty] }
+component main { public [ core_quota, leader_quota, pow_quota, core_root, K_part_one, K_part_two, pol_epoch_nonce, pol_t0, pol_t1, pol_window_first_slot, pol_window_last_slot, pol_eligible_aged, pow_blend_difficulty] }
     = ProofOfQuota(20, 20, 40);
