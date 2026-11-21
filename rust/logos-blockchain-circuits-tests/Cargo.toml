@@ -6,5 +6,5 @@ version.workspace = true
 publish = false
 
 [dev-dependencies]
-lbc-pol-sys = { workspace = true, features = ["test-inputs"] }
-lbc-poq-sys = { workspace = true, features = ["test-inputs"] }
+lbc-pol-sys = { workspace = true, features = ["embedded", "test-inputs"] }
+lbc-poq-sys = { workspace = true, features = ["embedded", "test-inputs"] }

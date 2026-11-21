@@ -10,7 +10,9 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["prebuilt"]
+default = ["embedded", "prebuilt"]
+embedded = []
+paths = []
 prebuilt = ["lbc-build/prebuilt"]
 test-inputs = []
 

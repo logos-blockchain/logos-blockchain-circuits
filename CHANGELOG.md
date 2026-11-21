@@ -23,6 +23,12 @@ All notable changes to this project will be documented in this file.
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **Rust**: the embedded `artifacts` bytes are behind the `embedded` feature, which is on by default.
+  **Breaking**: `CircuitWitnessInput::new` takes the witness generator data, and the new `CircuitWitnessInput::embedded`
+  uses the embedded data. `CircuitDat` is renamed `EmbeddedCircuit`, the `<Circuit>Dat` types (e.g. `PoqDat`) are
+  renamed `<Circuit>Circuit` (e.g. `PoqCircuit`), and the `artifacts` items `CIRCUIT_DAT` and `CIRCUIT_DAT_PATH` are
+  renamed `CIRCUIT` and `CIRCUIT_PATH`.
+  **Breaking**: the `artifacts` paths are behind the `paths` feature, which is off by default.
 
 ## [0.5.0] — 2026-05-25
 
