@@ -157,13 +157,23 @@ scripts/update-rapidsnark.sh <tag>
 
 ## Releasing
 
-Tags are `v<x.y.z>`, e.g. `v0.8.0`.
-Release candidates add `-rc.<n>`.
+There are 3 kinds of release:
 
-1. Bump `version` in `rust/Cargo.toml` and `rust/Cargo.lock` in a PR.
+| Kind              | Tag                  | Source     | Promise                           |
+|-------------------|----------------------|------------|-----------------------------------|
+| Final             | `v<x.y.z>`           | `main`     | A stable version.                 |
+| Release candidate | `v<x.y.z>-rc.<n>`    | `main`     | Meant to become `v<x.y.z>`.       |
+| Dev               | `v<base>+<name>.<n>` | Any branch | None: its changes may never ship. |
+
+### Release Steps
+
+These steps apply to every kind of release.
+
+1. Bump `version` in `rust/Cargo.toml` and `rust/Cargo.lock`.
+   For a final release or a release candidate, do it in a PR to `main`.
    For a final release, also move `[Unreleased]` in `CHANGELOG.md` to a new version section, following
    [Keep a Changelog](https://keepachangelog.com/en/1.1.0/#effort).
-2. Tag the merge commit and push the tag:
+2. Tag the last commit of the branch you release from, and push the tag. E.g., for `main`:
 
    ```bash
    git fetch origin
@@ -173,21 +183,57 @@ Release candidates add `-rc.<n>`.
 
 3. CI checks that the tag matches `rust/Cargo.toml`, builds and tests every platform, then creates a draft release
    with the bundles.
-   Tags with `-rc` are marked as pre-releases.
+
+   > [!NOTE]
+   > Release candidates and dev releases are marked as pre-releases.
+
 4. CI commits the bundle hashes in `circuits-nix-hashes.json` to the tag's branch, then moves the tag onto that commit.
    The flake reads this file to download the release.
    Don't edit it by hand.
 
    > [!NOTE]
    > This fails if the branch got new commits after the tag. Then tag the new last commit with the next version,
-   > e.g. `-rc.2`.
+   > e.g. `-rc.2` or `+<name>.2`.
 
 5. Review the draft and publish it.
 
-### Releasing From a Branch
+### Dev (Branch) Releases
 
-A tag on a branch other than `main` also creates a release, e.g. to test circuits before their PR merges.
-The tagged commits don't reach `main`'s history after the squash merge, so CI warns on the PR.
+Use a dev release when you need a release without merging into `main`.
+For example, an integration branch.
+
+Dev releases are meant for testing.
+Once the changes are validated, merge the branch into `main`.
+Before you merge it, it must meet the same standards as any other PR.
+
+#### Dev Tag Format
+
+A dev tag is its base tag plus `+<name>.<n>`, e.g. `v0.1.2+putxos.1` or `v0.1.2-rc.2+putxos.1`.
+
+- `<base>`: the release the branch is built on. It can be any release, but it is usually the latest one on `main`.
+- `<name>`: a short name for the branch, in lowercase letters, digits and `-`.
+- `<n>`: starts at 1 for each base, and goes up by 1 for each dev release on that base.
+
+> [!NOTE]
+> Only tag `v<x.y.z>` or `v<x.y.z>-rc.<n>` on `main`.
+> CI rejects them anywhere else.
+
+#### Syncing With `main`
+
+When you sync (merge or rebase) with `main`:
+
+- `rust/Cargo.toml`: update the dev version to use `main`'s version as its base, and restart `<n>` at 1.
+  E.g., if `main` is at `0.8.0-rc.3`, `0.8.0-rc.2+putxos.3` becomes `0.8.0-rc.3+putxos.1`.
+- `circuits-nix-hashes.json`: keep the entries from both sides.
+
+#### Merging
+
+1. Sync the branch with `main`, as in [Syncing With `main`](#syncing-with-main).
+2. Remove the `+<name>.<n>` part from `version` in `rust/Cargo.toml`, e.g. `0.8.0-rc.3+putxos.1` to `0.8.0-rc.3`.
+   Merging doesn't release the changes. To release them, follow [Release Steps](#release-steps) on `main`.
+3. Squash-merge the PR.
+   Don't delete dev tags or their releases, since consumers might still depend on them.
+4. Update consumers if necessary.
 
 ### Release Bundles
 
