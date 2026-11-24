@@ -159,11 +159,11 @@ scripts/update-rapidsnark.sh <tag>
 
 There are 3 kinds of release:
 
-| Kind              | Tag                   | Made from             | Promise                           |
-|-------------------|-----------------------|-----------------------|-----------------------------------|
-| Final             | `v<x.y.z>`            | `main` or `release/*` | A stable version.                 |
-| Release candidate | `v<x.y.z>-rc.<n>`     | `main` or `release/*` | Meant to become `v<x.y.z>`.       |
-| Dev               | `v<base>+<name>.<n>`  | Any branch            | None: its changes may never ship. |
+| Kind              | Tag                  | Source     | Promise                           |
+|-------------------|----------------------|------------|-----------------------------------|
+| Final             | `v<x.y.z>`           | `main`     | A stable version.                 |
+| Release candidate | `v<x.y.z>-rc.<n>`    | `main`     | Meant to become `v<x.y.z>`.       |
+| Dev               | `v<base>+<name>.<n>` | Any branch | None: its changes may never ship. |
 
 ### Release Steps
 
@@ -215,7 +215,7 @@ A dev tag is its base tag plus `+<name>.<n>`, e.g. `v0.1.2+putxos.1` or `v0.1.2-
 - `<n>`: starts at 1 for each base, and goes up by 1 for each dev release on that base.
 
 > [!NOTE]
-> Only tag `v<x.y.z>` or `v<x.y.z>-rc.<n>` on `main` or a `release/*` branch.
+> Only tag `v<x.y.z>` or `v<x.y.z>-rc.<n>` on `main`.
 > CI rejects them anywhere else.
 
 #### Syncing With `main`
