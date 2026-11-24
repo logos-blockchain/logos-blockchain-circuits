@@ -263,30 +263,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/pol-artifact
-
-      - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poq-artifact
-
-      - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
-
-      - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
-
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
@@ -296,6 +272,10 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          POL_DIR: mantle/pol_cpp
+          POQ_DIR: blend/poq_cpp
+          SIGNATURE_DIR: mantle/signature_cpp
+          POC_DIR: mantle/poc_cpp
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
@@ -308,18 +288,18 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
-          mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
-          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
-          mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
+          mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
+          cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
+          mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
+          mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
+          cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
+          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
+          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
+          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
+          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
@@ -438,30 +418,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/pol-artifact
-
-      - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poq-artifact
-
-      - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
-
-      - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
-
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
@@ -471,6 +427,10 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          POL_DIR: mantle/pol_cpp
+          POQ_DIR: blend/poq_cpp
+          SIGNATURE_DIR: mantle/signature_cpp
+          POC_DIR: mantle/poc_cpp
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
@@ -483,18 +443,18 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
-          mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
-          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
-          mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
+          mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
+          cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
+          mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
+          mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
+          cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
+          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
+          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
+          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
+          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
@@ -780,30 +740,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Download PoL Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: pol-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/pol-artifact
-
-      - name: Download PoQ Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poq-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poq-artifact
-
-      - name: Download Signature Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: signature-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/signature-artifact
-
-      - name: Download PoC Witness Generator
-        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
-        with:
-          name: poc-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          path: witness-generators/poc-artifact
-
       - name: Download All Proving Key Artifacts
         uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b
         with:
@@ -813,6 +749,10 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
+          POL_DIR: mantle/pol_cpp
+          POQ_DIR: blend/poq_cpp
+          SIGNATURE_DIR: mantle/signature_cpp
+          POC_DIR: mantle/poc_cpp
         run: |
           # Create the bundle directory structure
           mkdir -p "${BUNDLE_NAME}"/{pol,poq,signature,poc}
@@ -825,18 +765,18 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv witness-generators/pol-artifact/libpol.a "${BUNDLE_NAME}/pol/"
-          mv witness-generators/pol-artifact/pol.dat "${BUNDLE_NAME}/pol/witness_generator.dat"
-          cp -r witness-generators/pol-artifact/include "${BUNDLE_NAME}/pol/"
-          mv witness-generators/poq-artifact/libpoq.a "${BUNDLE_NAME}/poq/"
-          mv witness-generators/poq-artifact/poq.dat "${BUNDLE_NAME}/poq/witness_generator.dat"
-          cp -r witness-generators/poq-artifact/include "${BUNDLE_NAME}/poq/"
-          mv witness-generators/signature-artifact/libsignature.a "${BUNDLE_NAME}/signature/"
-          mv witness-generators/signature-artifact/signature.dat "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r witness-generators/signature-artifact/include "${BUNDLE_NAME}/signature/"
-          mv witness-generators/poc-artifact/libpoc.a "${BUNDLE_NAME}/poc/"
-          mv witness-generators/poc-artifact/poc.dat "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r witness-generators/poc-artifact/include "${BUNDLE_NAME}/poc/"
+          mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
+          mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
+          cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
+          mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
+          mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
+          cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
+          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
+          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
+          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
+          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
+          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
 
           # Copy proving keys and verification keys into each circuit directory
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
