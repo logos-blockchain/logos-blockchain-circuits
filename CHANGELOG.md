@@ -33,14 +33,15 @@ All notable changes to this project will be documented in this file.
   the public inputs `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and
   `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
   constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification
-  keys change. Breaking: the node must pass both slots, and core and proof of work provers must fill `pol_sl` with a
-  slot of the window instead of arbitrary data.
-- The circuits are built with circom 2.2.3 (was 2.2.2), in CI (`CIRCOM_TAG`) and in the Nix Windows cross-build (`flake.nix`
-  overrides the circom of logos-nix), and every circuit declares `pragma circom 2.2.3`.
+  keys change.
+  **Breaking**: the node must pass both slots, and core and proof of work provers must fill `pol_sl` with a slot of
+  the window instead of arbitrary data.
+- **Circuits** are built with circom 2.2.3 (was 2.2.2), in CI (`CIRCOM_TAG`) and in the Nix Windows cross-build
+  (`flake.nix` overrides the circom of logos-nix), and every circuit declares `pragma circom 2.2.3`.
 
 ### Removed
 
-- The unused constant `NOTE_ID_V1`, absent from the specification.
+- **Constant** `NOTE_ID_V1`, unused and absent from the specification.
 
 ## [0.7.3] - 2026-11-12
 
@@ -50,12 +51,12 @@ All notable changes to this project will be documented in this file.
   the index of the leaf of the next nullifier. The index was only hashed, never constrained: proving a nullifier absent
   needs the low leaf's nullifier and next nullifier alone, and the ledger inserts in the tree natively. The inputs
   `low_leaf_next_index` (PoL) and `pol_low_leaf_next_index` (PoQ) are removed, and the verification keys change.
-  Breaking: the node must hash its IMT leaves the same way.
+  **Breaking**: the node must hash its IMT leaves the same way.
 
 ### Fixed
 
-- **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is `zkhash(KDF, core_sk)`.
-  The circuit does not change.
+- **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is
+  `zkhash(KDF, core_sk)`. The circuit does not change.
 
 ## [0.7.1] - 2026-11-10
 
@@ -152,7 +153,7 @@ channel, each with its commitment MMR and nullifier IMT.
   are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block
   header, which replaces the two `leader_pk` inputs.
 - **PoQ** leader branch follows the PoL, without the unspent check.
-- The input generators run with plain Python 3: `just gen-inputs` replaces `just sage-run`. The PoL and PoQ
+- **Input generators** run with plain Python 3: `just gen-inputs` replaces `just sage-run`. The PoL and PoQ
   generators derive `t0` and `t1` from the exact lottery constants of the Proof of Leadership specification.
 
 ### Removed
