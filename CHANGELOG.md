@@ -6,8 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Releases**: branches can publish dev releases, tagged `v<base>+<name>.<n>`, e.g. `v0.1.2-rc.3+feature.4`.
+  Consumers can use circuits before they reach `main`. See `CONTRIBUTING.md`.
+
 ### Changed
 
+- **Rapidsnark**: the bundled `prover`, `verifier` and `libgmp.a` come from
+  [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
+  instead of being built from the `rapidsnark` submodule.
+  Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
+- **Windows**: the bundle is cross-built on Linux with logos-nix's MinGW toolchain, the same toolchain as Logos
+  Rapidsnark's, instead of with MSYS2.
+  **Breaking**: the circuit libraries are named `lib<circuit>.a` instead of `<circuit>.lib`, and consumers must link
+  them with the same toolchain.
+  The bundle adds `lib/libmman.a` (mman-win32), which provides `mmap` to the circuit libraries. Consumers must link it
+  too.
+- **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
+  machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
+  `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
+  **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
+  `LazyLock<PathBuf>` statics instead of `&str` constants.
+- **Releases**: CI rejects `v<x.y.z>` and `v<x.y.z>-rc.<n>` tags that are not on `main`.
 - **PoQ** requires `pol_sl` to lie in a public window of slots in every branch (RFC-526, where the window is the epoch):
   the public inputs `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and
   `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
@@ -95,29 +116,8 @@ All notable changes to this project will be documented in this file.
 
 ## [0.6.1] - 2026-11-03
 
-### Added
-
-- **Releases**: branches can publish dev releases, tagged `v<base>+<name>.<n>`, e.g. `v0.1.2-rc.3+feature.4`.
-  Consumers can use circuits before they reach `main`. See `CONTRIBUTING.md`.
-
 ### Changed
 
-- **Rapidsnark**: the bundled `prover`, `verifier` and `libgmp.a` come from
-  [Logos Rapidsnark](https://github.com/logos-blockchain/logos-blockchain-rapidsnark)'s `v0.0.8-logos.1-rc.5` release,
-  instead of being built from the `rapidsnark` submodule.
-  Because Logos Rapidsnark builds GMP 6.3.0, the bundled GMP goes from 6.2.1 to 6.3.0.
-- **Windows**: the bundle is cross-built on Linux with logos-nix's MinGW toolchain, the same toolchain as Logos
-  Rapidsnark's, instead of with MSYS2.
-  **Breaking**: the circuit libraries are named `lib<circuit>.a` instead of `<circuit>.lib`, and consumers must link
-  them with the same toolchain.
-  The bundle adds `lib/libmman.a` (mman-win32), which provides `mmap` to the circuit libraries. Consumers must link it
-  too.
-- **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
-  machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
-  `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
-  **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
-  `LazyLock<PathBuf>` statics instead of `&str` constants.
-- **Releases**: CI rejects `v<x.y.z>` and `v<x.y.z>-rc.<n>` tags that are not on `main`.
 - **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
   distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
 - **Program Spend** derives the nonce of each active output from the nullifier of the first input and the index of the
