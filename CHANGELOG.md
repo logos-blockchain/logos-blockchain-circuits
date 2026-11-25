@@ -4,6 +4,8 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
 ## [Unreleased]
 
 ### Added
@@ -21,25 +23,22 @@ All notable changes to this project will be documented in this file.
 - **Windows**: the bundle is cross-built on Linux with logos-nix's MinGW toolchain, the same toolchain as Logos
   Rapidsnark's, instead of with MSYS2.
   **Breaking**: the circuit libraries are named `lib<circuit>.a` instead of `<circuit>.lib`, and consumers must link
-  them with the same toolchain.
-  The bundle adds `lib/libmman.a` (mman-win32), which provides `mmap` to the circuit libraries. Consumers must link it
-  too.
+  them with the same toolchain. Consumers must also link `lib/libmman.a` (mman-win32), which the bundle now includes.
 - **Rust**: to use the paths into the bundle on a machine that did not build the program, set `LBC_ROOT_DIR` on that
   machine to the bundle directory. These paths are the `artifacts` `*_PATH` items, and
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
-- **Releases**: CI rejects `v<x.y.z>` and `v<x.y.z>-rc.<n>` tags that are not on `main`.
 
 ### Fixed
 
-- **Witness generation**: frees the arrays of the main component after generating the witness, which leaked before.
+- **Witness generation**: no longer leaks memory.
 
 ## [0.5.7] - 2026-09-08
 
 ### Changed
 
-- **PoQ**: the proof of work ticket is `zkhash(pow_nonce, pol_epoch_nonce)`, and `BLEND_POW_V1` is removed.
+- **PoQ**: the proof of work ticket is `Hash(pow_nonce, pol_epoch_nonce)`, without the `BLEND_POW_V1` DST.
   **Breaking**: the verification key changes.
 
 ## [0.5.6] - 2026-08-12
@@ -47,7 +46,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - **PoQ**: the proof of work branch takes the private `pow_nonce` in place of `pow_sk`, and drops `pow_block_hash`.
-  The ticket is `zkhash(BLEND_POW_V1, pol_epoch_nonce, pow_nonce)`.
+  The ticket is `Hash(BLEND_POW_V1, pol_epoch_nonce, pow_nonce)`.
   **Breaking**: the verification key changes.
 
 ## [0.5.5] - 2026-08-05
@@ -56,22 +55,16 @@ All notable changes to this project will be documented in this file.
 
 - **PoQ**: `pow_block_hash` is a private input instead of a public one, and the output `pow_pk` is removed.
   **Breaking**: the public signals and the verification key change.
-- **PoL** and **PoQ**: the templates drop the unused slot secret tree depth parameter.
 
 ## [0.5.4] - 2026-08-04 [YANKED]
 
-Its release assets were replaced in place with the circuits of 0.5.5, which have a different public interface, and the
-release was later removed. Use 0.5.5.
+Its assets were replaced with those of 0.5.5, and the release was removed. Use 0.5.5.
 
 ### Added
 
-- **PoQ**: proof of work branch (`selector = 2`), with the public inputs `pow_quota`, `pow_block_hash` and
-  `pow_blend_difficulty`, the private `pow_sk`, and the output `pow_pk`.
+- **PoQ**: a proof of work branch, with the public inputs `pow_quota`, `pow_block_hash` and `pow_blend_difficulty`.
+  It adds the private input `pow_sk` and the output `pow_pk`.
   **Breaking**: the public signals and the verification key change.
-
-### Changed
-
-- **Releases**: the release tag points to the commit with the updated Nix hashes.
 
 ## [0.5.3] - 2026-06-09
 
@@ -83,8 +76,7 @@ release was later removed. Use 0.5.5.
 
 ### Fixed
 
-- **Symbol isolation**: the `Fr_*` symbols are local to each circuit library, so circuits and rapidsnark can be
-  linked into the same binary.
+- **Symbol isolation**: circuits and rapidsnark can be linked into the same binary.
 
 ## [0.5.1] - 2026-05-30
 
@@ -93,73 +85,47 @@ release was later removed. Use 0.5.5.
 - **PoQ**: public input `session`. The core branch uses `pol_epoch_nonce` in its place.
   **Breaking**: the public signals and the verification key change.
 
-## [0.5.0] — 2026-05-25
+## [0.5.0] - 2026-05-29
 
 ### Added
 
-- **Circuits as static libraries**
+- **Circuits**: each circuit is a static library (`lib{circuit}.a`) with a stable C FFI, instead of an executable
+  spawned for each witness. It has 2 entry points:
+  - `{circuit}_generate_witness(WitnessInput*, Bytes*)` generates a witness in memory from a JSON input string and a
+    `.dat` buffer. The caller owns the output buffer.
+  - `{circuit}_generate_witness_from_files(dat, inputs, output)` generates a witness from a `.dat` file and a JSON
+    input file, and writes it to an output file.
 
-   The central change in this release. Previously, witness generation required spawning a compiled executable per circuit.
-
-   Each circuit is now a linkable static archive (`lib{circuit}.a`) with a stable C FFI.
-
-   Two entry points per circuit:
-  - `{circuit}_generate_witness(WitnessInput*, Bytes*)`: Generates a witness in memory from a
-     JSON input string and an embedded `.dat` buffer; the caller owns the output buffer.
-  - `{circuit}_generate_witness_from_files(dat, inputs, output)`: Generates a witness from a `.dat` file and a JSON
-     input file, writing the witness to an output file.
-
-   The Rust crates (`lbc-{circuit}-sys`) wrap this FFI directly and can either link against a local build or download a
-   prebuilt release automatically.
-
-   See [`rust/README.md`](rust/README.md) for usage.
-
-- **Bundled static GMP**
-
-   `libgmp` is now compiled from source and statically linked, removing the runtime dependency on a system GMP
-   installation, and standardizing the GMP version used across all platforms.
-
-- **Older glibc compatibility**
-
-   Linux builds now target an older glibc ABI for broader distribution support.
-
-- **Dual MIT/Apache-2.0 license**.
-
-- **Rapidsnark crate**
-
-- **Circuit artifacts exposed via macro**
+  The Rust crates (`logos-blockchain-circuits-{circuit}-sys`) wrap this FFI, and can link a local build or download a
+  prebuilt release. See [`rust/README.md`](rust/README.md).
+  **Breaking**: consumers must link the libraries instead of running the executables.
+- **GMP**: `libgmp` is compiled from source and linked statically, so no system GMP is needed, and all platforms use
+  the same GMP version.
+- **Linux**: builds target an older glibc ABI, for broader distribution support.
+- **License**: dual MIT/Apache-2.0.
+- **Rust**: the `logos-blockchain-circuits-rapidsnark-sys` crate gives the paths of the bundled `prover` and
+  `verifier`.
+- **Rust**: the `circuit_artifacts!` macro gives the proving key, verification key and witness generator data of a
+  circuit.
 
 ### Changed
 
-- **Single `LBC_ROOT_DIR`** replaces the separate environment variables
-
-- **`prebuilt` is a default feature**
+- **Rust**: `LBC_ROOT_DIR` replaces `LBC_LIB_DIR` and the variables of each circuit.
+  **Breaking**: set `LBC_ROOT_DIR` instead.
+- **Rust**: the `prebuilt` feature is on by default.
 
 ### Fixed
 
-- **Symbol resolution conflicts**
-
-   When multiple circuit libraries are linked into the same binary, the linker silently collapsed shared internal
-   symbols to a single definition, corrupting witness parsing and causing SIGSEGV.
-
-   See [CONTRIBUTING.md](CONTRIBUTING.md#symbol-isolation-in-circuit-libraries) for a full explanation and maintenance
-   notes.
-
-- **macOS C++ library linkage**
-
-   Fixed missing C++ standard library on macOS builds.
-
-- **Circuit assert statements**
-
-   Assert statements in the circuit source assumed standalone binary execution, causing disruptions when compiled as a library.
-
-- **Comparator full less-than**
-
-   Fixed incorrect output in the full less-than comparator circuit.
-
-- **Windows extension for rapidsnark binaries**
-
-   The rapidsnark binaries get the `.exe` extension on Windows builds.
+- **Symbol isolation**: when several circuit libraries were linked into the same binary, the linker collapsed their
+  shared internal symbols to a single definition, which corrupted witness parsing and caused SIGSEGV. See
+  [CONTRIBUTING.md](CONTRIBUTING.md#symbol-isolation-in-circuit-libraries).
+- **macOS**: builds link the C++ standard library, which was missing.
+- **Circuits**: `assert` statements work in the libraries.
+- **Comparator**: the full less-than comparator gives the correct output.
+  **Breaking**: the PoL and PoQ verification keys change.
+- **PoQ**: the leader branch derives the key nullifier from the PoL slot, as 0.4.2 intended.
+  **Breaking**: the verification key changes.
+- **Windows**: the rapidsnark binaries have the `.exe` extension.
 
 ## [0.4.2] - 2026-03-18
 
@@ -170,12 +136,13 @@ release was later removed. Use 0.5.5.
 ### Changed
 
 - **PoQ**: the key nullifier of the leader branch is derived from the PoL slot instead of the session.
+  **Breaking**: the verification key changes.
 
-## [0.4.1] - 2026-01-22
+## [0.4.1] - 2026-01-21
 
 ### Added
 
-- **Linux aarch64** builds, e.g. for the Raspberry Pi.
+- **Linux**: aarch64 builds, e.g. for the Raspberry Pi.
 
 ### Changed
 
@@ -191,36 +158,40 @@ Tagged by mistake, with the changes of 0.3.2, and never released. Use 0.4.1.
 
 ### Changed
 
-- **DSTs**: drop the `NOMOS_` prefix, e.g. `NOMOS_KDF` becomes `KDF`, which changes every hash that uses them.
+- **DSTs**: the `NOMOS_` prefix is dropped, e.g. `NOMOS_KDF` becomes `KDF`.
+  **Breaking**: the hashes and the verification keys change.
 
 ### Removed
 
-- **PoL** and **PoQ**: the protection against adaptive adversaries. The private `slot_secret`, `slot_secret_path` and
-  `starting_slot` are replaced by `secret_key` (`pol_secret_key` in the PoQ), and `NOMOS_POL_SK_V1` is removed.
+- **PoL** and **PoQ**: the protection against adaptive adversaries. The private inputs `slot_secret`,
+  `slot_secret_path` and `starting_slot` are replaced by `secret_key`.
+  **Breaking**: the private inputs and the verification keys change.
 
 ## [0.3.1] - 2025-11-18
 
 ### Changed
 
-- **Poseidon2**: note nullifiers, public keys and reward vouchers are derived with the Poseidon2 compression
+- **Poseidon2**: key nullifiers, voucher nullifiers, public keys and reward vouchers use the Poseidon2 compression
   function.
+  **Breaking**: these values and the verification keys change.
 
 ## [0.3.0] - 2025-11-17
 
 ### Changed
 
-- **Merkle proofs**: use the Poseidon2 `Compression()` template instead of `poseidon2_hash(2)`.
+- **Merkle proofs**: the Poseidon2 compression function replaces the Poseidon2 hash.
+  **Breaking**: the Merkle roots and the verification keys change.
 
 ## [0.2.0] - 2025-11-04
 
 ### Added
 
-- **Releases** publish the zkeys and verification keys.
+- **Releases**: the zkeys and verification keys are published.
 
 ### Changed
 
-- **Releases**: bundle all artifacts together for each supported target, as
-  `nomos-circuits-<version>-<os>-<arch>.tar.gz`.
+- **Releases**: the artifacts of each target are bundled as `nomos-circuits-<version>-<os>-<arch>.tar.gz`.
+  **Breaking**: consumers must download the bundles instead of the separate artifacts.
 
 ## [0.1.0] - 2025-10-06
 
