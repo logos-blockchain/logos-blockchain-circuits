@@ -43,11 +43,22 @@ To run the checks manually against all files:
 pre-commit run --all-files
 ```
 
+### Pull Requests
+
+PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), e.g.
+`feat(poq): add a slot window`. CI checks this.
+PRs are squash-merged, so the title becomes the commit message on `main`.
+Commit messages inside a PR are free-form.
+
 ### Changelog
 
 Every PR with a user-facing change must add an entry under `[Unreleased]` in `CHANGELOG.md`.
 Group entries by [type of change](https://keepachangelog.com/en/1.1.0/#types), e.g. `Added`, `Changed` or `Fixed`.
+Mark a breaking change with a `**Breaking**: ...` line that says what consumers must change.
 When [releasing](#releasing), these entries move to the new version's section.
+
+CI, tooling and other internal changes don't go in the changelog.
+Don't add PR numbers to entries: you often write the entry before the PR exists, and "What's Changed" links every PR.
 
 ### Maintenance
 
@@ -196,6 +207,9 @@ These steps apply to every kind of release.
    > e.g. `-rc.2` or `+<name>.2`.
 
 5. Review the draft and publish it.
+   The release notes are the tag's `CHANGELOG.md` section.
+   Release candidates and dev releases use `[Unreleased]`.
+   GitHub then adds "What's Changed", the list of PRs merged since the previous release.
 
 ### Dev (Branch) Releases
 
@@ -248,7 +262,8 @@ generate and verify proofs for all circuits.
 ```text
 logos-blockchain-circuits-{version}-{os}-{arch}/
 ├── lib/
-│   └── libgmp.a
+│   ├── libgmp.a
+│   └── libmman.a           (Windows only)
 ├── {circuit}/              (poc/, pol/, poq/, signature/)
 │   ├── include/
 │   ├── lib{circuit}.a
