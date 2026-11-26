@@ -29,19 +29,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `logos-blockchain-circuits-rapidsnark-sys`'s `prover()` and `verifier()`.
   **Breaking**: the `artifacts` items `PROVING_KEY_PATH`, `VERIFICATION_KEY_PATH` and `CIRCUIT_DAT_PATH` are
   `LazyLock<PathBuf>` statics instead of `&str` constants.
-- **PoQ** requires `pol_sl` to lie in a public window of slots in every branch (RFC-526, where the window is the epoch):
-  the public inputs `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and
-  `pol_sl - pol_window_first_slot` and `pol_window_last_slot - pol_sl` are each range-checked to 64 bits (128
-  constraints). The public signals grow from 12 to 14, the existing ones keep their positions, and the verification
-  keys change.
-  **Breaking**: the node must pass both slots, and core and proof of work provers must fill `pol_sl` with a slot of
-  the window instead of arbitrary data.
-- **Circuits** are built with circom 2.2.3 (was 2.2.2), in CI (`CIRCOM_TAG`) and in the Nix Windows cross-build
-  (`flake.nix` overrides the circom of logos-nix), and every circuit declares `pragma circom 2.2.3`.
+- **PoQ**: every branch requires `pol_sl` to lie in a public window of slots, the epoch (RFC-526). The public inputs
+  `pol_window_first_slot` and `pol_window_last_slot` follow `pol_t1`, and the public signals grow from 12 to 14. The
+  existing ones keep their positions.
+  **Breaking**: the verification key changes. The node must pass both slots, and core and proof of work provers must
+  fill `pol_sl` with a slot of the window instead of arbitrary data.
+- **Circuits**: built with circom 2.2.3 instead of 2.2.2, and every circuit declares `pragma circom 2.2.3`.
 
 ### Removed
 
-- **Constant** `NOTE_ID_V1`, unused and absent from the specification.
+- **Constants**: `NOTE_ID_V1`, unused and absent from the specification.
 
 ### Fixed
 
@@ -51,33 +48,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **PoL** and **PoQ** hash a nullifier IMT leaf as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`, without
-  the index of the leaf of the next nullifier. The index was only hashed, never constrained: proving a nullifier absent
-  needs the low leaf's nullifier and next nullifier alone, and the ledger inserts in the tree natively. The inputs
-  `low_leaf_next_index` (PoL) and `pol_low_leaf_next_index` (PoQ) are removed, and the verification keys change.
-  **Breaking**: the node must hash its IMT leaves the same way.
-
-### Fixed
-
-- **PoQ** input generator takes `core_sk` as the Non-ephemeral Quota Key itself, whose `zk_id` is
-  `zkhash(KDF, core_sk)`. The circuit does not change.
+- **PoL** and **PoQ**: a nullifier IMT leaf is hashed as `zkhash(NULLIFIER_IMT_LEAF_V1, nullifier, next_nullifier)`,
+  without the index of the leaf of the next nullifier. The inputs `low_leaf_next_index` (PoL) and
+  `pol_low_leaf_next_index` (PoQ) are removed.
+  **Breaking**: the node must hash its IMT leaves the same way, and the verification keys change.
 
 ## [0.7.1] - 2026-11-10
 
 ### Fixed
 
-- **Program Spend** requires the active inputs to come first: an input is active only if the previous one is, so
-  `inputs_active[0]` holds exactly when the step consumes a note of the program, and the nonces of the outputs of such a
-  step are always derived from the nullifier of its first input. A step with `inputs_active = [0, 1, 0, 0]` could pick
-  the nonces of its outputs, and create a note of the program with the commitment of an existing one. A step consuming
-  no note of the program still picks the nonces of its outputs. The public signals do not change.
-- **Transfer** and **Program Spend** require the nullifiers of their active inputs to be pairwise distinct
-  (`DistinctWhenActive` in `misc/comparator.circom`), so one note cannot fill two inputs and be counted twice in the
-  balance. The public signals do not change.
-- **Program Spend** range-checks the public `paid_value` to 64 bits and the sum of its input values to 74 bits, as the
-  Transfer bounds its sums, so the balance `sum(inputs_value) + paid_value == sum(outputs_value)` cannot wrap around
-  the field modulus: a `paid_value` of `p - k` balanced outputs worth `k` less than the inputs. The public signals do
-  not change.
+- **Program Spend**: the active inputs must come first, so `inputs_active[0]` holds exactly when the step consumes a
+  note of the program, and the output nonces of such a step always derive from the nullifier of its first input.
+  Before, a step with `inputs_active = [0, 1, 0, 0]` could pick its output nonces, and create a note of the program
+  with the commitment of an existing one. The public signals do not change.
+  **Breaking**: provers must put the active inputs first, and the verification key changes.
+- **Transfer** and **Program Spend**: the nullifiers of the active inputs must be pairwise distinct, so one note cannot
+  fill 2 inputs and be counted twice in the balance. The public signals do not change.
+  **Breaking**: the verification keys change.
+- **Program Spend**: the public `paid_value` is range-checked to 64 bits and the sum of the input values to 74 bits, so
+  the balance `sum(inputs_value) + paid_value == sum(outputs_value)` cannot wrap around the field modulus. Before, a
+  `paid_value` of `p - k` balanced outputs worth `k` less than the inputs. The public signals do not change.
+  **Breaking**: the verification key changes.
 
 ## [0.7.0] - 2026-11-06
 
@@ -85,49 +76,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Note keys**: the nullifier key `nf_sk = zkhash(NF_KDF_V1, spending_sk)` sits between the spending secret key and the
   public key `zkhash(KDF, nf_sk)`, and derives the nullifier `zkhash(NOTE_NF_V1, commitment, nf_sk)`. The note
-  commitment hashes the staking key after the public key: `zkhash(NOTE_CM_V1, value, nonce, public_key,
-  stake_public_key, program, data)`.
-- **Transfer** proves the spending secret key of each input, `inputs_sk` becoming `inputs_spending_sk`, and takes the
-  staking keys of its inputs and outputs as the private witnesses `inputs_stake_pk` and `outputs_stake_pk`. The public
+  commitment hashes the staking key after the public key:
+  `zkhash(NOTE_CM_V1, value, nonce, public_key, stake_public_key, program, data)`.
+  **Breaking**: the public keys, the nullifiers, the note commitments and the verification keys change.
+- **Transfer**: proves the spending secret key of each input, so `inputs_sk` becomes `inputs_spending_sk`. It takes the
+  staking keys of its inputs and outputs as the private inputs `inputs_stake_pk` and `outputs_stake_pk`. The public
   signals do not change.
-- **Program Spend** takes the staking keys of its inputs and outputs as the private witnesses `inputs_stake_pk` and
-  `outputs_stake_pk`, and `spend_notes_hash` hashes the staking key of every input and output after its public key,
-  read as `0` when inactive. The public signals do not change.
-- **Program Spend** notes of the program are held by `PK0 = zkhash(KDF, NF_SK0)`, with `NF_SK0 = zkhash(NF_KDF_V1, 0)`,
-  both constants of the circuit (`misc/constants.circom`). The witness `inputs_sk` is removed: each input derives its
-  commitment with `PK0` and its nullifier with `NF_SK0`, each output flagged in `outputs_of_program` must have
-  `outputs_pk` equal to `PK0`, and `program_step_id` hashes `PK0` as the public key of every active input.
-- **Program Spend** output `spend_notes_hash` is renamed `program_step_id`, and its domain separation tag
-  `PROGRAM_SPEND_NOTES_V1` becomes `PROGRAM_STEP_ID_V1`, which changes its value and the verification key. Its position
-  among the public signals does not change.
-- **PoL** takes the nullifier key `nf_sk` and the staking secret key `staking_sk` of its note in place of `sk`, and the
-  `program` and `data` of the note as private witnesses, so a program note leads like a user note. It derives the
-  public key and the nullifier from `nf_sk`, the staking key from `staking_sk`, and the ticket and the entropy
-  contribution from `staking_sk`, never taking the spending secret key. The leader reward note has `reward_public_key`
-  as both its public key and its staking key. The public signals do not change.
-- **PoQ** leader branch follows the PoL: `pol_secret_key` is replaced by `pol_nullifier_key` and
-  `pol_staking_secret_key`, the note takes the private `pol_note_program` and `pol_note_data`, and the key nullifier of
-  a leader derives from `pol_staking_secret_key`. The core branch keeps its constraints, `core_sk` being the nullifier
-  key of the Non-ephemeral Quota Key. The public signals do not change, and the sample input takes the leader branch.
+  **Breaking**: the private inputs and the verification key change.
+- **Program Spend**: takes the staking keys of its inputs and outputs as the private inputs `inputs_stake_pk` and
+  `outputs_stake_pk`. `spend_notes_hash` hashes the staking key of every input and output after its public key, `0`
+  when inactive. The public signals do not change.
+  **Breaking**: the private inputs and the verification key change.
+- **Program Spend**: notes of the program are held by `PK0 = zkhash(KDF, NF_SK0)`, with `NF_SK0 = zkhash(NF_KDF_V1, 0)`,
+  both constants of the circuit. The private input `inputs_sk` is removed. Each output flagged in `outputs_of_program`
+  must have `outputs_pk` equal to `PK0`, and `program_step_id` hashes `PK0` as the public key of every active input.
+  **Breaking**: the private inputs and the verification key change.
+- **Program Spend**: the output `spend_notes_hash` is renamed `program_step_id`, and its DST `PROGRAM_SPEND_NOTES_V1`
+  becomes `PROGRAM_STEP_ID_V1`. Its position among the public signals does not change.
+  **Breaking**: its value and the verification key change.
+- **PoL**: takes the nullifier key `nf_sk` and the staking secret key `staking_sk` of its note in place of `sk`, and the
+  `program` and `data` of the note as private inputs, so a program note can lead like a user note. It derives the
+  public key and the nullifier from `nf_sk`, and the staking key, the ticket and the entropy contribution from
+  `staking_sk`, never taking the spending secret key. The leader reward note has `reward_public_key` as both its public
+  key and its staking key. The public signals do not change.
+  **Breaking**: the private inputs and the verification key change.
+- **PoQ**: the leader branch follows the PoL. `pol_secret_key` is replaced by `pol_nullifier_key` and
+  `pol_staking_secret_key`, and the note takes the private `pol_note_program` and `pol_note_data`. The key nullifier of
+  a leader derives from `pol_staking_secret_key`. The core branch does not change, and `core_sk` is the nullifier key
+  of the Non-ephemeral Quota Key. The public signals do not change.
+  **Breaking**: the private inputs and the verification key change.
 
 ## [0.6.2] - 2026-11-05
 
 ### Changed
 
-- **PoL** derives the commitment of the note of the leader reward: the private `reward_public_key` and `reward_nonce`,
-  the public input `reward_value` and the public output `reward_commitment`, with `program` and `data` at `0`. The
+- **PoL**: derives the commitment of the leader reward note from the private `reward_public_key` and `reward_nonce`
+  and the public input `reward_value`, with `program` and `data` at `0`, and outputs it as `reward_commitment`. The
   public signals become `[entropy_contribution, reward_commitment, sl, epoch_nonce, t0, t1, eligible_aged,
   eligible_latest, msg, reward_value]`. The PoQ does not change.
+  **Breaking**: the public signals and the verification key change.
 
 ## [0.6.1] - 2026-11-03
 
 ### Changed
 
-- **PoQ** leader branch proves the non-membership of the note nullifier in the nullifier IMT of its set when the stake
-  distribution was frozen: `pol_nf_root_aged` is replaced by the witnesses of the low leaf of that IMT.
-- **Program Spend** derives the nonce of each active output from the nullifier of the first input and the index of the
-  output when the step consumes a note of the program, and `spend_notes_hash` reads the fields of an inactive input or
-  output as `0`.
+- **PoQ**: the leader branch proves that the note nullifier is not in the nullifier IMT of its note set when the stake
+  distribution was frozen. The private inputs of the low leaf of that IMT replace `pol_nf_root_aged`.
+  **Breaking**: the inputs and the verification key change.
+- **Program Spend**: when the step consumes a note of the program, the nonce of each active output `i` is
+  `zkhash(NOTE_NONCE_V1, nf, i, outputs_value[i], outputs_pk[i])`, where `nf` is the nullifier of the first input.
+  `spend_notes_hash` reads the fields of an inactive input or output as `0`.
+  **Breaking**: the output nonces, `spend_notes_hash` and the verification key change.
 
 ## [0.6.0] - 2026-10-14
 
@@ -136,33 +135,38 @@ channel, each with its commitment MMR and nullifier IMT.
 
 ### Added
 
-- **Transfer** (`transfer`, `lbc-transfer-sys`): consumes up to 4 user notes and creates up to 8, outputting the
-  excess value. Public flags mark the used inputs and outputs, and inputs are proven against the commitment MMR root
-  extended with the transaction buffer.
-- **Program Spend** (`program_spend`, `lbc-program-spend-sys`): consumes notes of a program and creates notes of the
-  program or user notes, balancing exactly with the value paid to the program, and outputs `spend_notes_hash`, the hash
-  read by the program proof. Public flags mark the outputs that are notes of the program.
+- **Transfer**: the `transfer` circuit and the `logos-blockchain-circuits-transfer-sys` crate. It consumes up to 4 user
+  notes, creates up to 8, and outputs the excess value. Public flags mark the used inputs and outputs. The inputs are
+  proven against the commitment MMR root extended with the transaction buffer.
+- **Program Spend**: the `program_spend` circuit and the `logos-blockchain-circuits-program-spend-sys` crate. It
+  consumes notes of a program and creates notes of the program or user notes, balancing exactly with the value paid to
+  the program. It outputs `spend_notes_hash`, the hash read by the program proof. Public flags mark the outputs that
+  are notes of the program.
 
 ### Changed
 
-- **Note commitment** gains the `program` and `data` fields.
-- **Merkle paths** take their selectors in the same order as their nodes, from the leaf level up: the selector of a
-  level is the bit of the leaf index at that level, starting from the least significant, `1` when the path node is on
-  the left. Every circuit, input generator and sample input follows.
-- **Note sets** have a commitment MMR and a nullifier IMT of depth 40, so that sustained use takes decades to fill a
-  set, and the eligible tree over the note sets has depth 40, so that channel creations, each adding a note set, take
-  decades to fill it. The Transfer, Program Spend, PoL and PoQ take the depth of the trees as a template parameter.
-- **PoL** proves the note commitment in the commitment MMR of its note set under the aged eligible root, and the
-  non-membership of its nullifier in the latest nullifier IMT of the same set. The ticket and the entropy contribution
-  are derived from the note commitment. The proof is bound to its block by the public input `msg`, a hash of the block
-  header, which replaces the two `leader_pk` inputs.
-- **PoQ** leader branch follows the PoL, without the unspent check.
-- **Input generators** run with plain Python 3: `just gen-inputs` replaces `just sage-run`. The PoL and PoQ
-  generators derive `t0` and `t1` from the exact lottery constants of the Proof of Leadership specification.
+- **Note commitment**: gains the `program` and `data` fields.
+  **Breaking**: the note commitments and the verification keys change.
+- **Merkle paths**: the selectors are in the same order as their nodes, from the leaf level up. The selector of a level
+  is the bit of the leaf index at that level, starting from the least significant, `1` when the path node is on the
+  left.
+  **Breaking**: provers must pass the selectors in this order.
+- **Note sets**: each has a commitment MMR and a nullifier IMT of depth 40, and the eligible tree over the note sets has
+  depth 40.
+  **Breaking**: the Merkle paths and the verification keys change.
+- **PoL**: proves the note commitment in the commitment MMR of its note set under the aged eligible root, and that its
+  nullifier is not in the latest nullifier IMT of the same set. The ticket and the entropy contribution derive from the
+  note commitment. The public input `msg`, a hash of the block header, binds the proof to its block, and replaces the
+  2 `leader_pk` inputs.
+  **Breaking**: the inputs, the public signals and the verification key change.
+- **PoQ**: the leader branch follows the PoL, without the unspent check.
+  **Breaking**: the inputs and the verification key change.
 
 ### Removed
 
-- **PoC** (`lbc-poc-sys`) and **Signature** (`lbc-signature-sys`).
+- **PoC** and **Signature**, with the `logos-blockchain-circuits-poc-sys` and `logos-blockchain-circuits-signature-sys`
+  crates.
+  **Breaking**: the bundle no longer contains them.
 
 ## [0.5.7] - 2026-09-08
 
