@@ -30,23 +30,23 @@ sage-run script +args='':
         -w "/work/$(dirname '{{script}}')" \
         sagemath/sagemath sage "$(basename '{{script}}')" {{args}}
 
-# Build the PoQ circuit and its C++ witness generator, equivalent to the CI build.
-poq: check-circom
-    circom blend/poq.circom --c --r1cs --no_asm --O2 --output blend
+# Build the PoC circuit and its C++ witness generator, equivalent to the CI build.
+poc: check-circom
+    circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
     # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
-    sh {{calcwit_fix}} blend/poq_cpp
-    cp -r {{src}}/poq blend/poq_cpp/poq
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h blend/poq_cpp/
-    cp {{ci_makefile}} blend/poq_cpp/Makefile
-    cp blend/test_ffi.cpp blend/poq_cpp/test_ffi.cpp
-    make -C blend/poq_cpp PROJECT=poq linux-lib
+    sh {{calcwit_fix}} mantle/poc_cpp
+    cp -r {{src}}/poc mantle/poc_cpp/poc
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/poc_cpp/
+    cp {{ci_makefile}} mantle/poc_cpp/Makefile
+    cp mantle/test_poc.cpp mantle/poc_cpp/test_poc.cpp
+    make -C mantle/poc_cpp PROJECT=poc linux-lib
 
-# Run a simple smoke test of the PoQ witness generator.
-test-poq: poq
-    g++ -std=c++11 -O3 -I blend/poq_cpp blend/poq_cpp/test_ffi.cpp -L blend/poq_cpp -lwitness_poq -lgmp -o blend/poq_cpp/test_ffi
-    cd blend/poq_cpp && ./test_ffi
+# Run a simple smoke test of the PoC witness generator.
+test-poc: poc
+    g++ -std=c++11 -O3 -I mantle/poc_cpp mantle/poc_cpp/test_poc.cpp -L mantle/poc_cpp -lwitness_poc -lgmp -o mantle/poc_cpp/test_poc
+    cd mantle/poc_cpp && ./test_poc
 
 # Build the PoL circuit and its C++ witness generator, equivalent to the CI build.
 pol: check-circom
@@ -66,23 +66,23 @@ test-pol: pol
     g++ -std=c++11 -O3 -I mantle/pol_cpp mantle/pol_cpp/test_pol.cpp -L mantle/pol_cpp -lwitness_pol -lgmp -o mantle/pol_cpp/test_pol
     cd mantle/pol_cpp && ./test_pol
 
-# Build the PoC circuit and its C++ witness generator, equivalent to the CI build.
-poc: check-circom
-    circom mantle/poc.circom --c --r1cs --no_asm --O2 --output mantle
+# Build the PoQ circuit and its C++ witness generator, equivalent to the CI build.
+poq: check-circom
+    circom blend/poq.circom --c --r1cs --no_asm --O2 --output blend
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/poc_cpp/main.cpp
+    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' blend/poq_cpp/main.cpp
     # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
-    sh {{calcwit_fix}} mantle/poc_cpp
-    cp -r {{src}}/poc mantle/poc_cpp/poc
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/poc_cpp/
-    cp {{ci_makefile}} mantle/poc_cpp/Makefile
-    cp mantle/test_poc.cpp mantle/poc_cpp/test_poc.cpp
-    make -C mantle/poc_cpp PROJECT=poc linux-lib
+    sh {{calcwit_fix}} blend/poq_cpp
+    cp -r {{src}}/poq blend/poq_cpp/poq
+    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h blend/poq_cpp/
+    cp {{ci_makefile}} blend/poq_cpp/Makefile
+    cp blend/test_ffi.cpp blend/poq_cpp/test_ffi.cpp
+    make -C blend/poq_cpp PROJECT=poq linux-lib
 
-# Run a simple smoke test of the PoC witness generator.
-test-poc: poc
-    g++ -std=c++11 -O3 -I mantle/poc_cpp mantle/poc_cpp/test_poc.cpp -L mantle/poc_cpp -lwitness_poc -lgmp -o mantle/poc_cpp/test_poc
-    cd mantle/poc_cpp && ./test_poc
+# Run a simple smoke test of the PoQ witness generator.
+test-poq: poq
+    g++ -std=c++11 -O3 -I blend/poq_cpp blend/poq_cpp/test_ffi.cpp -L blend/poq_cpp -lwitness_poq -lgmp -o blend/poq_cpp/test_ffi
+    cd blend/poq_cpp && ./test_ffi
 
 # Build the signature circuit and its C++ witness generator, equivalent to the CI build.
 signature: check-circom
@@ -117,4 +117,4 @@ valgrind circuit iterations='3':
         "${cpp}/witness_leak" "${cpp}/{{circuit}}.dat" "rust/logos-blockchain-circuits-{{circuit}}-sys/sample.input.json" {{iterations}}
 
 clean:
-    rm -rf blend/poq_cpp mantle/pol_cpp mantle/poc_cpp mantle/signature_cpp
+    rm -rf mantle/poc_cpp mantle/pol_cpp blend/poq_cpp mantle/signature_cpp

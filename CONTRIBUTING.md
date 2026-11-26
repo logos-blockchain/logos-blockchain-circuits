@@ -91,9 +91,9 @@ For a full walkthrough of the CI build steps, from `.circom` source to release a
 
 #### The Problem
 
-Each circuit (PoQ, PoL, PoC, Signature) is compiled into a static archive (`libpoq.a`, `libpol.a`, etc.).
+Each circuit (PoC, PoL, PoQ, Signature) is compiled into a static archive (`libpoc.a`, `libpol.a`, etc.).
 All archives share the same symbols, compiled from the same source files but with **different
-constant values per circuit** (e.g. `get_size_of_witness()` returns 18149 for PoQ and 20531 for PoL).
+constant values per circuit** (e.g. `get_size_of_witness()` returns 20531 for PoL and 18149 for PoQ).
 When two or more circuit libraries are linked into the same binary, the linker silently picks the first definition it
 encounters for each symbol and discards the rest without any sort of error or warning.
 The result is that one circuit's constants end up hardwired into functions shared by both circuits, corrupting witness
