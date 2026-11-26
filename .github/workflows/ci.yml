@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  CIRCOM_TAG: v2.2.2
+  CIRCOM_TAG: v2.2.3
 
 jobs:
   setup:
@@ -100,10 +100,6 @@ jobs:
       fail-fast: false
       matrix:
         circuit:
-          - name: poc
-            display: PoC
-            file: poc.circom
-            dir: mantle
           - name: pol
             display: PoL
             file: pol.circom
@@ -112,9 +108,9 @@ jobs:
             display: PoQ
             file: poq.circom
             dir: blend
-          - name: signature
-            display: Signature
-            file: signature.circom
+          - name: transfer
+            display: Transfer
+            file: transfer.circom
             dir: mantle
     env:
       VERSION: ${{ needs.setup.outputs.version }}
@@ -165,7 +161,7 @@ jobs:
           head -c 32 /dev/urandom | xxd -p -c 256 | snarkjs zkey contribute ${{ matrix.circuit.name }}-0.zkey ${{ matrix.circuit.name }}.zkey --name="RELEASE" -v
           snarkjs zkey export verificationkey ${{ matrix.circuit.name }}.zkey ${{ matrix.circuit.name }}_verification_key.json
         env:
-          CIRCUIT_NAME: ${{ matrix.circuit.file == 'signature.circom' && 'signature' || matrix.circuit.name }}
+          CIRCUIT_NAME: ${{ matrix.circuit.name }}
 
       - name: Upload Proving Key
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
@@ -223,16 +219,6 @@ jobs:
         # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
         run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
-      - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -253,12 +239,12 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -272,13 +258,12 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          POC_DIR: mantle/poc_cpp
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          SIGNATURE_DIR: mantle/signature_cpp
+          TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{poc,pol,poq,signature}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -288,28 +273,23 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
-          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
           mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
           mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
           cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
-          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
+          mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
 
           # Copy proving keys and verification keys into each circuit directory
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -378,16 +358,6 @@ jobs:
         # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
         run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
-      - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -408,12 +378,12 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -427,13 +397,12 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          POC_DIR: mantle/poc_cpp
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          SIGNATURE_DIR: mantle/signature_cpp
+          TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{poc,pol,poq,signature}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -443,28 +412,23 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
-          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
           mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
           mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
           cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
-          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
+          mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
 
           # Copy proving keys and verification keys into each circuit directory
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -531,7 +495,7 @@ jobs:
           cp "${RAPIDSNARK}/lib/libgmp.a" "${BUNDLE_NAME}/lib/"
           cp witness-generator-libs/lib/libmman.a "${BUNDLE_NAME}/lib/"
 
-          for circuit in poc pol poq signature; do
+          for circuit in pol poq transfer; do
             mkdir -p "${BUNDLE_NAME}/${circuit}"
             cp "witness-generator-libs/${circuit}/lib${circuit}.a" "${BUNDLE_NAME}/${circuit}/"
             cp "witness-generator-libs/${circuit}/${circuit}.dat" "${BUNDLE_NAME}/${circuit}/witness_generator.dat"
@@ -700,16 +664,6 @@ jobs:
         # Use Logos Rapidsnark's GMP headers, so the witness generator matches the bundled libgmp.a.
         run: echo "PRIORITY_FLAGS=-I${{ steps.rapidsnark.outputs.path }}/include" >> $GITHUB_ENV
 
-      - name: Compile PoC Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "PoC"
-          circuit-name-binary: "poc"
-          circuit-path: "mantle/poc.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -730,12 +684,12 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Signature Witness Generator
+      - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
-          circuit-name-display: "Signature"
-          circuit-name-binary: "signature"
-          circuit-path: "mantle/signature.circom"
+          circuit-name-display: "Transfer"
+          circuit-name-binary: "transfer"
+          circuit-path: "mantle/transfer.circom"
           version: ${{ env.VERSION }}
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
@@ -749,13 +703,12 @@ jobs:
       - name: Create Unified Release Bundle
         env:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
-          POC_DIR: mantle/poc_cpp
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          SIGNATURE_DIR: mantle/signature_cpp
+          TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{poc,pol,poq,signature}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -765,28 +718,23 @@ jobs:
           cp "${{ steps.rapidsnark.outputs.path }}/bin/verifier" "${BUNDLE_NAME}/verifier"
 
           # Move witness libraries into their respective circuit directories
-          mv "${POC_DIR}/libpoc.a" "${BUNDLE_NAME}/poc/"
-          mv "${POC_DIR}/poc.dat" "${BUNDLE_NAME}/poc/witness_generator.dat"
-          cp -r "${POC_DIR}/include" "${BUNDLE_NAME}/poc/"
           mv "${POL_DIR}/libpol.a" "${BUNDLE_NAME}/pol/"
           mv "${POL_DIR}/pol.dat" "${BUNDLE_NAME}/pol/witness_generator.dat"
           cp -r "${POL_DIR}/include" "${BUNDLE_NAME}/pol/"
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${SIGNATURE_DIR}/libsignature.a" "${BUNDLE_NAME}/signature/"
-          mv "${SIGNATURE_DIR}/signature.dat" "${BUNDLE_NAME}/signature/witness_generator.dat"
-          cp -r "${SIGNATURE_DIR}/include" "${BUNDLE_NAME}/signature/"
+          mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
+          mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
+          cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
 
           # Copy proving keys and verification keys into each circuit directory
-          cp proving-keys/poc-proving-key/poc.zkey "${BUNDLE_NAME}/poc/proving_key.zkey"
-          cp proving-keys/poc-proving-key/poc_verification_key.json "${BUNDLE_NAME}/poc/verification_key.json"
           cp proving-keys/pol-proving-key/pol.zkey "${BUNDLE_NAME}/pol/proving_key.zkey"
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/signature-proving-key/signature.zkey "${BUNDLE_NAME}/signature/proving_key.zkey"
-          cp proving-keys/signature-proving-key/signature_verification_key.json "${BUNDLE_NAME}/signature/verification_key.json"
+          cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
+          cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
           # Bundle GMP static library
           mkdir -p "${BUNDLE_NAME}/lib"
@@ -939,14 +887,15 @@ jobs:
       fail-fast: false
       matrix:
         circuit:
-          - name: poc
-            display: PoC
           - name: pol
             display: PoL
+            crate: pol
           - name: poq
             display: PoQ
-          - name: signature
-            display: Signature
+            crate: poq
+          - name: transfer
+            display: Transfer
+            crate: transfer
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       OS: linux
@@ -981,7 +930,7 @@ jobs:
         env:
           BUNDLE: circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           CIRCUIT: ${{ matrix.circuit.name }}
-          INPUTS: rust/logos-blockchain-circuits-${{ matrix.circuit.name }}-sys/sample.input.json
+          INPUTS: rust/logos-blockchain-circuits-${{ matrix.circuit.crate }}-sys/sample.input.json
         run: >
           valgrind --leak-check=full --errors-for-leak-kinds=definite,indirect --error-exitcode=1
           ./witness_leak "${BUNDLE}/${CIRCUIT}/witness_generator.dat" "${INPUTS}" 3

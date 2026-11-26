@@ -1,5 +1,5 @@
 //test
-pragma circom 2.1.9;
+pragma circom 2.2.3;
 
 include "../circomlib/circuits/bitify.circom";
 include "../circomlib/circuits/comparators.circom";
@@ -31,10 +31,10 @@ template KDF(){
 }
 
 
-// int.from_bytes(b"NOTE_ID_V1", byteorder="little") = 232989242343357190262606
-template NOTE_ID_V1(){
+// int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
+template NF_KDF_V1(){
     signal output out;
-    out <== 232989242343357190262606;
+    out <== 910114230080953599566;
 }
 
 
@@ -51,16 +51,26 @@ template KEY_NULLIFIER_V1(){
     out <== 65580642670359595206974785265459610955;
 }
 
-
-// int.from_bytes(b"REWARD_VOUCHER", byteorder="little") = 1668646695034522932676805048878418
-template REWARD_VOUCHER(){
+// int.from_bytes(b"NOTE_CM_V1", byteorder="little") = 232989244870034910891854
+template NOTE_CM_V1(){
     signal output out;
-    out <== 1668646695034522932676805048878418;
+    out <== 232989244870034910891854;
 }
 
-
-// int.from_bytes(b"VOUCHER_NF", byteorder="little") = 332011368467182873038678
-template VOUCHER_NF(){
+// int.from_bytes(b"NOTE_NF_V1", byteorder="little") = 232989242911804701822798
+template NOTE_NF_V1(){
     signal output out;
-    out <== 332011368467182873038678;
+    out <== 232989242911804701822798;
+}
+
+// int.from_bytes(b"ELIGIBLE_SET_LEAF_V1", byteorder="little") = 281666711431130609191864295137803020528161213509
+template ELIGIBLE_SET_LEAF_V1(){
+    signal output out;
+    out <== 281666711431130609191864295137803020528161213509;
+}
+
+// int.from_bytes(b"NULLIFIER_IMT_LEAF_V1", byteorder="little") = 72106678126369435953119723346337253106302222882126
+template NULLIFIER_IMT_LEAF_V1(){
+    signal output out;
+    out <== 72106678126369435953119723346337253106302222882126;
 }

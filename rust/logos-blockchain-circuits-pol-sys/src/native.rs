@@ -68,7 +68,17 @@ mod tests {
     #[test]
     fn test_generate_witness_constraint_violation_returns_err() {
         let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
-        inputs["ledger_aged"] = serde_json::json!("1");
+        inputs["eligible_aged"] = serde_json::json!("1");
+        let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
+        assert!(generate_witness(&input).is_err());
+    }
+
+    #[test]
+    fn test_generate_witness_nullifier_key_as_staking_secret_key_returns_err() {
+        // The sample note has a staking key of its own: its nullifier key alone,
+        // which derives its public key, does not derive its staking key.
+        let mut inputs: serde_json::Value = serde_json::from_str(SAMPLE_INPUTS).unwrap();
+        inputs["staking_sk"] = inputs["nf_sk"].clone();
         let input = PolWitnessInput::new(serde_json::to_string(&inputs).unwrap()).unwrap();
         assert!(generate_witness(&input).is_err());
     }

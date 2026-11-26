@@ -10,11 +10,10 @@ Each circuit has a `-sys` crate that wraps the underlying C FFI with a safe Rust
 |----------------------|-----------------------------------------------------|
 | `lbc-build`          | Build helper                                        |
 | `lbc-common`         | Shared helpers for the `-sys` crates                |
-| `lbc-poc-sys`        | Witness generator for PoC (Proof of Claim)          |
 | `lbc-pol-sys`        | Witness generator for PoL (Proof of Leadership)     |
 | `lbc-poq-sys`        | Witness generator for PoQ (Proof of Quota)          |
 | `lbc-rapidsnark-sys` | Paths to Logos Rapidsnark's `prover` and `verifier` |
-| `lbc-signature-sys`  | Witness generator for Signature                     |
+| `lbc-transfer-sys`   | Witness generator for Transfer                      |
 | `lbc-types`          | Shared types                                        |
 
 ## Providing the circuit libraries
@@ -30,7 +29,7 @@ The build script downloads the release bundle matching the crate version from Gi
 
 ```toml
 [dependencies]
-lbc-poq-sys = { version = "0.5", features = ["prebuilt"] }
+lbc-poq-sys = { version = "0.6", features = ["prebuilt"] }
 ```
 
 The cache location depends on the operating system:
@@ -113,7 +112,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-The other circuits follow the same pattern under `lbc_poc_sys`, `lbc_pol_sys` and `lbc_signature_sys`.
+The other circuits follow the same pattern under `lbc_pol_sys` and `lbc_transfer_sys`.
 
 ## Running tests
 
