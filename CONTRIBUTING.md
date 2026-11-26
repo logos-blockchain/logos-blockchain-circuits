@@ -208,9 +208,10 @@ These steps apply to every kind of release.
 
 5. Review the draft and publish it.
    The release notes are the tag's `CHANGELOG.md` section.
-   Release candidates and dev releases use `[Unreleased]`.
-   Dev releases also start with a note that names their branch and its PR.
    GitHub then adds "What's Changed", the list of PRs merged since the previous release.
+   Release candidates and dev releases use `[Unreleased]`, and their "What's Changed" starts from the last final
+   release. This is specified in a note at the top.
+   Dev releases also name their branch and its PR in this note.
 
 ### Dev (Branch) Releases
 
