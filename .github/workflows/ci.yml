@@ -1042,7 +1042,7 @@ jobs:
         run: |
           prerelease=$([[ "$TAG" == *[-+]* ]] && echo --prerelease || true)
           gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --verify-tag $prerelease \
-            --title "Circom Circuits $TAG" --notes-file notes.md --generate-notes
+            --title "Logos Blockchain Circuits $TAG" --notes-file notes.md --generate-notes
 
   update-nix-hashes:
     name: Update Nix Hashes
