@@ -75,7 +75,7 @@ jobs:
             echo "Skipping version check for PR build."
             exit 0
           fi
-          CARGO_VERSION=$(grep '^version = ' rust/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          CARGO_VERSION=$(sed -n 's/^version *= *"\(.*\)"/\1/p' rust/Cargo.toml | head -1)
           if [ "$CARGO_VERSION" != "${VERSION#v}" ]; then
             echo "Version mismatch: Cargo.toml has '$CARGO_VERSION' but tag is '$VERSION'."
             exit 1
