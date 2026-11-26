@@ -69,5 +69,11 @@
         "aarch64-linux": "sha256-GOQzZCbVNYOTgpLXop/2274YSqvF1RbwklKFikWNvdU=",
         "x86_64-linux": "sha256-bpimq7uhbYPS3wxcburayTz25js3PqEtWGEpfLfwkH0=",
         "x86_64-windows": "sha256-r1XRqCHvIGfwIezVFz+SU3wz1xLPw1y53LVHg9emSbE="
+    },
+    "0.8.0-rc.1+putxos.2": {
+        "aarch64-darwin": "sha256-qhcMuA1kPQoaScbtIuwidzPPZJlNru/4wszuFdLGYy4=",
+        "aarch64-linux": "sha256-zjX60oIO8e2b2+05H70fOzZ8Kda6aG2fGUiAoxjfv48=",
+        "x86_64-linux": "sha256-uNuYEJHlpaEz49i9p3Dfw1wWmiJHwrA2bVbb6iCwJbM=",
+        "x86_64-windows": "sha256-ztU0Axy04zMhpBQGiRzZz08r1KrvlMdLcK9JETkltfI="
     }
 }
