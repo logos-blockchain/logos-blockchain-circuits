@@ -1040,7 +1040,8 @@ jobs:
             printf '> The changes below are cumulative since %s.\n\n' "$SINCE" >> notes.md
           fi
           SECTION=$([[ "$TAG" == *[-+]* ]] && echo Unreleased || echo "${TAG#v}")
-          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md >> notes.md
+          # The section starts after its heading, without the empty lines that follow it.
+          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md | sed '/./,$!d' >> notes.md
 
       - name: Create Draft Release
         env:
