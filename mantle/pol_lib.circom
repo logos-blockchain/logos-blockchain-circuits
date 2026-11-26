@@ -27,22 +27,6 @@ template ticket_calculator(){
     out <== hash.out;
 }
 
-template derive_entropy(){
-    signal input slot;
-    signal input note_id;
-    signal input secret_key;
-    signal output out;
-
-    component hash = Poseidon2_hash(4);
-    component dst = NONCE_CONTRIB_V1();
-    hash.inp[0] <== dst.out;
-    hash.inp[1] <== slot;
-    hash.inp[2] <== note_id;
-    hash.inp[3] <== secret_key;
-
-    out <== hash.out;
-}
-
 template would_win_leadership(depth_merkle_tree){
     signal input sl;
     signal input epoch_nonce;
@@ -53,8 +37,6 @@ template would_win_leadership(depth_merkle_tree){
     signal input staking_sk;                // staking secret key of the note
     signal input value;
     signal input nonce;
-    signal input program;                   // program of the note, 0 for a user note
-    signal input data;                      // data of the note, 0 for a user note
     signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
     signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
     signal input cm_aged_selectors[depth_merkle_tree];
@@ -80,14 +62,12 @@ template would_win_leadership(depth_merkle_tree){
     note_stake_pk.secret_key <== staking_sk;
 
 
-    // Derive the note commitment from its fields, so a program note leads like a user note
+    // Derive the note commitment from its fields
     component note_cm = derive_note_commitment();
     note_cm.public_key <== pk;
     note_cm.stake_public_key <== note_stake_pk.out;
     note_cm.nonce <== nonce;
     note_cm.value <== value;
-    note_cm.program <== program;
-    note_cm.data <== data;
     cm <== note_cm.out;
 
 
@@ -160,8 +140,6 @@ template proof_of_leadership(depth_merkle_tree){
     signal input staking_sk;                // staking secret key of the note
     signal input value;
     signal input nonce;
-    signal input program;                   // program of the note, 0 for a user note
-    signal input data;                      // data of the note, 0 for a user note
     signal input set_selectors[depth_merkle_tree];          // position of the note set in the eligible tree
     signal input cm_aged_path[depth_merkle_tree];          // path of the note commitment in the commitment MMR of its set
     signal input cm_aged_selectors[depth_merkle_tree];
@@ -188,8 +166,6 @@ template proof_of_leadership(depth_merkle_tree){
     lottery_checker.staking_sk <== staking_sk;
     lottery_checker.value <== value;
     lottery_checker.nonce <== nonce;
-    lottery_checker.program <== program;
-    lottery_checker.data <== data;
     lottery_checker.nf_root_aged <== nf_root_aged;
     for(var i = 0; i < depth_merkle_tree; i++){
         lottery_checker.set_selectors[i] <== set_selectors[i];
@@ -268,14 +244,12 @@ template proof_of_leadership(depth_merkle_tree){
     entropy_contribution <== derive_entropy.out;
 
 
-    // Derive the commitment of the note of the leader reward, a user note with the reward public key as both its keys
+    // Derive the commitment of the note of the leader reward, with the reward public key as both its keys
     component reward_cm = derive_note_commitment();
     reward_cm.public_key <== reward_public_key;
     reward_cm.stake_public_key <== reward_public_key;
     reward_cm.nonce <== reward_nonce;
     reward_cm.value <== reward_value;
-    reward_cm.program <== 0;
-    reward_cm.data <== 0;
     reward_commitment <== reward_cm.out;
 
 

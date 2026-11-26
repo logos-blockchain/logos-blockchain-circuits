@@ -6,16 +6,15 @@ Each circuit has a `-sys` crate that wraps the underlying C FFI with a safe Rust
 
 ## Crates
 
-| Crate                   | Description                                         |
-|-------------------------|-----------------------------------------------------|
-| `lbc-build`             | Build helper                                        |
-| `lbc-common`            | Shared helpers for the `-sys` crates                |
-| `lbc-pol-sys`           | Witness generator for PoL (Proof of Leadership)     |
-| `lbc-poq-sys`           | Witness generator for PoQ (Proof of Quota)          |
-| `lbc-program-spend-sys` | Witness generator for Program Spend                 |
-| `lbc-rapidsnark-sys`    | Paths to Logos Rapidsnark's `prover` and `verifier` |
-| `lbc-transfer-sys`      | Witness generator for Transfer                      |
-| `lbc-types`             | Shared types                                        |
+| Crate                | Description                                         |
+|----------------------|-----------------------------------------------------|
+| `lbc-build`          | Build helper                                        |
+| `lbc-common`         | Shared helpers for the `-sys` crates                |
+| `lbc-pol-sys`        | Witness generator for PoL (Proof of Leadership)     |
+| `lbc-poq-sys`        | Witness generator for PoQ (Proof of Quota)          |
+| `lbc-rapidsnark-sys` | Paths to Logos Rapidsnark's `prover` and `verifier` |
+| `lbc-transfer-sys`   | Witness generator for Transfer                      |
+| `lbc-types`          | Shared types                                        |
 
 ## Providing the circuit libraries
 
@@ -113,7 +112,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_program_spend_sys` and `lbc_transfer_sys`.
+The other circuits follow the same pattern under `lbc_pol_sys` and `lbc_transfer_sys`.
 
 ## Running tests
 

@@ -63,24 +63,6 @@ test-poq: poq
     g++ -std=c++11 -O3 -I blend/poq_cpp blend/poq_cpp/test_ffi.cpp -L blend/poq_cpp -lwitness_poq -lgmp -o blend/poq_cpp/test_ffi
     cd blend/poq_cpp && ./test_ffi
 
-# Build the program spend circuit and its C++ witness generator, equivalent to the CI build.
-program_spend: check-circom
-    circom mantle/program_spend.circom --c --r1cs --no_asm --O2 --output mantle
-    # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
-    {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/program_spend_cpp/main.cpp
-    # circom's empty ~Circom_CalcWit destructor leaks per call when linked as a library; free the per-call allocations
-    sh {{calcwit_fix}} mantle/program_spend_cpp
-    cp -r {{src}}/program_spend mantle/program_spend_cpp/program_spend
-    cp {{src}}/circom_adapter.cpp {{src}}/circom_adapter.hpp {{src}}/circom_fwd.hpp {{src}}/types.hpp {{src}}/assert.h mantle/program_spend_cpp/
-    cp {{ci_makefile}} mantle/program_spend_cpp/Makefile
-    cp mantle/test_program_spend.cpp mantle/program_spend_cpp/test_program_spend.cpp
-    make -C mantle/program_spend_cpp PROJECT=program_spend linux-lib
-
-# Run a simple smoke test of the program spend witness generator.
-test-program_spend: program_spend
-    g++ -std=c++11 -O3 -I mantle/program_spend_cpp mantle/program_spend_cpp/test_program_spend.cpp -L mantle/program_spend_cpp -lwitness_program_spend -lgmp -o mantle/program_spend_cpp/test_program_spend
-    cd mantle/program_spend_cpp && ./test_program_spend
-
 # Build the transfer circuit and its C++ witness generator, equivalent to the CI build.
 transfer: check-circom
     circom mantle/transfer.circom --c --r1cs --no_asm --O2 --output mantle
@@ -114,4 +96,4 @@ valgrind circuit iterations='3':
         "${cpp}/witness_leak" "${cpp}/{{circuit}}.dat" "rust/logos-blockchain-circuits-{{ replace(circuit, "_", "-") }}-sys/sample.input.json" {{iterations}}
 
 clean:
-    rm -rf mantle/pol_cpp blend/poq_cpp mantle/program_spend_cpp mantle/transfer_cpp
+    rm -rf mantle/pol_cpp blend/poq_cpp mantle/transfer_cpp

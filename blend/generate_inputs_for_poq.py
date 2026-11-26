@@ -265,18 +265,15 @@ threshold = (t0 + t1 * value) * value
 nf_sk = F(randrange(0,p,1))
 staking_sk = F(randrange(0,p,1))
 nonce = F(randrange(0,p,1))
-# a note of a program qualifies like a user note
-program = F(randrange(1,p,1))
-data = F(randrange(0,p,1))
 
 pk = Compression([F(4605003),nf_sk])
 stake_pk = Compression([F(4605003),staking_sk])
 
-cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk])
 ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 while(ticket > threshold):
     nonce += 1
-    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk])
     ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 
 # the note commitment in the commitment MMR of its set, and the set under the aged eligible root
@@ -365,8 +362,6 @@ inp = {
   "pol_staking_secret_key":     str(staking_sk),
   "pol_note_value":             str(value),
   "pol_note_nonce":             str(nonce),
-  "pol_note_program":           str(program),
-  "pol_note_data":              str(data),
   "pol_cm_aged_path":           [str(x) for x in cm_aged_nodes],
   "pol_cm_aged_selectors":      [str(x) for x in cm_aged_selectors[::-1]],
   "pol_low_leaf_nf":            str(low_leaf_nf),

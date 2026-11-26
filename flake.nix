@@ -133,7 +133,6 @@
           lib.mapAttrs (_: mkWindowsWitnessGeneratorLib) {
             pol = "mantle/pol.circom";
             poq = "blend/poq.circom";
-            program_spend = "mantle/program_spend.circom";
             transfer = "mantle/transfer.circom";
           }
           // {

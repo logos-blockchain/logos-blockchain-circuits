@@ -239,7 +239,7 @@ inputs_active = [F(1) for i in range(maxInputs//2)] + [F(0) for i in range(maxIn
 # int.from_bytes(b"NF_KDF_V1", byteorder="little") = 910114230080953599566
 inputs_nf_sk = [Compression([F(910114230080953599566), inputs_spending_sk[i]]) for i in range(maxInputs)]
 inputs_pk = [Compression([F(4605003), inputs_nf_sk[i]]) for i in range(maxInputs)]
-inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i],inputs_stake_pk[i], F(0), F(0)]) for i in range(maxInputs)]
+inputs_cm = [poseidon2_hash([F(232989244870034910891854),inputs_value[i],inputs_nonce[i],inputs_pk[i],inputs_stake_pk[i]]) for i in range(maxInputs)]
 inputs_nf = [poseidon2_hash([F(232989242911804701822798),inputs_cm[i],inputs_nf_sk[i]]) if inputs_active[i] == 1 else F(0) for i in range(maxInputs)]
 inputs_selectors = [format(i,'040b') for i in range(maxInputs//2)] + [format(randrange(0,2**40,1),'040b') for i in range(maxInputs - maxInputs//2)]
 tx_cm_root = inputs_cm[:maxInputs//2]
@@ -261,7 +261,7 @@ outputs_nonce = [F(randrange(0,p,1)) for i in range(maxOutputs)]
 total_input_value = sum(inputs_value)
 outputs_value = [F((int(total_input_value) - 50) // maxOutputs) for i in range(maxOutputs)]
 outputs_active = [F(1) for i in range(maxOutputs)]
-outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i],outputs_stake_pk[i], F(0), F(0)]) for i in range(maxOutputs)]
+outputs_cm = [poseidon2_hash([F(232989244870034910891854),outputs_value[i],outputs_nonce[i],outputs_pk[i],outputs_stake_pk[i]]) for i in range(maxOutputs)]
 
 
 # Assemble JSON

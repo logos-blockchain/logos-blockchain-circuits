@@ -35,10 +35,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   **Breaking**: the verification key changes. The node must pass both slots, and core and proof of work provers must
   fill `pol_sl` with a slot of the window instead of arbitrary data.
 - **Circuits**: built with circom 2.2.3 instead of 2.2.2, and every circuit declares `pragma circom 2.2.3`.
+- **Notes**: a note is `(value, nonce, public_key, stake_public_key)`, and its commitment is
+  `zkhash(NOTE_CM_V1, value, nonce, public_key, stake_public_key)`, without `program` and `data`. The private inputs
+  `program` and `data` (PoL) and `pol_note_program` and `pol_note_data` (PoQ) are removed, and the input generators and
+  sample inputs follow. The public signals do not change.
+  **Breaking**: the note commitments, the nullifiers and the verification keys change.
 
 ### Removed
 
 - **Constants**: `NOTE_ID_V1`, unused and absent from the specification.
+- **Program Spend**: the `program_spend` circuit, its input generator, its witness generator FFI and the
+  `logos-blockchain-circuits-program-spend-sys` crate.
+  **Breaking**: the release bundle no longer has `program_spend/`.
+- **Constants**: `NF_SK0`, `PK0`, `NOTE_NONCE_V1` and `PROGRAM_STEP_ID_V1`, used by no circuit.
+- **Templates**: `derive_entropy`, `Poseidon2_sponge_hash_rate_1` and `Poseidon2_sponge_hash_rate_2`, used by no
+  circuit.
 
 ### Fixed
 

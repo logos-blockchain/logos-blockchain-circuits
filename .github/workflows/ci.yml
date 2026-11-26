@@ -108,10 +108,6 @@ jobs:
             display: PoQ
             file: poq.circom
             dir: blend
-          - name: program_spend
-            display: Program Spend
-            file: program_spend.circom
-            dir: mantle
           - name: transfer
             display: Transfer
             file: transfer.circom
@@ -243,16 +239,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Program Spend Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "Program Spend"
-          circuit-name-binary: "program_spend"
-          circuit-path: "mantle/program_spend.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -274,11 +260,10 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          PROGRAM_SPEND_DIR: mantle/program_spend_cpp
           TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,program_spend,transfer}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -294,9 +279,6 @@ jobs:
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${PROGRAM_SPEND_DIR}/libprogram_spend.a" "${BUNDLE_NAME}/program_spend/"
-          mv "${PROGRAM_SPEND_DIR}/program_spend.dat" "${BUNDLE_NAME}/program_spend/witness_generator.dat"
-          cp -r "${PROGRAM_SPEND_DIR}/include" "${BUNDLE_NAME}/program_spend/"
           mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
           mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
           cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
@@ -306,8 +288,6 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
@@ -398,16 +378,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Program Spend Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "Program Spend"
-          circuit-name-binary: "program_spend"
-          circuit-path: "mantle/program_spend.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -429,11 +399,10 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          PROGRAM_SPEND_DIR: mantle/program_spend_cpp
           TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,program_spend,transfer}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -449,9 +418,6 @@ jobs:
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${PROGRAM_SPEND_DIR}/libprogram_spend.a" "${BUNDLE_NAME}/program_spend/"
-          mv "${PROGRAM_SPEND_DIR}/program_spend.dat" "${BUNDLE_NAME}/program_spend/witness_generator.dat"
-          cp -r "${PROGRAM_SPEND_DIR}/include" "${BUNDLE_NAME}/program_spend/"
           mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
           mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
           cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
@@ -461,8 +427,6 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
@@ -531,7 +495,7 @@ jobs:
           cp "${RAPIDSNARK}/lib/libgmp.a" "${BUNDLE_NAME}/lib/"
           cp witness-generator-libs/lib/libmman.a "${BUNDLE_NAME}/lib/"
 
-          for circuit in pol poq program_spend transfer; do
+          for circuit in pol poq transfer; do
             mkdir -p "${BUNDLE_NAME}/${circuit}"
             cp "witness-generator-libs/${circuit}/lib${circuit}.a" "${BUNDLE_NAME}/${circuit}/"
             cp "witness-generator-libs/${circuit}/${circuit}.dat" "${BUNDLE_NAME}/${circuit}/witness_generator.dat"
@@ -720,16 +684,6 @@ jobs:
           os: ${{ env.OS }}
           arch: ${{ env.ARCH }}
 
-      - name: Compile Program Spend Witness Generator
-        uses: ./.github/actions/compile-witness-generator
-        with:
-          circuit-name-display: "Program Spend"
-          circuit-name-binary: "program_spend"
-          circuit-path: "mantle/program_spend.circom"
-          version: ${{ env.VERSION }}
-          os: ${{ env.OS }}
-          arch: ${{ env.ARCH }}
-
       - name: Compile Transfer Witness Generator
         uses: ./.github/actions/compile-witness-generator
         with:
@@ -751,11 +705,10 @@ jobs:
           BUNDLE_NAME: logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
           POL_DIR: mantle/pol_cpp
           POQ_DIR: blend/poq_cpp
-          PROGRAM_SPEND_DIR: mantle/program_spend_cpp
           TRANSFER_DIR: mantle/transfer_cpp
         run: |
           # Create the bundle directory structure
-          mkdir -p "${BUNDLE_NAME}"/{pol,poq,program_spend,transfer}
+          mkdir -p "${BUNDLE_NAME}"/{pol,poq,transfer}
 
           # Create VERSION file
           echo "${{ env.VERSION }}" > "${BUNDLE_NAME}/VERSION"
@@ -771,9 +724,6 @@ jobs:
           mv "${POQ_DIR}/libpoq.a" "${BUNDLE_NAME}/poq/"
           mv "${POQ_DIR}/poq.dat" "${BUNDLE_NAME}/poq/witness_generator.dat"
           cp -r "${POQ_DIR}/include" "${BUNDLE_NAME}/poq/"
-          mv "${PROGRAM_SPEND_DIR}/libprogram_spend.a" "${BUNDLE_NAME}/program_spend/"
-          mv "${PROGRAM_SPEND_DIR}/program_spend.dat" "${BUNDLE_NAME}/program_spend/witness_generator.dat"
-          cp -r "${PROGRAM_SPEND_DIR}/include" "${BUNDLE_NAME}/program_spend/"
           mv "${TRANSFER_DIR}/libtransfer.a" "${BUNDLE_NAME}/transfer/"
           mv "${TRANSFER_DIR}/transfer.dat" "${BUNDLE_NAME}/transfer/witness_generator.dat"
           cp -r "${TRANSFER_DIR}/include" "${BUNDLE_NAME}/transfer/"
@@ -783,8 +733,6 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
@@ -945,9 +893,6 @@ jobs:
           - name: poq
             display: PoQ
             crate: poq
-          - name: program_spend
-            display: Program Spend
-            crate: program-spend
           - name: transfer
             display: Transfer
             crate: transfer

@@ -32,19 +32,15 @@ template derive_note_commitment(){
     signal input stake_public_key;
     signal input nonce;
     signal input value;
-    signal input program;
-    signal input data;
     signal output out;
 
-    component hash = Poseidon2_hash(7);
+    component hash = Poseidon2_hash(5);
     component dst = NOTE_CM_V1();
     hash.inp[0] <== dst.out;
     hash.inp[1] <== value;
     hash.inp[2] <== nonce;
     hash.inp[3] <== public_key;
     hash.inp[4] <== stake_public_key;
-    hash.inp[5] <== program;
-    hash.inp[6] <== data;
     out <== hash.out;
 }
 

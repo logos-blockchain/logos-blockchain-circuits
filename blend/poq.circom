@@ -2,17 +2,18 @@
 pragma circom 2.2.3;
 
 include "../hash_bn/poseidon2_hash.circom";
-include "../misc/constants.circom";         // defines KDF, SELECTION_RANDOMNESS, PROOF_NULLIFIER
+include "../misc/constants.circom";         // defines KDF, SELECTION_RANDOMNESS_V1, KEY_NULLIFIER_V1
 include "../misc/comparator.circom";        
 include "../circomlib/circuits/bitify.circom";
-include "../mantle/pol_lib.circom";      // defines proof_of_leadership
+include "../mantle/pol_lib.circom";      // defines would_win_leadership
 include "../ledger/notes.circom";
 
 /**
- * ProofOfQuota(nLevelsPK, bitsQuota)
+ * ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree)
  *
- * - nLevelsPK   : depth of the core-node public-key registry Merkle tree
- * - bitsQuota   : bit-width for the index comparator
+ * - nLevelsPK         : depth of the core-node public-key registry Merkle tree
+ * - bitsQuota         : bit-width for the index comparator
+ * - depth_merkle_tree : depth of the note set and eligible set Merkle trees
  */
 template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     // Public Inputs
@@ -54,8 +55,6 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     signal input pol_staking_secret_key;
     signal input pol_note_value;
     signal input pol_note_nonce;
-    signal input pol_note_program;          // 0 for a user note
-    signal input pol_note_data;             // 0 for a user note
     signal input pol_cm_aged_path[depth_merkle_tree];
     signal input pol_cm_aged_selectors[depth_merkle_tree];
     signal input pol_low_leaf_nf;           // greatest nullifier of the set at the freeze lower than the note nullifier
@@ -145,8 +144,6 @@ template ProofOfQuota(nLevelsPK, bitsQuota, depth_merkle_tree) {
     would_win.staking_sk <== pol_staking_secret_key;
     would_win.value <== pol_note_value;
     would_win.nonce <== pol_note_nonce;
-    would_win.program <== pol_note_program;
-    would_win.data <== pol_note_data;
     would_win.nf_root_aged <== nf_root_aged.root;
     for (var i = 0; i < depth_merkle_tree; i++) {
         would_win.set_selectors[i] <== pol_set_selectors[i];

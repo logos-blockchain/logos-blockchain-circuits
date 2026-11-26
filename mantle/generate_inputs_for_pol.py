@@ -245,17 +245,14 @@ threshold = (t0 + t1 * value) * value
 nf_sk = F(randrange(0,p,1))
 staking_sk = F(randrange(0,p,1))
 nonce = F(randrange(0,p,1))
-# a note of a program leads like a user note
-program = F(randrange(1,p,1))
-data = F(randrange(0,p,1))
 pk = Compression([F(4605003),nf_sk])
 stake_pk = Compression([F(4605003),staking_sk])
 
-cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk])
 ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 while(ticket > threshold):
     nonce += 1
-    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk,program,data])
+    cm = poseidon2_hash([F(232989244870034910891854),value,nonce,pk,stake_pk])
     ticket = poseidon2_hash([F(13887241025832268),F(epoch_nonce),F(slot_number),cm,staking_sk])
 
 # position of the note set in the eligible tree, shared by the aged and the latest paths
@@ -316,7 +313,7 @@ for i in range(40):
 reward_value = F(randrange(0,2**64,1))
 reward_nonce = F(randrange(0,p,1))
 reward_public_key = Compression([F(4605003),F(randrange(0,p,1))])
-reward_commitment = poseidon2_hash([F(232989244870034910891854),reward_value,reward_nonce,reward_public_key,reward_public_key,F(0),F(0)])
+reward_commitment = poseidon2_hash([F(232989244870034910891854),reward_value,reward_nonce,reward_public_key,reward_public_key])
 
 
 # 5) Assemble JSON
@@ -333,8 +330,6 @@ inp = {
   "staking_sk":                 str(staking_sk),
   "value":                      str(value),
   "nonce":                      str(nonce),
-  "program":                    str(program),
-  "data":                       str(data),
   "set_selectors":              [str(x) for x in set_selectors[::-1]],  # leaf level first
   "cm_aged_path":               [str(x) for x in cm_aged_nodes],
   "cm_aged_selectors":          [str(x) for x in cm_aged_selectors[::-1]],
