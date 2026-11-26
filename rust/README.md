@@ -111,7 +111,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-The other circuits follow the same pattern under `lbc_pol_sys`, `lbc_poc_sys` and `lbc_signature_sys`.
+The other circuits follow the same pattern under `lbc_poc_sys`, `lbc_pol_sys` and `lbc_signature_sys`.
 
 ## Running tests
 

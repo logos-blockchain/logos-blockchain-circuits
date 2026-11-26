@@ -117,4 +117,4 @@ valgrind circuit iterations='3':
         "${cpp}/witness_leak" "${cpp}/{{circuit}}.dat" "rust/logos-blockchain-circuits-{{circuit}}-sys/sample.input.json" {{iterations}}
 
 clean:
-    rm -rf blend/poq_cpp mantle/pol_cpp mantle/poc_cpp mantle/signature_cpp
+    rm -rf mantle/poc_cpp mantle/pol_cpp blend/poq_cpp mantle/signature_cpp
