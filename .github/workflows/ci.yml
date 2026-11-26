@@ -1026,23 +1026,38 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           : > notes.md
-          # Dev releases start with a note that names their branch and its PR.
-          if [[ "$TAG" == *+* ]]; then
-            BRANCH=$(gh api "repos/${{ github.repository }}/commits/$TAG/branches-where-head" -q '.[0].name // ""')
-            [ -n "$BRANCH" ] || { echo "::error::$TAG is not the head of any branch"; exit 1; }
-            PR=$(gh pr list --repo ${{ github.repository }} --head "$BRANCH" --state all --json number -q '.[0].number // ""')
-            printf '> [!NOTE]\n> Branch release from `%s`%s.\n\n' "$BRANCH" "${PR:+ (#$PR)}" >> notes.md
+          # Release candidates and dev releases start with a note that says the final release their notes start from.
+          # Dev releases also name their branch and its PR.
+          if [[ "$TAG" == *[-+]* ]]; then
+            echo '> [!NOTE]' >> notes.md
+            if [[ "$TAG" == *+* ]]; then
+              BRANCH=$(gh api "repos/${{ github.repository }}/commits/$TAG/branches-where-head" -q '.[0].name // ""')
+              [ -n "$BRANCH" ] || { echo "::error::$TAG is not the head of any branch"; exit 1; }
+              PR=$(gh pr list --repo ${{ github.repository }} --head "$BRANCH" --state all --json number -q '.[0].number // ""')
+              printf '> Branch release from `%s`%s.\n' "$BRANCH" "${PR:+ (#$PR)}" >> notes.md
+            fi
+            SINCE=$(sed -n 's/^## \[\([0-9][^]]*\)\].*/\1/p' CHANGELOG.md | head -1)
+            printf '> The changes below are cumulative since %s.\n\n' "$SINCE" >> notes.md
           fi
           SECTION=$([[ "$TAG" == *[-+]* ]] && echo Unreleased || echo "${TAG#v}")
-          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md >> notes.md
+          # The section starts after its heading, without the empty lines that follow it.
+          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md | sed '/./,$!d' >> notes.md
 
       - name: Create Draft Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           prerelease=$([[ "$TAG" == *[-+]* ]] && echo --prerelease || true)
+          # Release candidates and dev releases are cumulative since the last final release, "What's Changed" too.
+          start=()
+          if [[ "$TAG" == *[-+]* ]]; then
+            since="v$(sed -n 's/^## \[\([0-9][^]]*\)\].*/\1/p' CHANGELOG.md | head -1)"
+            if git ls-remote --exit-code --tags origin "refs/tags/$since" > /dev/null; then
+              start=(--notes-start-tag "$since")
+            fi
+          fi
           gh release create "$TAG" dist/*.tar.gz --repo ${{ github.repository }} --draft --verify-tag $prerelease \
-            --title "Logos Blockchain Circuits $TAG" --notes-file notes.md --generate-notes
+            --title "Logos Blockchain Circuits $TAG" --notes-file notes.md --generate-notes "${start[@]}"
 
   update-nix-hashes:
     name: Update Nix Hashes
