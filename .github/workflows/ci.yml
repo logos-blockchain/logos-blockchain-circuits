@@ -104,18 +104,22 @@ jobs:
             display: PoL
             file: pol.circom
             dir: mantle
+            artifact: pol-proving-key
           - name: poq
             display: PoQ
             file: poq.circom
             dir: blend
+            artifact: poq-proving-key
           - name: program_spend
             display: Program Spend
             file: program_spend.circom
             dir: mantle
+            artifact: program-spend-proving-key
           - name: transfer
             display: Transfer
             file: transfer.circom
             dir: mantle
+            artifact: transfer-proving-key
     env:
       VERSION: ${{ needs.setup.outputs.version }}
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
@@ -170,7 +174,7 @@ jobs:
       - name: Upload Proving Key
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
         with:
-          name: ${{ matrix.circuit.name }}-proving-key
+          name: ${{ matrix.circuit.artifact }}
           path: |
             ${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}.zkey
             ${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}_verification_key.json
@@ -306,8 +310,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
+          cp proving-keys/program-spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program-spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
@@ -461,8 +465,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
+          cp proving-keys/program-spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program-spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
@@ -536,8 +540,8 @@ jobs:
             cp "witness-generator-libs/${circuit}/lib${circuit}.a" "${BUNDLE_NAME}/${circuit}/"
             cp "witness-generator-libs/${circuit}/${circuit}.dat" "${BUNDLE_NAME}/${circuit}/witness_generator.dat"
             cp -r "witness-generator-libs/${circuit}/include" "${BUNDLE_NAME}/${circuit}/"
-            cp "proving-keys/${circuit}-proving-key/${circuit}.zkey" "${BUNDLE_NAME}/${circuit}/proving_key.zkey"
-            cp "proving-keys/${circuit}-proving-key/${circuit}_verification_key.json" \
+            cp "proving-keys/${circuit//_/-}-proving-key/${circuit}.zkey" "${BUNDLE_NAME}/${circuit}/proving_key.zkey"
+            cp "proving-keys/${circuit//_/-}-proving-key/${circuit}_verification_key.json" \
               "${BUNDLE_NAME}/${circuit}/verification_key.json"
           done
 
@@ -783,8 +787,8 @@ jobs:
           cp proving-keys/pol-proving-key/pol_verification_key.json "${BUNDLE_NAME}/pol/verification_key.json"
           cp proving-keys/poq-proving-key/poq.zkey "${BUNDLE_NAME}/poq/proving_key.zkey"
           cp proving-keys/poq-proving-key/poq_verification_key.json "${BUNDLE_NAME}/poq/verification_key.json"
-          cp proving-keys/program_spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
-          cp proving-keys/program_spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
+          cp proving-keys/program-spend-proving-key/program_spend.zkey "${BUNDLE_NAME}/program_spend/proving_key.zkey"
+          cp proving-keys/program-spend-proving-key/program_spend_verification_key.json "${BUNDLE_NAME}/program_spend/verification_key.json"
           cp proving-keys/transfer-proving-key/transfer.zkey "${BUNDLE_NAME}/transfer/proving_key.zkey"
           cp proving-keys/transfer-proving-key/transfer_verification_key.json "${BUNDLE_NAME}/transfer/verification_key.json"
 
