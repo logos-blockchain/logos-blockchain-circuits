@@ -887,7 +887,7 @@ jobs:
         run: tar -xzf circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}.tar.gz -C circuit-libs/
 
       - name: Check Feature Combinations
-        run: ./hooks/cargo-hack.sh
+        run: ./hooks/cargo_hack.sh
         env:
           LBC_ROOT_DIR: ${{ github.workspace }}/circuit-libs/logos-blockchain-circuits-${{ env.VERSION }}-${{ env.OS }}-${{ env.ARCH }}
 
@@ -1077,27 +1077,27 @@ jobs:
 
       - name: Update versions.nix
         env:
-          CIRCUITS_NIX_HASHES_FILE: circuits-nix-hashes.json
+          CIRCUITS_NIX_HASHES_FILE: circuits_nix_hashes.json
           CIRCUIT_HASH_LINUX_X86_64: ${{ needs.build-linux.outputs.hash }}
           CIRCUIT_HASH_LINUX_AARCH64: ${{ needs.build-linux-aarch64.outputs.hash }}
           CIRCUIT_HASH_WINDOWS_X86_64: ${{ needs.build-windows.outputs.hash }}
           CIRCUIT_HASH_DARWIN_AARCH64: ${{ needs.build-macos.outputs.hash }}
-        run: python3 scripts/update-nix-hashes.py
+        run: python3 scripts/update_nix_hashes.py
 
       - name: Commit Nix Hashes
         id: commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git diff --quiet -- circuits-nix-hashes.json && exit 0
+          git diff --quiet -- circuits_nix_hashes.json && exit 0
           OID=$(gh api graphql \
             -f query='mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }' \
             -f "input[branch][repositoryNameWithOwner]=${{ github.repository }}" \
             -f "input[branch][branchName]=${{ steps.release.outputs.branch }}" \
             -f "input[expectedHeadOid]=$(git rev-parse HEAD)" \
             -f "input[message][headline]=chore(ci): auto-update Nix hashes for ${{ env.VERSION }}" \
-            -f "input[fileChanges][additions][][path]=circuits-nix-hashes.json" \
-            -f "input[fileChanges][additions][][contents]=$(base64 -w0 circuits-nix-hashes.json)" \
+            -f "input[fileChanges][additions][][path]=circuits_nix_hashes.json" \
+            -f "input[fileChanges][additions][][contents]=$(base64 -w0 circuits_nix_hashes.json)" \
             -q .data.createCommitOnBranch.commit.oid)
           echo "oid=$OID" >> "$GITHUB_OUTPUT"
 

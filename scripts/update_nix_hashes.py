@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Updates circuits-nix-hashes.json with new platform hashes, overwriting any existing entry for the version.
+# Updates circuits_nix_hashes.json with new platform hashes, overwriting any existing entry for the version.
 
 import os, json
 from packaging.version import Version

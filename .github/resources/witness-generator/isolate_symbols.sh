@@ -8,7 +8,7 @@
 # Thus, this script renames each internal symbol to `__<project>_priv_<symbol>` instead. It keeps the public FFI symbols
 # and the COMDAT symbols.
 #
-# Usage: isolate-symbols.sh <project> <object>...
+# Usage: isolate_symbols.sh <project> <object>...
 # Uses $NM, $OBJDUMP and $OBJCOPY, or the unprefixed tools.
 set -eu
 export LC_ALL=C

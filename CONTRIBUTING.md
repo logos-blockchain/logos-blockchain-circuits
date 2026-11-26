@@ -129,7 +129,7 @@ leading `_`. The Makefile's `SYM_PREFIX` variable handles this automatically.
 
 ##### Windows
 
-Uses `isolate-symbols.sh` instead of `ld -r` and `objcopy`.
+Uses `isolate_symbols.sh` instead of `ld -r` and `objcopy`.
 
 On Windows, `ld -r` and `objcopy` also make COMDAT symbols local, e.g. template instances, so the link with `libstdc++`
 fails.
@@ -161,7 +161,7 @@ The Logos Rapidsnark release is pinned in 3 places:
 To update all 3, run:
 
 ```bash
-scripts/update-rapidsnark.sh <tag>
+scripts/update_rapidsnark.sh <tag>
 ```
 
 ---
@@ -198,7 +198,7 @@ These steps apply to every kind of release.
    > [!NOTE]
    > Release candidates and dev releases are marked as pre-releases.
 
-4. CI commits the bundle hashes in `circuits-nix-hashes.json` to the tag's branch, then moves the tag onto that commit.
+4. CI commits the bundle hashes in `circuits_nix_hashes.json` to the tag's branch, then moves the tag onto that commit.
    The flake reads this file to download the release.
    Don't edit it by hand.
 
@@ -239,7 +239,7 @@ When you sync (merge or rebase) with `main`:
 
 - `rust/Cargo.toml`: update the dev version to use `main`'s version as its base, and restart `<n>` at 1.
   E.g., if `main` is at `0.8.0-rc.3`, `0.8.0-rc.2+putxos.3` becomes `0.8.0-rc.3+putxos.1`.
-- `circuits-nix-hashes.json`: keep the entries from both sides.
+- `circuits_nix_hashes.json`: keep the entries from both sides.
 
 #### Merging
 

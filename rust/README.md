@@ -88,7 +88,7 @@ use lbc_poq_sys::native::{PoqWitnessInput, generate_witness};
 use lbc_types::native::{Error, Witness};
 
 fn main() -> Result<Witness, Error> {
-    let inputs_json = std::fs::read_to_string("poq-input.json").expect("failed to read input");
+    let inputs_json = std::fs::read_to_string("poq_input.json").expect("failed to read input");
     let input = PoqWitnessInput::new(inputs_json)?;
     generate_witness(&input)
 }
@@ -104,7 +104,7 @@ use std::path::Path;
 fn main() -> Result<(), Error> {
     generate_witness_from_files(
         Path::new("/path/to/witness_generator"),  // Extensionless .dat file
-        Path::new("poq-input.json"),
+        Path::new("poq_input.json"),
         Path::new("output.wtns"),
     )?;
     Ok(())
