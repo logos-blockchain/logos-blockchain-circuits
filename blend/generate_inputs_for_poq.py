@@ -324,4 +324,4 @@ import json
 with open("input.json","w") as f:
     json.dump(inp, f, indent=2)
 
-print("Wrote input_poq.json")
+print("Wrote input.json")

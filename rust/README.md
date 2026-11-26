@@ -8,9 +8,9 @@ Each circuit has a `-sys` crate that wraps the underlying C FFI with a safe Rust
 
 | Crate               | Description                                     |
 |---------------------|-------------------------------------------------|
-| `lbc-poq-sys`       | Witness generator for PoQ (Proof of Quota)      |
-| `lbc-pol-sys`       | Witness generator for PoL (Proof of Leadership) |
 | `lbc-poc-sys`       | Witness generator for PoC (Proof of Claim)      |
+| `lbc-pol-sys`       | Witness generator for PoL (Proof of Leadership) |
+| `lbc-poq-sys`       | Witness generator for PoQ (Proof of Quota)      |
 | `lbc-signature-sys` | Witness generator for Signature                 |
 | `lbc-types`         | Shared types                                    |
 | `lbc-build`         | Build helper                                    |
@@ -47,7 +47,7 @@ Set `LBC_ROOT_DIR` to the top-level directory of an extracted release bundle:
 LBC_ROOT_DIR=/path/to/logos-blockchain-circuits-v<version>-<os>-<arch>
 ```
 
-> The `justfile` at the repo root contains recipes (`just poq`, `just pol`, etc.) that build the circuit libraries from
+> The `justfile` at the repo root contains recipes (`just pol`, `just poq`, etc.) that build the circuit libraries from
 > source.
 >
 > This is not yet an officially supported workflow, but it can serve as a reference if you need to produce the
