@@ -38,22 +38,6 @@ template NF_KDF_V1(){
 }
 
 
-// nullifier key of the spending secret key 0, which holds every note of a program
-// NF_SK0 = Compression(NF_KDF_V1, 0) = 19745231567900497560154548245026581537856204580560566680980497366069099903172
-template NF_SK0(){
-    signal output out;
-    out <== 19745231567900497560154548245026581537856204580560566680980497366069099903172;
-}
-
-
-// public key of the spending secret key 0, which holds every note of a program
-// PK0 = Compression(KDF, NF_SK0) = 972202553888197888567329063379813321440011391652189983173398887118271398762
-template PK0(){
-    signal output out;
-    out <== 972202553888197888567329063379813321440011391652189983173398887118271398762;
-}
-
-
 // int.from_bytes(b"SELECTION_RANDOMNESS_V1", byteorder="little") = 4725583332308041445519605499429790922252397838206780755
 template SELECTION_RANDOMNESS_V1(){
     signal output out;
@@ -77,18 +61,6 @@ template NOTE_CM_V1(){
 template NOTE_NF_V1(){
     signal output out;
     out <== 232989242911804701822798;
-}
-
-// int.from_bytes(b"NOTE_NONCE_V1", byteorder="little") = 3908910849081313593738852061006
-template NOTE_NONCE_V1(){
-    signal output out;
-    out <== 3908910849081313593738852061006;
-}
-
-// int.from_bytes(b"PROGRAM_STEP_ID_V1", byteorder="little") = 4297892925435406160038936939178153126875728
-template PROGRAM_STEP_ID_V1(){
-    signal output out;
-    out <== 4297892925435406160038936939178153126875728;
 }
 
 // int.from_bytes(b"ELIGIBLE_SET_LEAF_V1", byteorder="little") = 281666711431130609191864295137803020528161213509

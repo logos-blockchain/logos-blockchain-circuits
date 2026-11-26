@@ -48,8 +48,8 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
         inputs_pk[i].secret_key <== inputs_nf_sk[i].out;
     }
 
-    // Each input flag is boolean, and each input commitment is derived from the value, the nonce, the public key and the staking key,
-    // with `program` and `data` set to `0`, so a ZkTransfer only consumes user notes. The staking key is not proven: spending a note takes its spending secret key alone.
+    // Each input flag is boolean, and each input commitment is derived from the value, the nonce, the public key and the staking key.
+    // The staking key is not proven: spending a note takes its spending secret key alone.
     component inputs_cm[maxInput];
     for(var i = 0; i < maxInput; i++){
         inputs_active[i] * (1 - inputs_active[i]) === 0;
@@ -58,8 +58,6 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
         inputs_cm[i].stake_public_key <== inputs_stake_pk[i];
         inputs_cm[i].nonce <== inputs_nonce[i];
         inputs_cm[i].value <== inputs_value[i];
-        inputs_cm[i].program <== 0;
-        inputs_cm[i].data <== 0;
     }
 
     // Each active input nullifier is derived from the nullifier key and the input commitment, and each inactive input has value 0.
@@ -100,7 +98,7 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
     }
 
     // Each output flag is boolean, each active output commitment is derived from the value, the nonce, the public key and the staking key,
-    // with `program` and `data` set to `0`, so a ZkTransfer only creates user notes, and each inactive output has value 0.
+    // and each inactive output has value 0.
     component outputs_cm[maxOutput];
     for(var i = 0; i < maxOutput; i++){
         outputs_active[i] * (1 - outputs_active[i]) === 0;
@@ -109,14 +107,12 @@ template zkTransfer(maxInput, maxOutput, depth_merkle_tree){
         outputs_cm[i].stake_public_key <== outputs_stake_pk[i];
         outputs_cm[i].nonce <== outputs_nonce[i];
         outputs_cm[i].value <== outputs_value[i];
-        outputs_cm[i].program <== 0;
-        outputs_cm[i].data <== 0;
 
         (1 - outputs_active[i]) * outputs_value[i] === 0;
         outputs[i] <== outputs_active[i] * outputs_cm[i].out;
     }
 
-    // Each output is well-formed and the excess value is greater than zero and outputted.
+    // Each output is well-formed, and the excess value, zero or more, is outputted.
         // First each output value is less than 64 bits
     component range_check[maxOutput];
     for(var i = 0; i < maxOutput; i++){

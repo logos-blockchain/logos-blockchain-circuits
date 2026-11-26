@@ -14,7 +14,6 @@ members = [
   "logos-blockchain-circuits-common",
   "logos-blockchain-circuits-pol-sys",
   "logos-blockchain-circuits-poq-sys",
-  "logos-blockchain-circuits-program-spend-sys",
   "logos-blockchain-circuits-rapidsnark-sys",
   "logos-blockchain-circuits-tests",
   "logos-blockchain-circuits-transfer-sys",
@@ -24,14 +23,13 @@ resolver = "3"
 
 [workspace.dependencies]
 # Internal
-lbc-build             = { package = "logos-blockchain-circuits-build", path = "./logos-blockchain-circuits-build" }
-lbc-common            = { default-features = false, package = "logos-blockchain-circuits-common", path = "./logos-blockchain-circuits-common" }
-lbc-pol-sys           = { package = "logos-blockchain-circuits-pol-sys", path = "./logos-blockchain-circuits-pol-sys" }
-lbc-poq-sys           = { package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
-lbc-program-spend-sys = { package = "logos-blockchain-circuits-program-spend-sys", path = "./logos-blockchain-circuits-program-spend-sys" }
-lbc-rapidsnark-sys    = { package = "logos-blockchain-circuits-rapidsnark-sys", path = "./logos-blockchain-circuits-rapidsnark-sys" }
-lbc-transfer-sys      = { package = "logos-blockchain-circuits-transfer-sys", path = "./logos-blockchain-circuits-transfer-sys" }
-lbc-types             = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
+lbc-build          = { package = "logos-blockchain-circuits-build", path = "./logos-blockchain-circuits-build" }
+lbc-common         = { default-features = false, package = "logos-blockchain-circuits-common", path = "./logos-blockchain-circuits-common" }
+lbc-pol-sys        = { package = "logos-blockchain-circuits-pol-sys", path = "./logos-blockchain-circuits-pol-sys" }
+lbc-poq-sys        = { package = "logos-blockchain-circuits-poq-sys", path = "./logos-blockchain-circuits-poq-sys" }
+lbc-rapidsnark-sys = { package = "logos-blockchain-circuits-rapidsnark-sys", path = "./logos-blockchain-circuits-rapidsnark-sys" }
+lbc-transfer-sys   = { package = "logos-blockchain-circuits-transfer-sys", path = "./logos-blockchain-circuits-transfer-sys" }
+lbc-types          = { default-features = false, package = "logos-blockchain-circuits-types", path = "./logos-blockchain-circuits-types" }
 
 # External
 bytes      = "^1.11"
