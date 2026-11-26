@@ -1003,6 +1003,7 @@ jobs:
       - test-windows
     permissions:
       contents: write
+      pull-requests: read
     env:
       TAG: ${{ needs.setup.outputs.tag }}
     steps:
@@ -1021,9 +1022,19 @@ jobs:
 
       # The setup job checks that the section exists.
       - name: Extract Release Notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          : > notes.md
+          # Dev releases start with a note that names their branch and its PR.
+          if [[ "$TAG" == *+* ]]; then
+            BRANCH=$(gh api "repos/${{ github.repository }}/commits/$TAG/branches-where-head" -q '.[0].name // ""')
+            [ -n "$BRANCH" ] || { echo "::error::$TAG is not the head of any branch"; exit 1; }
+            PR=$(gh pr list --repo ${{ github.repository }} --head "$BRANCH" --state all --json number -q '.[0].number // ""')
+            printf '> [!NOTE]\n> Branch release from `%s`%s.\n\n' "$BRANCH" "${PR:+ (#$PR)}" >> notes.md
+          fi
           SECTION=$([[ "$TAG" == *[-+]* ]] && echo Unreleased || echo "${TAG#v}")
-          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md > notes.md
+          awk -v s="## [$SECTION]" '/^## \[/ { p = index($0, s) == 1; next } p' CHANGELOG.md >> notes.md
 
       - name: Create Draft Release
         env:
