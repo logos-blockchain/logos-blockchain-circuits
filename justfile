@@ -64,7 +64,7 @@ test-poq: poq
     cd blend/poq_cpp && ./test_ffi
 
 # Build the program spend circuit and its C++ witness generator, equivalent to the CI build.
-program_spend: check-circom
+program-spend: check-circom
     circom mantle/program_spend.circom --c --r1cs --no_asm --O2 --output mantle
     # circom-generated main() has no return on the success path; patch it before -O3 turns it into an infinite loop
     {{sed_i}} ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' mantle/program_spend_cpp/main.cpp
@@ -77,7 +77,7 @@ program_spend: check-circom
     make -C mantle/program_spend_cpp PROJECT=program_spend linux-lib
 
 # Run a simple smoke test of the program spend witness generator.
-test-program_spend: program_spend
+test-program-spend: program-spend
     g++ -std=c++11 -O3 -I mantle/program_spend_cpp mantle/program_spend_cpp/test_program_spend.cpp -L mantle/program_spend_cpp -lwitness_program_spend -lgmp -o mantle/program_spend_cpp/test_program_spend
     cd mantle/program_spend_cpp && ./test_program_spend
 
@@ -101,17 +101,18 @@ test-transfer: transfer
 
 # Build a circuit's witness generator and check `<circuit>_generate_witness` for leaks with valgrind.
 # Example: just valgrind pol
-valgrind circuit iterations='3':
+valgrind circuit_recipe iterations='3':
     #!/usr/bin/env bash
     set -euo pipefail
-    just {{circuit}}
-    dir="{{ if circuit == "poq" { "blend" } else { "mantle" } }}"
-    cpp="${dir}/{{circuit}}_cpp"
-    g++ -std=c++11 -O1 -g -DGENERATE_WITNESS={{circuit}}_generate_witness \
-        -I "${cpp}/{{circuit}}" -I "${cpp}" tests/witness_leak.cpp \
-        -L "${cpp}" -l{{circuit}} -lgmp -lpthread -o "${cpp}/witness_leak"
+    circuit="{{ replace(circuit_recipe, "-", "_") }}"
+    just "{{circuit_recipe}}"
+    dir="{{ if circuit_recipe == "poq" { "blend" } else { "mantle" } }}"
+    cpp="${dir}/${circuit}_cpp"
+    g++ -std=c++11 -O1 -g -DGENERATE_WITNESS="${circuit}_generate_witness" \
+        -I "${cpp}/${circuit}" -I "${cpp}" tests/witness_leak.cpp \
+        -L "${cpp}" -l"${circuit}" -lgmp -lpthread -o "${cpp}/witness_leak"
     valgrind --leak-check=full --errors-for-leak-kinds=definite,indirect --error-exitcode=1 \
-        "${cpp}/witness_leak" "${cpp}/{{circuit}}.dat" "rust/logos-blockchain-circuits-{{ replace(circuit, "_", "-") }}-sys/sample.input.json" {{iterations}}
+        "${cpp}/witness_leak" "${cpp}/${circuit}.dat" "rust/logos-blockchain-circuits-{{circuit_recipe}}-sys/sample.input.json" {{iterations}}
 
 clean:
     rm -rf mantle/pol_cpp blend/poq_cpp mantle/program_spend_cpp mantle/transfer_cpp
