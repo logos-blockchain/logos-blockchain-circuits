@@ -1,18 +1,18 @@
 # Config file reference can be found at https://embarkstudios.github.io/cargo-deny/checks/cfg.html.
 
 [graph]
-all-features = true
-exclude-dev = true
+all-features        = true
+exclude-dev         = true
 no-default-features = true
 
 [advisories]
-ignore = []
+ignore                  = []
 unused-ignored-advisory = "deny"
-yanked = "deny"
+yanked                  = "deny"
 
 [bans]
 allow-wildcard-paths = false
-multiple-versions = "allow"
+multiple-versions    = "allow"
 
 [licenses]
 allow = [
@@ -30,5 +30,5 @@ private = { ignore = false }
 unused-allowed-license = "deny"
 
 [sources]
-unknown-git = "deny"
+unknown-git      = "deny"
 unknown-registry = "deny"

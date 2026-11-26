@@ -1,10 +1,10 @@
 [package]
-name = "logos-blockchain-circuits-tests"
 edition.workspace = true
 license.workspace = true
+name              = "logos-blockchain-circuits-tests"
+publish           = false
 version.workspace = true
-publish = false
 
 [dev-dependencies]
-lbc-pol-sys = { workspace = true, features = ["test-inputs"] }
-lbc-poq-sys = { workspace = true, features = ["test-inputs"] }
+lbc-pol-sys = { features = ["test-inputs"], workspace = true }
+lbc-poq-sys = { features = ["test-inputs"], workspace = true }
