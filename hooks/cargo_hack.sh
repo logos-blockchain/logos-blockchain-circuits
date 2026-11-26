@@ -14,7 +14,7 @@ current="$(cargo hack --version 2>/dev/null || echo "none")"
 
 if [[ "$current" != "cargo-hack $VERSION" ]]; then
   echo "cargo-hack $VERSION required (found: $current). Install it with:" >&2
-  echo "  ./hooks/cargo-hack.sh --install" >&2
+  echo "  ./hooks/cargo_hack.sh --install" >&2
   exit 1
 fi
 

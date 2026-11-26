@@ -43,10 +43,10 @@ macos-lib: $(LIB)
 
 # ---- Windows (MinGW) ----
 # On Windows, `ld -r` breaks the link with libstdc++, so windows-lib renames internal symbols instead.
-# See `isolate-symbols.sh`.
+# See `isolate_symbols.sh`.
 windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int" -D_WIN32_WINNT=0x0601
 windows-lib: $(LIB_OBJS)
-	NM=$(NM) OBJDUMP=$(OBJDUMP) OBJCOPY=$(OBJCOPY) sh isolate-symbols.sh $(PROJECT) $^
+	NM=$(NM) OBJDUMP=$(OBJDUMP) OBJCOPY=$(OBJCOPY) sh isolate_symbols.sh $(PROJECT) $^
 	rm -f $(LIB)
 	$(AR) rcs $(LIB) $^
 

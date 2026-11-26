@@ -56,5 +56,5 @@ repos:
       - id: cargo-hack-check
         language: script
         name: cargo hack check
-        entry: ./hooks/cargo-hack.sh
+        entry: ./hooks/cargo_hack.sh
         stages: [manual]

@@ -6,7 +6,7 @@
     # The Windows toolchain. It must match Logos Rapidsnark's, so that everything is built with the same compiler and
     # runtime libraries.
     logos-nix.url = "github:logos-co/logos-nix";
-    # Keep this tag the same as deps/rapidsnark/VERSION. Using `scripts/update-rapidsnark.sh` updates both.
+    # Keep this tag the same as deps/rapidsnark/VERSION. Using `scripts/update_rapidsnark.sh` updates both.
     logos-blockchain-rapidsnark.url = "github:logos-blockchain/logos-blockchain-rapidsnark/v0.0.8-logos.1-rc.5";
     logos-blockchain-rapidsnark.inputs.logos-nix.follows = "logos-nix";
     # The circomlib submodule that the Windows build uses, at the same commit. CI checks that they match.
@@ -87,7 +87,7 @@
 
             cp -r src/${name} ${cpp}/${name}
             cp src/{circom_adapter.cpp,circom_adapter.hpp,circom_fwd.hpp,types.hpp,assert.h} ${cpp}/
-            cp $resources/{Makefile,isolate-symbols.sh} ${cpp}/
+            cp $resources/{Makefile,isolate_symbols.sh} ${cpp}/
 
             # circom-generated main() has no return on the success path.
             sed -i ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' ${cpp}/main.cpp
@@ -161,7 +161,7 @@
 
       cargoToml = builtins.fromTOML (builtins.readFile ./rust/Cargo.toml);
       circuitsVersion = cargoToml.workspace.package.version;
-      versions = builtins.fromJSON (builtins.readFile ./circuits-nix-hashes.json);
+      versions = builtins.fromJSON (builtins.readFile ./circuits_nix_hashes.json);
       circuitsHashes = versions.${circuitsVersion};
 
       githubBase = "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download";

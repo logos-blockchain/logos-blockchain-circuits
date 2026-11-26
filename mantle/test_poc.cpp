@@ -20,7 +20,7 @@ static uint8_t* read_file(const char* path, size_t* out_size) {
 int main() {
     Status status = poc_generate_witness_from_files(
         "poc",
-        "../poc-input.json",
+        "../poc_input.json",
         "witness.wtns"
     );
 
@@ -33,7 +33,7 @@ int main() {
 
     size_t dat_size, json_size;
     uint8_t* dat_data = read_file("poc.dat", &dat_size);
-    uint8_t* json_data = read_file("../poc-input.json", &json_size);
+    uint8_t* json_data = read_file("../poc_input.json", &json_size);
 
     WitnessInput input = {
         {dat_data, dat_size},
